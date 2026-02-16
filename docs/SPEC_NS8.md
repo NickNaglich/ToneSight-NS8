@@ -76,7 +76,7 @@ Do not duplicate arithmetic formulas per derived family.
 - Spec version is `1.0`.
 - Any change to formulas, transforms, strictness, or helper semantics must:
   - bump `spec_version`
-  - regenerate/extend vectors in `ns8_test_vectors.json`
+  - regenerate/extend vectors in `vectors/ns8_test_vectors.json`
   - keep old vectors for historical compatibility when appropriate
 
 ## Decision record

@@ -31,7 +31,7 @@ def test_cli_eval(capsys):
             "--out-root",
             str(out_root),
             "--taxonomy",
-            "tone_taxonomy.v1.json",
+            "taxonomy/tone_taxonomy.v1.json",
             "--threshold-l1",
             "3",
         ]

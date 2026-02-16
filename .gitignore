@@ -8,6 +8,7 @@ pytest-cache-files-*/
 
 # Local run artifacts
 runs/
+.agent/
 .agent/tmp_runs*/
 .agent/tmp_runs_*/
 .agent/tmp_compare*/

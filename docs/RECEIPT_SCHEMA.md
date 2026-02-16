@@ -41,6 +41,6 @@ Status:
 - `label` and `vad` are optional based on entrypoint:
   - `tonesight_from_label(...)`: include both `label` and resolved `vad`
   - `tonesight_from_vad(...)`: include `vad`; omit `label` if not provided
-- `spec_version` must match `SPEC_NS8.md`.
+- `spec_version` must match `docs/SPEC_NS8.md`.
 - `A` must be in `1..8`.
 - Unknown optional fields are allowed only if they do not alter deterministic behavior.

@@ -240,6 +240,6 @@ Behavior:
 
 ## Behavioral Contract
 
-- Math and routing are governed by `SPEC_NS8.md`.
+- Math and routing are governed by `docs/SPEC_NS8.md`.
 - Vectors in `vectors/ns8_test_vectors.json` are normative.
 - Any behavior change requires spec + vector updates.

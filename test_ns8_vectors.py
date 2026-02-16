@@ -7,8 +7,6 @@ from ns8_ref import InvalidInput, ns8_A, ns8_route
 
 
 VECTOR_PATH = Path("vectors/ns8_test_vectors.json")
-if not VECTOR_PATH.exists():
-    VECTOR_PATH = Path(__file__).with_name("ns8_test_vectors.json")
 
 
 def load_vectors():

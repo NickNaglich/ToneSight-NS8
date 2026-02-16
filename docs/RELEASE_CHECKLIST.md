@@ -43,5 +43,5 @@ python -m tonesight_ns8.cli eval
 
 - `pyproject.toml` version is correct for release target
 - `LICENSE` present and aligned with package metadata
-- `SPEC_NS8.md`/vectors/tests/docs are synchronized for any behavior changes
-- `.agent/LOGS/CHANGE_LOG.md` includes append-only entries for release changes
+- `docs/SPEC_NS8.md`/vectors/tests/docs are synchronized for any behavior changes
+- project change log is updated with release-facing changes (path depends on repo policy)

@@ -37,7 +37,7 @@ def _mk_run(path: Path, *, run_id: str, dataset_hash: str, pass_rate: float, avg
             "dataset_path": "data/goldset.jsonl",
             "dataset_hash": dataset_hash,
             "row_count": len(rows),
-            "config": {"threshold_l1": 3, "taxonomy_path": "tone_taxonomy.v1.json"},
+            "config": {"threshold_l1": 3, "taxonomy_path": "taxonomy/tone_taxonomy.v1.json"},
             "artifacts": {
                 "out_jsonl": str(path / "out.jsonl"),
                 "eval_summary_json": str(path / "eval_summary.json"),

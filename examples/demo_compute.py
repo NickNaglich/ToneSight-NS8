@@ -14,7 +14,7 @@ def main() -> None:
         r=6,
         c=4,
         k=3,
-        taxonomy_path="tone_taxonomy.v1.json",
+        taxonomy_path="taxonomy/tone_taxonomy.v1.json",
     )
     print(json.dumps(receipt, indent=2, sort_keys=True))
 

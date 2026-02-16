@@ -6,8 +6,6 @@ from pathlib import Path
 
 
 TAXONOMY_PATH = Path("taxonomy/tone_taxonomy.v1.json")
-if not TAXONOMY_PATH.exists():
-    TAXONOMY_PATH = Path(__file__).with_name("tone_taxonomy.v1.json")
 LABEL_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 
 

@@ -99,7 +99,7 @@ def test_override_defaults_propagates_to_cli_and_eval(monkeypatch):
 
 
 def _local_test_dir(prefix: str) -> Path:
-    root = Path(".agent") / f"{prefix}_{uuid4().hex}"
+    root = Path(".tmp") / f"{prefix}_{uuid4().hex}"
     root.mkdir(parents=True, exist_ok=True)
     return root
 
@@ -177,7 +177,7 @@ def test_docs_defaults_examples_match_config_defaults():
     artifact_defaults = defaults["artifact_defaults"]
 
     readme = Path("README.md").read_text(encoding="utf-8")
-    api_ref = Path("API_REFERENCE.md").read_text(encoding="utf-8")
+    api_ref = Path("docs/API_REFERENCE.md").read_text(encoding="utf-8")
     merged = readme + "\n" + api_ref
 
     assert artifact_defaults["goldset_path"] in merged

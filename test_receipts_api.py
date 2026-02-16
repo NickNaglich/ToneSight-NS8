@@ -26,8 +26,7 @@ def test_receipt_from_label():
         r=6,
         c=4,
         k=3,
-        taxonomy_path="tone_taxonomy.v1.json",
+        taxonomy_path="taxonomy/tone_taxonomy.v1.json",
     )
     assert rec["input"]["label"] == "empathetic"
     assert rec["input"]["vad"] == {"V": 7, "A": 3, "D": 3}
-

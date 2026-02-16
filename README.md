@@ -33,7 +33,7 @@ Discrete VAD (or label)
 taxonomy/tone_taxonomy.v1.json  ->  validated V/A/D in 1..8
         |
         v
-NS8 deterministic mapping (SPEC_NS8.md, ns8_ref.py)
+NS8 deterministic mapping (docs/SPEC_NS8.md, ns8_ref.py)
         |
         +--> receipt APIs / CLI encode-decode
         |
@@ -153,7 +153,7 @@ It is a deterministic structural mapping layer that operates on discrete VAD inp
 - Output range is `A in {1..8}`.
 
 Authoritative reference:
-- `SPEC_NS8.md`
+- `docs/SPEC_NS8.md`
 
 ## Tone Taxonomy
 
@@ -161,7 +161,7 @@ Taxonomy provides deterministic label-to-VAD mapping for friendly tone labels.
 It does not perform emotion inference in core logic.
 
 Source of truth:
-- `taxonomy/tone_taxonomy.v1.json` (root alias `tone_taxonomy.v1.json` is kept for compatibility)
+- `taxonomy/tone_taxonomy.v1.json`
 
 Constraints:
 - each tone defines exactly `V, A, D`
@@ -194,7 +194,7 @@ No plotting is included in core. Visualization is downstream.
 ## API Reference
 
 Detailed API is documented in:
-- `API_REFERENCE.md`
+- `docs/API_REFERENCE.md`
 
 The current reference implementation exposes `ns8_A` and `ns8_route`.
 Future packaged releases will provide stable wrapper APIs while preserving deterministic behavior.
@@ -401,11 +401,8 @@ curl -X POST http://localhost:8080/eval/run \
 ```text
 .
 |-- README.md
-|-- API_REFERENCE.md
-|-- SPEC_NS8.md
+|-- LICENSE
 |-- ns8_ref.py
-|-- ns8_test_vectors.json
-|-- tone_taxonomy.v1.json
 |-- vectors/
 |   `-- ns8_test_vectors.json
 |-- taxonomy/
@@ -413,8 +410,13 @@ curl -X POST http://localhost:8080/eval/run \
 |-- test_ns8_vectors.py
 |-- test_tone_taxonomy.py
 |-- docs/
+|   |-- API_REFERENCE.md
 |   |-- DEFAULTS_SCHEMA.md
+|   |-- EVAL.md
+|   |-- MONITORING.md
+|   |-- RELEASE_CHECKLIST.md
 |   |-- RECEIPT_SCHEMA.md
+|   |-- SPEC_NS8.md
 |   `-- SEGMENT_INTERFACE.md
 |-- config/
 |   |-- defaults.json
@@ -422,19 +424,16 @@ curl -X POST http://localhost:8080/eval/run \
 |-- tools/
 |   `-- regen_vectors.py
 |-- PROJECT_BRIEF.md
-|-- MONITORING.md
-|-- EVAL.md
-`-- .agent/
+`-- tests/
 ```
 
 Note: The current layout uses a reference implementation (`ns8_ref.py`).
-A packaged module layout is planned in the phased workflow (`.agent/TO-DO/PHASED_WORKFLOW.md`).
 `ns8_ref.py` remains the oracle until packaged implementation parity is proven by vectors + invariants.
 
 ## Versioning and Stability
 
 - Library versioning follows semantic versioning when packaging is introduced.
-- NS8 spec version is tracked separately in `SPEC_NS8.md`.
+- NS8 spec version is tracked separately in `docs/SPEC_NS8.md`.
 - The NS8 specification is stable within a major version.
 
 Compatibility expectations:
@@ -443,7 +442,7 @@ Compatibility expectations:
 
 Phase 2 status:
 - Formula decision is resolved (Option A retained).
-- Runtime behavior is frozen to `spec_version: 1.0` using `SPEC_NS8.md` + `vectors/ns8_test_vectors.json`.
+- Runtime behavior is frozen to `spec_version: 1.0` using `docs/SPEC_NS8.md` + `vectors/ns8_test_vectors.json`.
 
 ## Limitations
 

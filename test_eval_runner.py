@@ -10,7 +10,12 @@ def test_run_eval_writes_artifacts():
     out_root = Path(".agent") / f"tmp_runs_{uuid4().hex}"
     goldset_path = Path("data/goldset.jsonl")
     expected_rows = sum(1 for line in goldset_path.read_text(encoding="utf-8").splitlines() if line.strip())
-    result = run_eval(str(goldset_path), out_root=str(out_root), taxonomy_path="tone_taxonomy.v1.json", threshold_l1=3)
+    result = run_eval(
+        str(goldset_path),
+        out_root=str(out_root),
+        taxonomy_path="taxonomy/tone_taxonomy.v1.json",
+        threshold_l1=3,
+    )
 
     run_id = result["run_id"]
     run_dir = out_root / run_id
