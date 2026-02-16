@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+*.egg-info/
 
 # Local pytest temp/cache directories seen in this repo
 pytest-cache-files-*/

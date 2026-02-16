@@ -24,17 +24,6 @@ This repository currently focuses on:
 Most systems can measure latency and correctness, but have weak controls for deterministic tone conformance and regression tracking.
 ToneSight NS8 focuses on that specific gap: deterministic encoding, reproducible evaluation artifacts, and stable run-to-run comparison.
 
-## Licensing Boundary
-
-ToneSight NS8 is open and currently licensed under MIT.
-NS8 in this repository is the in-scope reference mapping for the toolkit and is currently covered by MIT in this v1 release.
-ToneSight NS8 is released under the MIT License.
-For commercial licensing, enterprise support, or OEM inquiries, please contact: Nicholas@CollaborativeCurators.com
-
-Authoritative files:
-- `LICENSE`
-- `LICENSE_POLICY.md`
-
 ## Architecture (v1)
 
 ```text
@@ -476,3 +465,13 @@ Minimal example:
 from ns8_ref import ns8_A
 print(ns8_A("TLF", 1, 1, 1))
 ```
+## Licensing Boundary
+
+ToneSight NS8 is open and currently licensed under MIT.
+NS8 in this repository is the in-scope reference mapping for the toolkit and is currently covered by MIT in this v1 release.
+ToneSight NS8 is released under the MIT License.
+For commercial licensing, enterprise support, or OEM inquiries, please contact: Nicholas@CollaborativeCurators.com
+
+Authoritative files:
+- `LICENSE`
+- `LICENSE_POLICY.md`
