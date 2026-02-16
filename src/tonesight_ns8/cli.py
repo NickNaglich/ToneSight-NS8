@@ -10,13 +10,12 @@ from pathlib import Path
 from typing import Any
 
 from .defaults import ARTIFACT_DEFAULTS, EVAL_DEFAULTS
+from .mapping import get_mapping, list_mappings
 from . import (
     SegmentRecord,
-    compute_A,
     run_compare,
     run_eval_compare,
     run_eval,
-    resolve_to_seed,
     summarize_session,
     summarize_speaker,
     tonesight_from_label,
@@ -57,6 +56,7 @@ def _to_jsonable(value: Any) -> Any:
 
 
 def _cmd_encode(args: argparse.Namespace) -> dict:
+    _ = get_mapping(args.mapping)
     if args.label:
         if not args.taxonomy:
             raise ValueError("--taxonomy is required when --label is provided")
@@ -67,6 +67,7 @@ def _cmd_encode(args: argparse.Namespace) -> dict:
             c=args.c,
             k=args.k,
             taxonomy_path=args.taxonomy,
+            mapping_id=args.mapping,
         )
 
     if args.V is None or args.A is None or args.D is None:
@@ -79,12 +80,14 @@ def _cmd_encode(args: argparse.Namespace) -> dict:
         r=args.r,
         c=args.c,
         k=args.k,
+        mapping_id=args.mapping,
     )
 
 
 def _cmd_decode(args: argparse.Namespace) -> dict:
-    seed_family, r_prime, c_prime, _ = resolve_to_seed(args.family, args.r, args.c, args.k, 8)
-    anchor = compute_A(args.family, args.r, args.c, args.k, 8)
+    mapping = get_mapping(args.mapping)
+    seed_family, r_prime, c_prime, _ = mapping.resolve_to_seed(args.family, args.r, args.c, args.k, 8)
+    anchor = mapping.compute_A(args.family, args.r, args.c, args.k, 8)
     return {
         "spec_version": "1.0",
         "input": {"family": args.family, "r": args.r, "c": args.c, "k": args.k},
@@ -155,6 +158,7 @@ def build_parser() -> argparse.ArgumentParser:
     encode.add_argument("--V", type=_int_1_to_8)
     encode.add_argument("--A", type=_int_1_to_8)
     encode.add_argument("--D", type=_int_1_to_8)
+    encode.add_argument("--mapping", default="ns8", choices=list_mappings())
     encode.set_defaults(func=_cmd_encode)
 
     decode = sub.add_parser("decode", help="Resolve route and anchor from NS8 parameters.")
@@ -162,6 +166,7 @@ def build_parser() -> argparse.ArgumentParser:
     decode.add_argument("--r", required=True, type=_int_1_to_8)
     decode.add_argument("--c", required=True, type=_int_1_to_8)
     decode.add_argument("--k", required=True, type=_int_1_to_8)
+    decode.add_argument("--mapping", default="ns8", choices=list_mappings())
     decode.set_defaults(func=_cmd_decode)
 
     summarize = sub.add_parser("summarize", help="Summarize speakers/session from segment JSON.")

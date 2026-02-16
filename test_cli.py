@@ -23,6 +23,13 @@ def test_cli_decode(capsys):
     assert payload["route"] == {"seed_family": "TLF", "r_prime": 6, "c_prime": 5}
 
 
+def test_cli_decode_with_mapping_flag(capsys):
+    rc = main(["decode", "--family", "TRF", "--r", "6", "--c", "4", "--k", "3", "--mapping", "ns8"])
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert payload["output"]["A"] == 2
+
+
 def test_cli_eval(capsys):
     out_root = Path(".agent") / f"tmp_runs_cli_{uuid4().hex}"
     rc = main(

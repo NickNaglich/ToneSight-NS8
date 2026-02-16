@@ -29,6 +29,11 @@ Stable public imports are the names exported by `tonesight_ns8.__all__`:
 - `run_eval`
 - `run_compare`
 - `run_eval_compare`
+- `register_mapping`
+- `get_mapping`
+- `list_mappings`
+- `get_default_mapping`
+- `get_default_mapping_id`
 
 Internal/non-stable modules (no backward-compatibility guarantee in v1):
 - `tonesight_ns8.defaults_schema`
@@ -124,6 +129,36 @@ Package wrapper over oracle anchor computation with strict validation.
 ### `resolve_to_seed(family: str, r: int, c: int, k: int, N: int = 8) -> tuple[str, int, int, int]`
 
 Package wrapper for canonical seed route resolution.
+
+## Mapping Interface (v1.2 scaffold)
+
+ToneSight now exposes a deterministic mapping registry so NS8 is a default adapter, not a hardcoded-only path.
+
+Built-in default:
+- `mapping_id="ns8"`
+
+Public helpers:
+- `register_mapping(mapping_id, adapter, set_default=False)`
+- `get_mapping(mapping_id)`
+- `list_mappings()`
+- `get_default_mapping()`
+- `get_default_mapping_id()`
+
+Adapter contract:
+- `name`, `spec_version`, `n`, `families`
+- `validate_inputs(family, r, c, k, N=8)`
+- `resolve_to_seed(family, r, c, k, N=8) -> (seed_family, r_prime, c_prime, k)`
+- `compute_A(family, r, c, k, N=8) -> int`
+
+Current wrappers support optional `mapping_id`:
+- `tonesight_from_label(..., mapping_id="ns8")`
+- `tonesight_from_vad(..., mapping_id="ns8")`
+- `tonesight_receipt_from_segment(..., mapping_id="ns8")`
+- `attach_tonesight_to_segment(..., mapping_id="ns8")`
+
+CLI support:
+- `encode ... --mapping ns8`
+- `decode ... --mapping ns8`
 
 ## Analytics Functions
 

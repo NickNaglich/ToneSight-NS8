@@ -10,6 +10,13 @@ from .analytics import summarize_session, summarize_speaker
 from .compare_runner import run_compare
 from .eval_compare_runner import run_eval_compare
 from .eval_runner import run_eval
+from .mapping import (
+    get_default_mapping,
+    get_default_mapping_id,
+    get_mapping,
+    list_mappings,
+    register_mapping,
+)
 from .ns8 import compute_A, resolve_to_seed, validate_inputs
 from .schema import Route, SegmentRecord, SessionSummary, SpeakerSummary, ToneReceipt
 
@@ -31,4 +38,9 @@ __all__ = [
     "run_eval",
     "run_compare",
     "run_eval_compare",
+    "register_mapping",
+    "get_mapping",
+    "list_mappings",
+    "get_default_mapping",
+    "get_default_mapping_id",
 ]

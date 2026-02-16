@@ -84,7 +84,13 @@ Requirements:
 - Python 3.11+
 - `pytest` (for running tests)
 
-After install, verify CLI entrypoint:
+After install, verify the CLI using module invocation (recommended and cross-platform):
+
+```bash
+python -m tonesight_ns8.cli --help
+```
+
+Optional convenience entrypoint (works when your Python Scripts directory is on `PATH`):
 
 ```bash
 tonesight-ns8 --help
@@ -112,6 +118,18 @@ set TEMP=%cd%\\.tmp
 set TMP=%cd%\\.tmp
 set PIP_CACHE_DIR=%cd%\\.tmp\\pip-cache
 pip install -e .
+```
+
+If `tonesight-ns8` is not recognized on Windows, either:
+- use `python -m tonesight_ns8.cli ...` (recommended), or
+- add `C:\Users\<you>\AppData\Roaming\Python\Python3xx\Scripts` to `PATH`.
+
+Sanity reset (if environment looks stale):
+
+```bash
+python -m pip uninstall -y tonesight-ns8
+python -m pip install -e .
+python -m tonesight_ns8.cli --help
 ```
 
 ## What ToneSight NS8 Is Not
@@ -198,6 +216,15 @@ Detailed API is documented in:
 
 The current reference implementation exposes `ns8_A` and `ns8_route`.
 Future packaged releases will provide stable wrapper APIs while preserving deterministic behavior.
+
+## Mapping Registry
+
+ToneSight includes a deterministic mapping registry with NS8 registered as the default adapter (`mapping_id="ns8"`).
+This enables future mapping implementations without changing core eval/receipt contracts.
+
+Current mapping-aware surfaces:
+- Python wrappers accept optional `mapping_id` (`tonesight_from_vad`, `tonesight_from_label`, segment helpers)
+- CLI supports `--mapping` for `encode` and `decode`
 
 ### Current runnable interface
 

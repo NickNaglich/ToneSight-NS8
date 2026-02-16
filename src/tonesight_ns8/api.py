@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, replace
 
-from .ns8 import compute_A, resolve_to_seed
+from .mapping import get_mapping
 from .schema import SegmentRecord, ToneReceipt
 from .taxonomy import get_vad, load_taxonomy
 
@@ -20,9 +20,11 @@ def _build_receipt(
     *,
     label: str | None = None,
     vad: tuple[int, int, int] | None = None,
+    mapping_id: str = "ns8",
 ) -> dict:
-    seed_family, r_prime, c_prime, _ = resolve_to_seed(family, r, c, k, 8)
-    anchor = compute_A(family, r, c, k, 8)
+    mapping = get_mapping(mapping_id)
+    seed_family, r_prime, c_prime, _ = mapping.resolve_to_seed(family, r, c, k, 8)
+    anchor = mapping.compute_A(family, r, c, k, 8)
 
     input_obj = {"family": family, "r": r, "c": c, "k": k}
     if label is not None:
@@ -46,11 +48,12 @@ def tonesight_from_label(
     c: int,
     k: int,
     taxonomy_path: str,
+    mapping_id: str = "ns8",
 ) -> dict:
     """Resolve tone label to VAD and return deterministic receipt."""
     taxonomy = load_taxonomy(taxonomy_path)
     vad = get_vad(label, taxonomy)
-    return _build_receipt(family, r, c, k, label=label, vad=vad)
+    return _build_receipt(family, r, c, k, label=label, vad=vad, mapping_id=mapping_id)
 
 
 def tonesight_from_vad(
@@ -61,9 +64,10 @@ def tonesight_from_vad(
     r: int,
     c: int,
     k: int,
+    mapping_id: str = "ns8",
 ) -> dict:
     """Use explicit VAD and return deterministic receipt."""
-    return _build_receipt(family, r, c, k, vad=(V, A, D))
+    return _build_receipt(family, r, c, k, vad=(V, A, D), mapping_id=mapping_id)
 
 
 def tonesight_receipt_from_segment(
@@ -72,6 +76,7 @@ def tonesight_receipt_from_segment(
     r: int,
     c: int,
     k: int,
+    mapping_id: str = "ns8",
 ) -> dict:
     """Build receipt for a segment using segment VAD bins."""
     return _build_receipt(
@@ -81,6 +86,7 @@ def tonesight_receipt_from_segment(
         k,
         label=segment.tone_label,
         vad=(segment.V, segment.A, segment.D),
+        mapping_id=mapping_id,
     )
 
 
@@ -90,10 +96,12 @@ def attach_tonesight_to_segment(
     r: int,
     c: int,
     k: int,
+    mapping_id: str = "ns8",
 ) -> SegmentRecord:
     """Return a copy of segment with NS8 route/anchor fields filled."""
-    seed_family, r_prime, c_prime, _ = resolve_to_seed(family, r, c, k, 8)
-    anchor = compute_A(family, r, c, k, 8)
+    mapping = get_mapping(mapping_id)
+    seed_family, r_prime, c_prime, _ = mapping.resolve_to_seed(family, r, c, k, 8)
+    anchor = mapping.compute_A(family, r, c, k, 8)
     return replace(
         segment,
         ns8_family=family,
@@ -105,4 +113,3 @@ def attach_tonesight_to_segment(
         ns8_c_prime=c_prime,
         ns8_A=anchor,
     )
-
