@@ -41,6 +41,17 @@ def _p95(values: list[float]) -> float:
     return float(sorted_vals[idx])
 
 
+def _median(values: list[float]) -> float:
+    if not values:
+        return 0.0
+    sorted_vals = sorted(values)
+    n = len(sorted_vals)
+    mid = n // 2
+    if n % 2 == 1:
+        return float(sorted_vals[mid])
+    return float((sorted_vals[mid - 1] + sorted_vals[mid]) / 2.0)
+
+
 def _dataset_hash(path: Path) -> str:
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
     return digest[:12]
@@ -177,9 +188,15 @@ def run_eval(
         "count_rows": total,
         "threshold_l1": threshold_l1,
         "pass_count": pass_count,
+        "fail_count": total - pass_count,
         "pass_rate": (pass_count / total) if total else 0.0,
+        "fail_rate": ((total - pass_count) / total) if total else 0.0,
         "avg_l1": (sum(compliance_l1_values) / total) if total else 0.0,
+        "median_l1": _median(compliance_l1_values),
         "p95_l1": _p95(compliance_l1_values),
+        "max_l1": max(compliance_l1_values) if compliance_l1_values else 0.0,
+        "count_with_gold_vad": len(accuracy_l1_values),
+        "count_without_gold_vad": total - len(accuracy_l1_values),
         "avg_accuracy_l1": (sum(accuracy_l1_values) / len(accuracy_l1_values)) if accuracy_l1_values else None,
     }
 

@@ -193,6 +193,13 @@ Returns:
 - optional GPU snapshots (`capture_gpu=True`)
 - optional MLflow logging (`mlflow_tracking_uri`)
 
+`eval_summary.json` key fields:
+- `count_rows`, `threshold_l1`
+- `pass_count`, `fail_count`, `pass_rate`, `fail_rate`
+- `avg_l1`, `median_l1`, `p95_l1`, `max_l1`
+- `count_with_gold_vad`, `count_without_gold_vad`
+- `avg_accuracy_l1` (or `null` when no gold labels are present)
+
 ### `run_eval_compare(goldset_path: str, *, out_root: str = "runs", taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", threshold_l1: int = 3, calibration_path: str | None = None, capture_gpu: bool = False, mlflow_tracking_uri: str | None = None, top_n: int = 10) -> dict`
 
 These defaults are sourced from `config/defaults.json`.
@@ -217,7 +224,10 @@ Computed outputs:
 - delta `pass_rate`
 - delta `avg_l1`
 - delta `p95_l1`
+- deterministic trend labels (`improved`, `regressed`, `unchanged`) for each core delta metric
 - per-label delta summary (when label present)
+- row coverage (`count_common_ids`, `count_only_in_a`, `count_only_in_b`)
+- regression coverage (`regression_count_total`, requested/returned `top_n`, truncation flag)
 - top regressions by L1 increase (stable sort by delta desc, then `id`)
 
 Optional artifact write (`write_artifact=True`):

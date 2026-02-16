@@ -2,6 +2,8 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
+
 from tonesight_ns8.cli import main
 
 
@@ -81,3 +83,16 @@ def test_cli_eval_compare(capsys):
     assert rc2 == 0
     assert payload2["previous_run"] is not None
     assert payload2["compare"] is not None
+
+
+def test_cli_encode_label_requires_taxonomy_returns_json_error(capsys):
+    rc = main(["encode", "--family", "TRF", "--r", "6", "--c", "4", "--k", "3", "--label", "empathetic"])
+    err = json.loads(capsys.readouterr().err)
+    assert rc == 2
+    assert err["error"]["type"] == "ValueError"
+    assert "--taxonomy is required" in err["error"]["message"]
+
+
+def test_cli_rejects_out_of_range_ns8_inputs():
+    with pytest.raises(SystemExit):
+        main(["decode", "--family", "TRF", "--r", "9", "--c", "4", "--k", "3"])

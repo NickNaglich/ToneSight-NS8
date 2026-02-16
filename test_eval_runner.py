@@ -35,6 +35,10 @@ def test_run_eval_writes_artifacts():
     assert summary["count_rows"] == expected_rows
     assert summary["threshold_l1"] == 3
     assert 0.0 <= summary["pass_rate"] <= 1.0
+    assert summary["fail_count"] == summary["count_rows"] - summary["pass_count"]
+    assert summary["fail_rate"] == 1.0 - summary["pass_rate"]
+    assert summary["max_l1"] >= summary["median_l1"] >= 0.0
+    assert summary["count_with_gold_vad"] + summary["count_without_gold_vad"] == summary["count_rows"]
 
     receipt = json.loads(receipt_json.read_text(encoding="utf-8"))
     assert receipt["run_id"] == run_id

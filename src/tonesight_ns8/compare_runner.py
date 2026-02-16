@@ -55,6 +55,16 @@ def _label_stats(rows: list[dict[str, Any]]) -> dict[str, dict[str, float]]:
     return out
 
 
+def _trend(delta: float | None, *, higher_is_better: bool) -> str:
+    if delta is None:
+        return "unknown"
+    if delta == 0.0:
+        return "unchanged"
+    if higher_is_better:
+        return "improved" if delta > 0 else "regressed"
+    return "improved" if delta < 0 else "regressed"
+
+
 def run_compare(
     run_a: str,
     run_b: str,
@@ -95,6 +105,7 @@ def run_compare(
         )
 
     regressions.sort(key=lambda row: (-row["delta_l1"], str(row["id"])))
+    regression_count_total = len(regressions)
     regressions = regressions[: max(0, int(top_n))]
 
     labels_a = _label_stats(out_a)
@@ -106,6 +117,10 @@ def run_compare(
             "delta_avg_l1": _safe_delta(labels_a[label]["avg_l1"], labels_b[label]["avg_l1"]),
             "delta_count": _safe_delta(labels_a[label]["count"], labels_b[label]["count"]),
         }
+
+    delta_pass_rate = _safe_delta(summary_a.get("pass_rate"), summary_b.get("pass_rate"))
+    delta_avg_l1 = _safe_delta(summary_a.get("avg_l1"), summary_b.get("avg_l1"))
+    delta_p95_l1 = _safe_delta(summary_a.get("p95_l1"), summary_b.get("p95_l1"))
 
     compare_summary: dict[str, Any] = {
         "spec_version": "1.0",
@@ -120,16 +135,27 @@ def run_compare(
             "dataset_hash": receipt_b.get("dataset_hash"),
         },
         "metrics": {
-            "delta_pass_rate": _safe_delta(summary_a.get("pass_rate"), summary_b.get("pass_rate")),
-            "delta_avg_l1": _safe_delta(summary_a.get("avg_l1"), summary_b.get("avg_l1")),
-            "delta_p95_l1": _safe_delta(summary_a.get("p95_l1"), summary_b.get("p95_l1")),
+            "delta_pass_rate": delta_pass_rate,
+            "delta_avg_l1": delta_avg_l1,
+            "delta_p95_l1": delta_p95_l1,
+            "pass_rate_trend": _trend(delta_pass_rate, higher_is_better=True),
+            "avg_l1_trend": _trend(delta_avg_l1, higher_is_better=False),
+            "p95_l1_trend": _trend(delta_p95_l1, higher_is_better=False),
         },
         "rows": {
             "count_a": len(out_a),
             "count_b": len(out_b),
             "count_common_ids": len(ids_common),
+            "count_only_in_a": len(set(by_id_a).difference(by_id_b)),
+            "count_only_in_b": len(set(by_id_b).difference(by_id_a)),
         },
         "per_label_delta": per_label_delta,
+        "regression_coverage": {
+            "regression_count_total": regression_count_total,
+            "top_n_requested": max(0, int(top_n)),
+            "top_n_returned": len(regressions),
+            "truncated": regression_count_total > len(regressions),
+        },
         "top_regressions": regressions,
     }
 

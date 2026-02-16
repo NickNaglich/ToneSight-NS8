@@ -325,10 +325,16 @@ Example `eval_summary.json` (shape only):
   "run_id": "run_20260214T000000Z_abc123def456",
   "count_rows": 20,
   "threshold_l1": 3,
-  "pass_count": 20,
-  "pass_rate": 1.0,
+  "pass_count": 18,
+  "fail_count": 2,
+  "pass_rate": 0.9,
+  "fail_rate": 0.1,
   "avg_l1": 0.0,
+  "median_l1": 0.0,
   "p95_l1": 0.0,
+  "max_l1": 2.0,
+  "count_with_gold_vad": 20,
+  "count_without_gold_vad": 0,
   "avg_accuracy_l1": 0.0
 }
 ```

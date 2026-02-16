@@ -73,11 +73,20 @@ def test_run_compare_metrics_and_regressions():
     assert summary["metrics"]["delta_pass_rate"] < 0
     assert summary["metrics"]["delta_avg_l1"] > 0
     assert summary["metrics"]["delta_p95_l1"] > 0
+    assert summary["metrics"]["pass_rate_trend"] == "regressed"
+    assert summary["metrics"]["avg_l1_trend"] == "regressed"
+    assert summary["metrics"]["p95_l1_trend"] == "regressed"
     assert summary["rows"]["count_common_ids"] == 3
+    assert summary["rows"]["count_only_in_a"] == 0
+    assert summary["rows"]["count_only_in_b"] == 0
 
     # Stable tie-breaker: same delta_l1 picks lexicographically smaller id first.
     assert summary["top_regressions"][0]["id"] == "id_1"
     assert "empathetic" in summary["per_label_delta"]
+    assert summary["regression_coverage"]["regression_count_total"] == 2
+    assert summary["regression_coverage"]["top_n_requested"] == 1
+    assert summary["regression_coverage"]["top_n_returned"] == 1
+    assert summary["regression_coverage"]["truncated"] is True
 
     compare_path = Path(result["compare_summary_path"])
     assert compare_path.exists()
@@ -98,4 +107,5 @@ def test_cli_compare(capsys):
     payload = json.loads(capsys.readouterr().out)
     assert rc == 0
     assert payload["compare_summary"]["run_a"]["run_id"] == "run_A"
+    assert payload["compare_summary"]["regression_coverage"]["top_n_requested"] == 5
     assert payload["compare_summary_path"] is not None
