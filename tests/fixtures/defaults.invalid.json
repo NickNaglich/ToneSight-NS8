@@ -1,0 +1,9 @@
+{
+  "spec_version": "1.0",
+  "eval_defaults": {
+    "out_root": "runs"
+  },
+  "artifact_defaults": {
+    "goldset_path": "data/goldset.jsonl"
+  }
+}

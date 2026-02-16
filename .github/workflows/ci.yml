@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: CLI smoke (entrypoint + defaults eval)
+        run: |
+          tonesight-ns8 --help
+          OUT="$(python -m tonesight_ns8.cli eval)"
+          python -c "import json,sys; p=json.loads(sys.argv[1]); assert p.get('run_id'); assert p.get('out_dir')" "$OUT"
+
+      - name: Run tests
+        run: |
+          python tools/validate_defaults.py
+          python -m pytest -q
+
+      - name: Verify defaults validator rejects invalid fixture
+        run: |
+          if python tools/validate_defaults.py tests/fixtures/defaults.invalid.json; then
+            echo "Expected defaults validator to fail on invalid fixture"
+            exit 1
+          fi
+
+      - name: Verify vector regeneration is stable
+        run: |
+          python tools/regen_vectors.py
+          git diff --exit-code
+
+  observability:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package with observability extras
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[observability]"
+
+      - name: Run observability tests
+        run: |
+          python -m pytest -q test_observability_api.py

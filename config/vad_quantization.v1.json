@@ -1,0 +1,12 @@
+{
+  "spec_version": "1.0",
+  "status": "stub",
+  "description": "Reserved boundary for future continuous-to-discrete VAD quantization adapters.",
+  "input_range": "0..1",
+  "output_bins": "1..8",
+  "notes": [
+    "This file reserves the quantization boundary only.",
+    "ToneSight NS8 v1 consumes already-discretized VAD bins.",
+    "No SER implementation is included in this repository."
+  ]
+}

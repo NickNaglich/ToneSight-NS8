@@ -1,0 +1,21 @@
+# Python cache/artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local pytest temp/cache directories seen in this repo
+pytest-cache-files-*/
+
+# Local run artifacts
+runs/
+.agent/tmp_runs*/
+.agent/tmp_runs_*/
+.agent/tmp_compare*/
+.agent/tmp_compare_*/
+.agent/tmp_compare_cli_*/
+.agent/tmp_defaults*/
+.agent/tmp_defaults_*/
+.agent/tmp_*/
+
+# Local temp scratch
+.tmp/

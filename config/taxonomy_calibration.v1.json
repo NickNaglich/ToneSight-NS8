@@ -1,0 +1,5 @@
+{
+  "version": "1.0",
+  "description": "Optional deterministic per-label VAD overrides for eval calibration.",
+  "label_overrides": {}
+}

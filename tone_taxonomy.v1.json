@@ -1,0 +1,26 @@
+{
+  "spec_version": "1.0",
+  "N": 8,
+  "vad_scale": "1..8",
+  "definitions": {
+    "V": "valence (1=negative, 8=positive)",
+    "A": "arousal (1=low energy, 8=high energy)",
+    "D": "dominance (1=yielding, 8=commanding)"
+  },
+  "tones": {
+    "empathetic": { "V": 7, "A": 3, "D": 3 },
+    "encouraging": { "V": 8, "A": 4, "D": 4 },
+    "friendly": { "V": 7, "A": 4, "D": 4 },
+    "calm": { "V": 6, "A": 2, "D": 4 },
+    "neutral": { "V": 5, "A": 3, "D": 4 },
+    "informative": { "V": 5, "A": 3, "D": 5 },
+    "professional": { "V": 5, "A": 3, "D": 6 },
+    "cautious": { "V": 4, "A": 3, "D": 4 },
+    "firm": { "V": 4, "A": 5, "D": 7 },
+    "authoritative": { "V": 4, "A": 4, "D": 8 },
+    "urgent": { "V": 3, "A": 7, "D": 7 },
+    "apologetic": { "V": 5, "A": 2, "D": 2 },
+    "concerned": { "V": 3, "A": 4, "D": 3 },
+    "reassuring": { "V": 7, "A": 2, "D": 3 }
+  }
+}

@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tonesight-ns8"
+version = "0.1.0"
+description = "Deterministic NS8 tone-structure library with vector-verified behavior."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "ToneSight NS8 Contributors" }]
+dependencies = []
+
+[project.optional-dependencies]
+observability = [
+  "fastapi>=0.111",
+  "uvicorn>=0.30",
+  "prometheus-client>=0.20",
+  "mlflow>=2.15",
+]
+
+[project.scripts]
+tonesight-ns8 = "tonesight_ns8.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

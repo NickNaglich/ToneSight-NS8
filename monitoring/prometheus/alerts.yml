@@ -1,0 +1,29 @@
+groups:
+  - name: tonesight-observability
+    rules:
+      - alert: ToneSightApiDown
+        expr: up{job="tonesight-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "ToneSight API target is down"
+          description: "Prometheus cannot scrape tonesight-api /metrics endpoint."
+
+      - alert: ToneSightLowPassRate
+        expr: tone_pass_rate < 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ToneSight pass rate is low"
+          description: "Most recent eval pass rate is below 0.50 for at least 5 minutes."
+
+      - alert: ToneSightHighP95L1
+        expr: tone_p95_l1 > 8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ToneSight p95 L1 is high"
+          description: "Most recent eval p95 L1 exceeds 8 for at least 5 minutes."
