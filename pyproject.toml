@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tonesight-ns8"
-version = "1.1.0"
+version = "1.3.0"
 description = "Deterministic NS8 tone-structure library with vector-verified behavior."
 readme = "README.md"
 requires-python = ">=3.11"

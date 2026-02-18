@@ -23,9 +23,11 @@ def test_run_eval_writes_artifacts():
 
     out_jsonl = run_dir / "out.jsonl"
     summary_json = run_dir / "eval_summary.json"
+    report_html = run_dir / "report.html"
     receipt_json = run_dir / "receipt.json"
     assert out_jsonl.exists()
     assert summary_json.exists()
+    assert report_html.exists()
     assert receipt_json.exists()
 
     lines = out_jsonl.read_text(encoding="utf-8").strip().splitlines()
@@ -43,7 +45,20 @@ def test_run_eval_writes_artifacts():
     receipt = json.loads(receipt_json.read_text(encoding="utf-8"))
     assert receipt["run_id"] == run_id
     assert receipt["row_count"] == expected_rows
-    assert set(receipt["artifacts"].keys()) == {"out_jsonl", "eval_summary_json", "receipt_json"}
+    assert set(receipt["artifacts"].keys()) == {"out_jsonl", "eval_summary_json", "report_html", "receipt_json"}
+
+    html_text = report_html.read_text(encoding="utf-8")
+    assert "ToneSight Eval Report" in html_text
+    assert run_id in html_text
+    assert "rows_with_label" in html_text
+    assert "rows_with_gold_vad" in html_text
+    assert "distinct_labels" in html_text
+    assert "p50_l1" in html_text
+    assert "p99_l1" in html_text
+    assert "l1_bucket_7_plus" in html_text
+    assert "mae_v_gold" in html_text
+    assert "mae_a_gold" in html_text
+    assert "mae_d_gold" in html_text
 
 
 def test_run_eval_with_calibration_override():

@@ -24,6 +24,11 @@ Eval behavior:
 - else if `gold_vad` is present, prediction uses `gold_vad`
 - else prediction falls back to `target_vad`
 
+Conformance interpretation:
+- this eval is a deterministic conformance check against target bins
+- intentional negative-anchor rows are included to test failure surfacing and regression behavior
+- `pass_rate` should not be interpreted as classifier accuracy
+
 ## Run Commands
 
 CLI eval:
@@ -61,6 +66,7 @@ Content-Type: application/json
 Always written:
 - `runs/<run_id>/out.jsonl`
 - `runs/<run_id>/eval_summary.json`
+- `runs/<run_id>/report.html`
 - `runs/<run_id>/receipt.json`
 
 Optional (when `capture_gpu=true`):

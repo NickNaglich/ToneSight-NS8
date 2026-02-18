@@ -37,7 +37,7 @@ NS8 deterministic mapping (docs/SPEC_NS8.md, ns8_ref.py)
         |
         +--> receipt APIs / CLI encode-decode
         |
-        +--> eval artifacts (out.jsonl, eval_summary.json, receipt.json)
+        +--> eval artifacts (out.jsonl, eval_summary.json, report.html, receipt.json)
                 |
                 +--> compare/eval-compare deterministic regression deltas
                         |
@@ -54,6 +54,7 @@ Expected:
 - prints JSON with `run_id` and `out_dir`
 - writes `runs/<run_id>/out.jsonl`
 - writes `runs/<run_id>/eval_summary.json`
+- writes `runs/<run_id>/report.html`
 - writes `runs/<run_id>/receipt.json`
 
 ## Hello Tone Example
@@ -226,6 +227,10 @@ Current mapping-aware surfaces:
 - Python wrappers accept optional `mapping_id` (`tonesight_from_vad`, `tonesight_from_label`, segment helpers)
 - CLI supports `--mapping` for `encode` and `decode`
 
+Developer references:
+- example adapter: `tonesight_ns8.mapping_examples.TLFConstantMappingAdapter`
+- reusable adapter conformance helper: `tests/mapping_conformance.py`
+
 ### Current runnable interface
 
 - `ns8_A(family, r, c, k, n=8) -> int`
@@ -321,6 +326,7 @@ python -m tonesight_ns8.cli compare runs/<runA> runs/<runB> --top-n 10 --write
 Eval artifacts:
 - `runs/<run_id>/out.jsonl`
 - `runs/<run_id>/eval_summary.json`
+- `runs/<run_id>/report.html`
 - `runs/<run_id>/receipt.json`
 
 Compare artifact (optional with `--write`):
@@ -343,6 +349,7 @@ This uses defaults from `config/defaults.json`. You can still override with expl
 Expected artifacts:
 - `runs/<run_id>/out.jsonl`
 - `runs/<run_id>/eval_summary.json`
+- `runs/<run_id>/report.html`
 - `runs/<run_id>/receipt.json`
 
 Example `eval_summary.json` (shape only):
@@ -382,6 +389,7 @@ Example `receipt.json` (shape only):
   "artifacts": {
     "out_jsonl": "runs/<run_id>/out.jsonl",
     "eval_summary_json": "runs/<run_id>/eval_summary.json",
+    "report_html": "runs/<run_id>/report.html",
     "receipt_json": "runs/<run_id>/receipt.json"
   },
   "created_at_utc": "2026-02-14T00:00:00+00:00"
@@ -389,6 +397,11 @@ Example `receipt.json` (shape only):
 ```
 
 Note: `run_id` and `created_at_utc` are metadata and vary per run; scoring metrics and artifact schema remain deterministic for fixed inputs/config.
+
+Conformance note:
+- `pass_rate` in this project is a conformance metric against target VAD bins.
+- The goldset intentionally includes negative anchors to validate failure surfacing and regression sensitivity.
+- This metric is not a claim of classifier accuracy.
 
 ## Path B Monitoring (Opt-in)
 

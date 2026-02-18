@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from uuid import uuid4
 
 import pytest
@@ -14,26 +13,7 @@ from tonesight_ns8 import (
     resolve_to_seed,
     tonesight_from_vad,
 )
-
-
-@dataclass(frozen=True)
-class DummyAdapter:
-    name: str = "dummy"
-    spec_version: str = "1.0"
-    n: int = 8
-    families: tuple[str, ...] = ("TLF",)
-
-    def validate_inputs(self, family: str, r: int, c: int, k: int, N: int = 8) -> None:
-        if family not in self.families:
-            raise ValueError("unsupported family")
-
-    def resolve_to_seed(self, family: str, r: int, c: int, k: int, N: int = 8) -> tuple[str, int, int, int]:
-        self.validate_inputs(family, r, c, k, N)
-        return (family, r, c, k)
-
-    def compute_A(self, family: str, r: int, c: int, k: int, N: int = 8) -> int:
-        self.validate_inputs(family, r, c, k, N)
-        return 8
+from tonesight_ns8.mapping_examples import TLFConstantMappingAdapter
 
 
 def test_default_mapping_is_ns8_and_parity_holds():
@@ -49,16 +29,16 @@ def test_default_mapping_is_ns8_and_parity_holds():
 
 
 def test_register_custom_mapping_and_use_in_receipt():
-    mapping_id = f"dummy_{uuid4().hex}"
-    register_mapping(mapping_id, DummyAdapter())
+    mapping_id = f"tlf_constant_{uuid4().hex}"
+    register_mapping(mapping_id, TLFConstantMappingAdapter())
 
     receipt = tonesight_from_vad(7, 3, 3, "TLF", 6, 4, 3, mapping_id=mapping_id)
     assert receipt["route"] == {"seed_family": "TLF", "r_prime": 6, "c_prime": 4}
-    assert receipt["output"]["A"] == 8
+    assert receipt["output"]["A"] == 1
 
 
 def test_register_rejects_duplicate_mapping_id():
     mapping_id = f"dup_{uuid4().hex}"
-    register_mapping(mapping_id, DummyAdapter())
+    register_mapping(mapping_id, TLFConstantMappingAdapter())
     with pytest.raises(ValueError):
-        register_mapping(mapping_id, DummyAdapter())
+        register_mapping(mapping_id, TLFConstantMappingAdapter())

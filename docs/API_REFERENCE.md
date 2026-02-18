@@ -150,6 +150,10 @@ Adapter contract:
 - `resolve_to_seed(family, r, c, k, N=8) -> (seed_family, r_prime, c_prime, k)`
 - `compute_A(family, r, c, k, N=8) -> int`
 
+Example adapter:
+- `tonesight_ns8.mapping_examples.TLFConstantMappingAdapter`
+- minimal plugin reference for registry integration and conformance testing
+
 Current wrappers support optional `mapping_id`:
 - `tonesight_from_label(..., mapping_id="ns8")`
 - `tonesight_from_vad(..., mapping_id="ns8")`
@@ -159,6 +163,9 @@ Current wrappers support optional `mapping_id`:
 CLI support:
 - `encode ... --mapping ns8`
 - `decode ... --mapping ns8`
+
+Conformance harness:
+- `tests/mapping_conformance.py` provides reusable assertions for adapter determinism, route shape, anchor range, and invalid-input rejection.
 
 ## Analytics Functions
 
@@ -220,6 +227,7 @@ These defaults are sourced from `config/defaults.json`.
 Runs deterministic evaluation over JSONL anchors and writes artifacts:
 - `runs/<run_id>/out.jsonl`
 - `runs/<run_id>/eval_summary.json`
+- `runs/<run_id>/report.html`
 - `runs/<run_id>/receipt.json`
 
 Returns:
@@ -229,11 +237,13 @@ Returns:
 - optional MLflow logging (`mlflow_tracking_uri`)
 
 `eval_summary.json` key fields:
+- `dataset_hash`
 - `count_rows`, `threshold_l1`
 - `pass_count`, `fail_count`, `pass_rate`, `fail_rate`
 - `avg_l1`, `median_l1`, `p95_l1`, `max_l1`
 - `count_with_gold_vad`, `count_without_gold_vad`
 - `avg_accuracy_l1` (or `null` when no gold labels are present)
+- `eval_duration_seconds`
 
 ### `run_eval_compare(goldset_path: str, *, out_root: str = "runs", taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", threshold_l1: int = 3, calibration_path: str | None = None, capture_gpu: bool = False, mlflow_tracking_uri: str | None = None, top_n: int = 10) -> dict`
 
