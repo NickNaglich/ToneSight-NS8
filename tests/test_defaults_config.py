@@ -4,9 +4,9 @@ import inspect
 import os
 import re
 from pathlib import Path
+import shutil
 import subprocess
 import sys
-from uuid import uuid4
 
 import pytest
 import tonesight_ns8.cli as cli_module
@@ -99,7 +99,9 @@ def test_override_defaults_propagates_to_cli_and_eval(monkeypatch):
 
 
 def _local_test_dir(prefix: str) -> Path:
-    root = Path(".tmp") / f"{prefix}_{uuid4().hex}"
+    root = Path(".tmp") / "test_tmp" / prefix
+    if root.exists():
+        shutil.rmtree(root, ignore_errors=True)
     root.mkdir(parents=True, exist_ok=True)
     return root
 

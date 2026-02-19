@@ -1,4 +1,5 @@
 import json
+import shutil
 from pathlib import Path
 from uuid import uuid4
 
@@ -30,8 +31,18 @@ def test_cli_decode_with_mapping_flag(capsys):
     assert payload["output"]["A"] == 2
 
 
+def _temp_dir(prefix: str) -> Path:
+    base = Path(".agent") / "test_tmp"
+    base.mkdir(parents=True, exist_ok=True)
+    for stale in base.glob(f"{prefix}_*"):
+        shutil.rmtree(stale, ignore_errors=True)
+    root = base / f"{prefix}_{uuid4().hex}"
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
 def test_cli_eval(capsys):
-    out_root = Path(".agent") / f"tmp_runs_cli_{uuid4().hex}"
+    out_root = _temp_dir("tmp_runs_cli")
     rc = main(
         [
             "eval",
@@ -52,10 +63,14 @@ def test_cli_eval(capsys):
     assert (run_dir / "out.jsonl").exists()
     assert (run_dir / "eval_summary.json").exists()
     assert (run_dir / "receipt.json").exists()
+    assert payload["trace"]["spec_version"] == "1.0"
+    assert payload["trace"]["dataset_hash"]
+    assert payload["trace"]["taxonomy_hash"]
+    assert payload["trace"]["defaults_hash"]
 
 
 def test_cli_eval_compare(capsys):
-    out_root = Path(".agent") / f"tmp_runs_eval_compare_{uuid4().hex}"
+    out_root = _temp_dir("tmp_runs_eval_compare")
     rc1 = main(
         [
             "eval-compare",
@@ -90,6 +105,10 @@ def test_cli_eval_compare(capsys):
     assert rc2 == 0
     assert payload2["previous_run"] is not None
     assert payload2["compare"] is not None
+    assert payload2["trace"]["spec_version"] == "1.0"
+    assert payload2["trace"]["dataset_hash"]
+    assert payload2["trace"]["taxonomy_hash"]
+    assert payload2["trace"]["defaults_hash"]
 
 
 def test_cli_encode_label_requires_taxonomy_returns_json_error(capsys):

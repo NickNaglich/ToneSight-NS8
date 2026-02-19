@@ -235,6 +235,12 @@ Returns:
 - optional calibration override support (`calibration_path`)
 - optional GPU snapshots (`capture_gpu=True`)
 - optional MLflow logging (`mlflow_tracking_uri`)
+- receipt includes reproducibility hashes: `taxonomy_hash`, `defaults_hash`
+
+`out.jsonl` per-row explainability fields:
+- `delta_v`, `delta_a`, `delta_d` (absolute per-dimension target deltas)
+- `compliance_l1` (`delta_v + delta_a + delta_d`)
+- `threshold_margin` (`threshold_l1 - compliance_l1`)
 
 `eval_summary.json` key fields:
 - `dataset_hash`
@@ -249,12 +255,21 @@ Returns:
 
 These defaults are sourced from `config/defaults.json`.
 
-Runs eval and then compares the new run against the most recent prior run with the same dataset hash.
+Runs eval and then compares the new run against the most recent prior run with matching:
+- `dataset_hash`
+- `spec_version`
 
 Returns:
 - `eval`: eval output payload
 - `previous_run`: previous run path (or `null` when none exists)
+- `incompatible_previous_runs`: skipped prior runs with explicit mismatch reasons
+- `compare_skipped_reason`: `null` when compare executed; otherwise reason such as `no_prior_runs` or `no_compatible_prior_run`
 - `compare`: compare output payload (or `null` on first run)
+
+CLI trace metadata (`python -m tonesight_ns8.cli eval` and `eval-compare`):
+- top-level `trace` object is included for operational reproducibility
+- keys: `spec_version`, `dataset_hash`, `taxonomy_hash`, `defaults_hash`
+- output remains JSON and backward-compatible (existing fields retained)
 
 ### `run_compare(run_a: str, run_b: str, *, top_n: int = 10, write_artifact: bool = False) -> dict`
 
@@ -274,9 +289,11 @@ Computed outputs:
 - row coverage (`count_common_ids`, `count_only_in_a`, `count_only_in_b`)
 - regression coverage (`regression_count_total`, requested/returned `top_n`, truncation flag)
 - top regressions by L1 increase (stable sort by delta desc, then `id`)
+- top regression entries include `delta_v`, `delta_a`, `delta_d` when available
 
 Optional artifact write (`write_artifact=True`):
 - `runs/<runB>/comparisons/<runA>/compare_summary.json`
+- `runs/<runB>/comparisons/<runA>/compare_report.html`
 
 ### `tonesight_from_label(label: str, family: str, r: int, c: int, k: int, taxonomy_path: str) -> dict`
 

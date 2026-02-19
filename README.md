@@ -331,6 +331,7 @@ Eval artifacts:
 
 Compare artifact (optional with `--write`):
 - `runs/<runB>/comparisons/<runA>/compare_summary.json`
+- `runs/<runB>/comparisons/<runA>/compare_report.html`
 
 Optional eval artifacts:
 - `runs/<run_id>/gpu_before.json`
@@ -351,6 +352,14 @@ Expected artifacts:
 - `runs/<run_id>/eval_summary.json`
 - `runs/<run_id>/report.html`
 - `runs/<run_id>/receipt.json`
+
+Presentation mode for screenshot-ready report view:
+
+```text
+runs/<run_id>/report.html?mode=present
+```
+
+The `mode=present` preset applies deterministic camera/control defaults for stable demos.
 
 Example `eval_summary.json` (shape only):
 
@@ -381,6 +390,8 @@ Example `receipt.json` (shape only):
   "run_id": "run_20260214T000000Z_abc123def456",
   "dataset_path": "data/goldset.jsonl",
   "dataset_hash": "abc123def456",
+  "taxonomy_hash": "7e2f9b31c1d4",
+  "defaults_hash": "9af18c0042de",
   "row_count": 20,
   "config": {
     "threshold_l1": 3,
@@ -402,6 +413,21 @@ Conformance note:
 - `pass_rate` in this project is a conformance metric against target VAD bins.
 - The goldset intentionally includes negative anchors to validate failure surfacing and regression sensitivity.
 - This metric is not a claim of classifier accuracy.
+
+## Goldset Validation
+
+Validate dataset integrity before eval:
+
+```bash
+python tools/validate_goldset.py data/goldset.jsonl
+```
+
+Automated validation workflow (tests + goldset validator):
+
+```bash
+python -m pytest -q
+python tools/validate_goldset.py data/goldset.jsonl
+```
 
 ## Path B Monitoring (Opt-in)
 

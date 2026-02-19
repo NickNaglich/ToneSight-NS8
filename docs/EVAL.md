@@ -19,6 +19,11 @@ Example:
 {"id":"a_001","label":"empathetic","target_vad":{"V":7,"A":3,"D":3},"gold_vad":{"V":7,"A":3,"D":3}}
 ```
 
+Current reference distribution:
+- row count: `250`
+- labels: `14`
+- key strata tags: `boundary` (80), `hard_negative` (80), `mismatch` (110), `confusion_pair` (130), `structured_strata` (130)
+
 Eval behavior:
 - if `label` is present, prediction uses taxonomy label mapping (or calibration override when configured)
 - else if `gold_vad` is present, prediction uses `gold_vad`
@@ -84,6 +89,15 @@ Optional (when `capture_gpu=true`):
 - `count_with_gold_vad`, `count_without_gold_vad`
 - `avg_accuracy_l1` (`null` when no `gold_vad` rows are present)
 
+## `out.jsonl` Per-Row Explainability Fields
+
+Each scored row includes deterministic explainability values:
+- `delta_v`: absolute `|pred_vad.V - target_vad.V|`
+- `delta_a`: absolute `|pred_vad.A - target_vad.A|`
+- `delta_d`: absolute `|pred_vad.D - target_vad.D|`
+- `compliance_l1`: equals `delta_v + delta_a + delta_d`
+- `threshold_margin`: `threshold_l1 - compliance_l1` (negative means threshold violation)
+
 ## Compare Output
 
 `compare` and `eval-compare` produce:
@@ -97,12 +111,23 @@ Optional (when `capture_gpu=true`):
   - `top_n_returned`
   - `truncated`
 - `top_regressions`: deterministic sort by `delta_l1` descending, then `id`
+  - includes per-dimension changes `delta_v`, `delta_a`, `delta_d` when available
+- eval-compare compatibility gate:
+  - compares only against prior runs matching both `dataset_hash` and `spec_version`
+  - exposes `incompatible_previous_runs` and `compare_skipped_reason` in payload
 
 Optional compare artifact (`--write`):
 - `runs/<runB>/comparisons/<runA>/compare_summary.json`
+- `runs/<runB>/comparisons/<runA>/compare_report.html`
+
+Report presentation preset:
+- open `runs/<run_id>/report.html?mode=present` for deterministic camera/control defaults suited for screenshots/demos
 
 ## Operational Notes
 
 - Determinism: for fixed inputs/config, scoring outputs and artifact schema are deterministic.
 - Run metadata (`run_id`, timestamps, artifact paths) is expected to vary per run.
 - GPU snapshots are best-effort and should not fail eval on non-GPU systems.
+
+Validation command:
+- `python tools/validate_goldset.py data/goldset.jsonl`

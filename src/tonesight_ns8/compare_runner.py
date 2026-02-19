@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import json
 from pathlib import Path
 from typing import Any
@@ -65,6 +66,96 @@ def _trend(delta: float | None, *, higher_is_better: bool) -> str:
     return "improved" if delta < 0 else "regressed"
 
 
+def _component_delta(row: dict[str, Any], key: str) -> float | None:
+    value = row.get(key)
+    if value is None:
+        return None
+    return float(value)
+
+
+def _render_compare_report_html(compare_summary: dict[str, Any]) -> str:
+    run_a = compare_summary["run_a"]
+    run_b = compare_summary["run_b"]
+    metrics = compare_summary["metrics"]
+    coverage = compare_summary["regression_coverage"]
+    regressions = compare_summary["top_regressions"]
+    per_label = compare_summary["per_label_delta"]
+    title = f"ToneSight Compare Report: {run_a.get('run_id')} -> {run_b.get('run_id')}"
+    rows_html = "".join(
+        (
+            "<tr>"
+            f"<td>{html.escape(str(r.get('id')))}</td>"
+            f"<td>{html.escape(str(r.get('label')))}</td>"
+            f"<td>{r.get('l1_a')}</td>"
+            f"<td>{r.get('l1_b')}</td>"
+            f"<td>{r.get('delta_l1')}</td>"
+            f"<td>{r.get('delta_v')}</td>"
+            f"<td>{r.get('delta_a')}</td>"
+            f"<td>{r.get('delta_d')}</td>"
+            "</tr>"
+        )
+        for r in regressions
+    )
+    labels_html = "".join(
+        (
+            "<tr>"
+            f"<td>{html.escape(label)}</td>"
+            f"<td>{payload.get('delta_avg_l1')}</td>"
+            f"<td>{payload.get('delta_count')}</td>"
+            "</tr>"
+        )
+        for label, payload in sorted(per_label.items())
+    )
+    if not rows_html:
+        rows_html = '<tr><td colspan="8">No regressions in top_n window.</td></tr>'
+    if not labels_html:
+        labels_html = '<tr><td colspan="3">No shared labels between runs.</td></tr>'
+    return (
+        "<!doctype html>\n"
+        '<html lang="en">\n'
+        "<head>\n"
+        '<meta charset="utf-8" />\n'
+        f"<title>{html.escape(title)}</title>\n"
+        "<style>"
+        "body{font-family:Segoe UI,Arial,sans-serif;background:#0f172a;color:#e5e7eb;padding:20px;}"
+        ".panel{background:#111827;border:1px solid #1f2937;border-radius:10px;padding:14px;margin-bottom:14px;}"
+        "table{width:100%;border-collapse:collapse}th,td{border:1px solid #1f2937;padding:6px;text-align:left;font-size:12px}"
+        "th{background:#0b1220}.kpi{display:inline-block;margin-right:16px}"
+        "</style>\n"
+        "</head>\n"
+        "<body>\n"
+        f"<h1>{html.escape(title)}</h1>\n"
+        '<div class="panel">\n'
+        f"<div><strong>run_a</strong>: {html.escape(str(run_a.get('path')))}</div>\n"
+        f"<div><strong>run_b</strong>: {html.escape(str(run_b.get('path')))}</div>\n"
+        "</div>\n"
+        '<div class="panel">\n'
+        '<h2>Delta KPIs</h2>\n'
+        f'<div class="kpi">delta_pass_rate: {metrics.get("delta_pass_rate")}</div>\n'
+        f'<div class="kpi">delta_avg_l1: {metrics.get("delta_avg_l1")}</div>\n'
+        f'<div class="kpi">delta_p95_l1: {metrics.get("delta_p95_l1")}</div>\n'
+        "</div>\n"
+        '<div class="panel">\n'
+        "<h2>Regression Coverage</h2>\n"
+        f"<div>total={coverage.get('regression_count_total')} requested={coverage.get('top_n_requested')} returned={coverage.get('top_n_returned')} truncated={coverage.get('truncated')}</div>\n"
+        "</div>\n"
+        '<div class="panel">\n'
+        "<h2>Top Regressions</h2>\n"
+        "<table><thead><tr><th>id</th><th>label</th><th>l1_a</th><th>l1_b</th><th>delta_l1</th><th>delta_v</th><th>delta_a</th><th>delta_d</th></tr></thead><tbody>\n"
+        f"{rows_html}\n"
+        "</tbody></table>\n"
+        "</div>\n"
+        '<div class="panel">\n'
+        "<h2>Per-Label Delta</h2>\n"
+        "<table><thead><tr><th>label</th><th>delta_avg_l1</th><th>delta_count</th></tr></thead><tbody>\n"
+        f"{labels_html}\n"
+        "</tbody></table>\n"
+        "</div>\n"
+        "</body>\n"
+        "</html>\n"
+    )
+
+
 def run_compare(
     run_a: str,
     run_b: str,
@@ -101,6 +192,9 @@ def run_compare(
                 "l1_a": float(a_row.get("compliance_l1", 0.0)),
                 "l1_b": float(b_row.get("compliance_l1", 0.0)),
                 "delta_l1": delta,
+                "delta_v": _safe_delta(_component_delta(a_row, "delta_v"), _component_delta(b_row, "delta_v")),
+                "delta_a": _safe_delta(_component_delta(a_row, "delta_a"), _component_delta(b_row, "delta_a")),
+                "delta_d": _safe_delta(_component_delta(a_row, "delta_d"), _component_delta(b_row, "delta_d")),
             }
         )
 
@@ -160,14 +254,19 @@ def run_compare(
     }
 
     compare_path: str | None = None
+    compare_report_path: str | None = None
     if write_artifact:
         parent = run_b_path / "comparisons" / run_a_path.name
         parent.mkdir(parents=True, exist_ok=True)
         target = parent / "compare_summary.json"
         target.write_text(json.dumps(compare_summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         compare_path = str(target)
+        report_target = parent / "compare_report.html"
+        report_target.write_text(_render_compare_report_html(compare_summary), encoding="utf-8")
+        compare_report_path = str(report_target)
 
     return {
         "compare_summary": compare_summary,
         "compare_summary_path": compare_path,
+        "compare_report_path": compare_report_path,
     }

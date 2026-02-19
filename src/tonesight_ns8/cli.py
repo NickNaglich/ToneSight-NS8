@@ -55,6 +55,16 @@ def _to_jsonable(value: Any) -> Any:
     return value
 
 
+def _trace_from_eval_result(result: dict[str, Any]) -> dict[str, Any]:
+    receipt = result.get("receipt", {})
+    return {
+        "spec_version": receipt.get("spec_version"),
+        "dataset_hash": receipt.get("dataset_hash"),
+        "taxonomy_hash": receipt.get("taxonomy_hash"),
+        "defaults_hash": receipt.get("defaults_hash"),
+    }
+
+
 def _cmd_encode(args: argparse.Namespace) -> dict:
     _ = get_mapping(args.mapping)
     if args.label:
@@ -108,7 +118,7 @@ def _cmd_summarize(args: argparse.Namespace) -> dict:
 
 
 def _cmd_eval(args: argparse.Namespace) -> dict:
-    return run_eval(
+    result = run_eval(
         goldset_path=args.goldset,
         out_root=args.out_root,
         taxonomy_path=args.taxonomy,
@@ -117,6 +127,8 @@ def _cmd_eval(args: argparse.Namespace) -> dict:
         capture_gpu=args.capture_gpu,
         mlflow_tracking_uri=args.mlflow_tracking_uri,
     )
+    result["trace"] = _trace_from_eval_result(result)
+    return result
 
 
 def _cmd_compare(args: argparse.Namespace) -> dict:
@@ -129,7 +141,7 @@ def _cmd_compare(args: argparse.Namespace) -> dict:
 
 
 def _cmd_eval_compare(args: argparse.Namespace) -> dict:
-    return run_eval_compare(
+    result = run_eval_compare(
         goldset_path=args.goldset,
         out_root=args.out_root,
         taxonomy_path=args.taxonomy,
@@ -139,6 +151,9 @@ def _cmd_eval_compare(args: argparse.Namespace) -> dict:
         mlflow_tracking_uri=args.mlflow_tracking_uri,
         top_n=args.top_n,
     )
+    eval_result = result.get("eval", {})
+    result["trace"] = _trace_from_eval_result(eval_result) if isinstance(eval_result, dict) else {}
+    return result
 
 
 def build_parser() -> argparse.ArgumentParser:

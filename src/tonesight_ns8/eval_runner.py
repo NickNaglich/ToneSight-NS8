@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .defaults import EVAL_DEFAULTS
+from .defaults import EVAL_DEFAULTS, _resolve_defaults_path
 from .taxonomy import get_vad, load_taxonomy
 
 
@@ -70,6 +70,11 @@ def _percentile(values: list[float], p: float) -> float:
 
 
 def _dataset_hash(path: Path) -> str:
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    return digest[:12]
+
+
+def _file_hash(path: Path) -> str:
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
     return digest[:12]
 
@@ -199,6 +204,7 @@ def _render_eval_report_html(
         f"const ROWS = {rows_json};\n"
         "const THRESHOLD = " + str(int(threshold_l1)) + ";\n"
         "const TOP_N_FAIL = " + str(max(0, int(top_n_failures))) + ";\n"
+        "const PRESENTATION_PRESET = Object.freeze({ colorBy: 'pass', maxRows: null, rotX: 18, rotY: -32, showTrajectory: true });\n"
         "const labelOr = (v, d) => (v === null || v === undefined || v === '' ? d : String(v));\n"
         "const pred = (r) => r.pred_vad || {V:0,A:0,D:0};\n"
         "const kpisEl = document.getElementById('kpis');\n"
@@ -240,6 +246,7 @@ def _render_eval_report_html(
         "const canvas=document.getElementById('vad3d'); const ctx=canvas.getContext('2d');\n"
         "const maxRowsInput=document.getElementById('maxRows'); const pointStats=document.getElementById('pointStats'); maxRowsInput.max=String(Math.max(1,ROWS.length)); maxRowsInput.value=String(Math.max(1,ROWS.length)); document.getElementById('maxRowsVal').textContent=maxRowsInput.value;\n"
         "const colorBy=document.getElementById('colorBy'); const rotX=document.getElementById('rotX'); const rotY=document.getElementById('rotY'); const showTrajectory=document.getElementById('showTrajectory'); const hoverEl=document.getElementById('hover');\n"
+        "const params = new URLSearchParams(window.location.search); if(params.get('mode')==='present'){ colorBy.value=PRESENTATION_PRESET.colorBy; rotX.value=String(PRESENTATION_PRESET.rotX); rotY.value=String(PRESENTATION_PRESET.rotY); showTrajectory.checked=Boolean(PRESENTATION_PRESET.showTrajectory); if(PRESENTATION_PRESET.maxRows!==null){ maxRowsInput.value=String(PRESENTATION_PRESET.maxRows); } }\n"
         "const hashColor=(s)=>{ let h=0; for(let i=0;i<s.length;i++){ h=((h<<5)-h)+s.charCodeAt(i); h|=0; } const r=(h&255), g=((h>>8)&255), b=((h>>16)&255); return `rgb(${(r+256)%256},${(g+256)%256},${(b+256)%256})`; };\n"
         "const proj=(v,a,d,rx,ry)=>{ let x=(v-4.5), y=(a-4.5), z=(d-4.5); const cx=Math.cos(rx), sx=Math.sin(rx), cy=Math.cos(ry), sy=Math.sin(ry); const y1=y*cx-z*sx; const z1=y*sx+z*cx; const x2=x*cy+z1*sy; const z2=-x*sy+z1*cy; const s=28; return { x: canvas.width/2 + x2*s, y: canvas.height/2 - y1*s, z: z2 }; };\n"
         "const draw3d=()=>{ const limit=Number(maxRowsInput.value); document.getElementById('maxRowsVal').textContent=String(limit); const rows=ROWS.slice(0,limit); const byCoord=new Map(); rows.forEach(r=>{ const p=pred(r); const ck=`${p.V}|${p.A}|${p.D}`; byCoord.set(ck,(byCoord.get(ck)||0)+1); }); const seenCoord=new Map(); pointStats.textContent=`points=${rows.length}, occupied_bins=${byCoord.size}`; ctx.clearRect(0,0,canvas.width,canvas.height); ctx.strokeStyle='#1f2937'; ctx.strokeRect(0,0,canvas.width,canvas.height); const rx=Number(rotX.value)*Math.PI/180, ry=Number(rotY.value)*Math.PI/180; const pts=rows.map((r,i)=>{ const p=pred(r); const ck=`${p.V}|${p.A}|${p.D}`; const dupTotal=byCoord.get(ck)||1; const dupIndex=seenCoord.get(ck)||0; seenCoord.set(ck,dupIndex+1); let jx=0, jy=0; if(dupTotal>1){ const angle=(dupIndex/dupTotal)*Math.PI*2; const rad=0.12*Math.sqrt(dupIndex+1); jx=Math.cos(angle)*rad; jy=Math.sin(angle)*rad; } const q=proj(Number(p.V)+jx,Number(p.A)+jy,Number(p.D),rx,ry); let key=''; if(colorBy.value==='label') key=labelOr(r.label,'(none)'); else if(colorBy.value==='source') key=labelOr(r.source,'(none)'); else if(colorBy.value==='agent') key=labelOr(r.agent,'(none)'); else key=r.pass?'pass':'fail'; return {i, r, ...q, dupIndex:dupIndex+1, dupTotal, c: colorBy.value==='pass' ? (r.pass?'#22c55e':'#ef4444') : hashColor(key)}; }).sort((a,b)=>a.z-b.z);\n"
@@ -272,6 +279,8 @@ def run_eval(
     rows = _read_jsonl(gpath)
     taxonomy = load_taxonomy(taxonomy_path)
     calibration = _load_calibration(calibration_path)
+    taxonomy_hash = _file_hash(Path(taxonomy_path))
+    defaults_hash = _file_hash(_resolve_defaults_path())
 
     d_hash = _dataset_hash(gpath)
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
@@ -300,6 +309,10 @@ def run_eval(
             pred_vad = target_vad
 
         c_l1 = _l1(pred_vad, target_vad)
+        delta_v = abs(pred_vad[0] - target_vad[0])
+        delta_a = abs(pred_vad[1] - target_vad[1])
+        delta_d = abs(pred_vad[2] - target_vad[2])
+        threshold_margin = threshold_l1 - c_l1
         passed = c_l1 <= threshold_l1
         pass_count += 1 if passed else 0
         compliance_l1_values.append(float(c_l1))
@@ -323,7 +336,11 @@ def run_eval(
                 "target_vad": {"V": target_vad[0], "A": target_vad[1], "D": target_vad[2]},
                 "pred_vad": {"V": pred_vad[0], "A": pred_vad[1], "D": pred_vad[2]},
                 "gold_vad": row.get("gold_vad"),
+                "delta_v": delta_v,
+                "delta_a": delta_a,
+                "delta_d": delta_d,
                 "compliance_l1": c_l1,
+                "threshold_margin": threshold_margin,
                 "accuracy_l1": a_l1,
                 "pass": passed,
             }
@@ -356,6 +373,8 @@ def run_eval(
         "run_id": run_id,
         "dataset_path": str(gpath),
         "dataset_hash": d_hash,
+        "taxonomy_hash": taxonomy_hash,
+        "defaults_hash": defaults_hash,
         "row_count": total,
         "config": {
             "threshold_l1": threshold_l1,
