@@ -13,6 +13,7 @@ from .defaults import ARTIFACT_DEFAULTS, EVAL_DEFAULTS
 from .mapping import get_mapping, list_mappings
 from . import (
     SegmentRecord,
+    run_gate,
     run_compare,
     run_eval_compare,
     run_eval,
@@ -156,6 +157,17 @@ def _cmd_eval_compare(args: argparse.Namespace) -> dict:
     return result
 
 
+def _cmd_gate(args: argparse.Namespace) -> dict:
+    return run_gate(
+        args.run_a,
+        args.run_b,
+        min_pass_rate_delta=args.min_pass_rate_delta,
+        max_avg_l1_delta=args.max_avg_l1_delta,
+        max_p95_l1_delta=args.max_p95_l1_delta,
+        top_n=args.top_n,
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="tonesight-ns8",
@@ -221,6 +233,15 @@ def build_parser() -> argparse.ArgumentParser:
     eval_compare_cmd.add_argument("--top-n", type=_non_negative_int, default=10)
     eval_compare_cmd.set_defaults(func=_cmd_eval_compare)
 
+    gate_cmd = sub.add_parser("gate", help="Run deterministic CI gate checks over compare deltas.")
+    gate_cmd.add_argument("--run-a", required=True, help="Baseline run directory path.")
+    gate_cmd.add_argument("--run-b", required=True, help="Candidate run directory path.")
+    gate_cmd.add_argument("--min-pass-rate-delta", type=float, default=-0.02)
+    gate_cmd.add_argument("--max-avg-l1-delta", type=float, default=0.2)
+    gate_cmd.add_argument("--max-p95-l1-delta", type=float, default=0.2)
+    gate_cmd.add_argument("--top-n", type=_non_negative_int, default=10)
+    gate_cmd.set_defaults(func=_cmd_gate)
+
     return parser
 
 
@@ -229,12 +250,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         args = parser.parse_args(argv)
         result = args.func(args)
+        exit_code = int(result.pop("exit_code", 0)) if isinstance(result, dict) else 0
     except Exception as exc:
         error = {"error": {"type": exc.__class__.__name__, "message": str(exc)}}
         print(json.dumps(error, indent=2), file=sys.stderr)
         return 2
     print(json.dumps(_to_jsonable(result), indent=2))
-    return 0
+    return exit_code
 
 
 if __name__ == "__main__":

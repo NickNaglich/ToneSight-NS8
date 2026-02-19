@@ -125,6 +125,24 @@ Optional compare artifact (`--write`):
 Report presentation preset:
 - open `runs/<run_id>/report.html?mode=present` for deterministic camera/control defaults suited for screenshots/demos
 
+## Gate Command (CI/CD)
+
+Use deterministic gate checks against run-to-run compare deltas:
+
+```bash
+python -m tonesight_ns8.cli gate --run-a runs/<baseline> --run-b runs/<candidate>
+```
+
+Threshold flags:
+- `--min-pass-rate-delta` (default `-0.02`)
+- `--max-avg-l1-delta` (default `0.2`)
+- `--max-p95-l1-delta` (default `0.2`)
+
+Exit codes:
+- `0`: gate passed
+- `2`: regression threshold violated
+- `3`: incompatible runs (`dataset_hash`/`spec_version` mismatch)
+
 ## Operational Notes
 
 - Determinism: for fixed inputs/config, scoring outputs and artifact schema are deterministic.

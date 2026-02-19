@@ -29,6 +29,7 @@ Stable public imports are the names exported by `tonesight_ns8.__all__`:
 - `run_eval`
 - `run_compare`
 - `run_eval_compare`
+- `run_gate`
 - `register_mapping`
 - `get_mapping`
 - `list_mappings`
@@ -294,6 +295,24 @@ Computed outputs:
 Optional artifact write (`write_artifact=True`):
 - `runs/<runB>/comparisons/<runA>/compare_summary.json`
 - `runs/<runB>/comparisons/<runA>/compare_report.html`
+
+### `run_gate(run_a: str, run_b: str, *, min_pass_rate_delta: float = -0.02, max_avg_l1_delta: float = 0.2, max_p95_l1_delta: float = 0.2, top_n: int = 10) -> dict`
+
+Runs deterministic CI gate checks over compare deltas.
+
+Compatibility checks:
+- `dataset_hash` must match across run receipts
+- `spec_version` must match across run receipts
+
+Decision semantics:
+- `decision = "passed"` -> `exit_code = 0`
+- `decision = "regressed"` -> `exit_code = 2`
+- `decision = "incompatible"` -> `exit_code = 3`
+
+Threshold checks:
+- fail if `delta_pass_rate < min_pass_rate_delta`
+- fail if `delta_avg_l1 > max_avg_l1_delta`
+- fail if `delta_p95_l1 > max_p95_l1_delta`
 
 ### `tonesight_from_label(label: str, family: str, r: int, c: int, k: int, taxonomy_path: str) -> dict`
 

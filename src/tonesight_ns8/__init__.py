@@ -10,6 +10,7 @@ from .analytics import summarize_session, summarize_speaker
 from .compare_runner import run_compare
 from .eval_compare_runner import run_eval_compare
 from .eval_runner import run_eval
+from .gate_runner import run_gate
 from .mapping import (
     get_default_mapping,
     get_default_mapping_id,
@@ -38,6 +39,7 @@ __all__ = [
     "run_eval",
     "run_compare",
     "run_eval_compare",
+    "run_gate",
     "register_mapping",
     "get_mapping",
     "list_mappings",
