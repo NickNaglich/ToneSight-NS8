@@ -13,6 +13,7 @@ from .defaults import ARTIFACT_DEFAULTS, EVAL_DEFAULTS
 from .mapping import get_mapping, list_mappings
 from . import (
     SegmentRecord,
+    run_bundle,
     run_gate,
     run_compare,
     run_eval_compare,
@@ -180,6 +181,14 @@ def _cmd_triage(args: argparse.Namespace) -> dict:
     )
 
 
+def _cmd_bundle(args: argparse.Namespace) -> dict:
+    return run_bundle(
+        args.run_b,
+        run_a=args.run_a,
+        out_path=args.out,
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="tonesight-ns8",
@@ -262,6 +271,12 @@ def build_parser() -> argparse.ArgumentParser:
     triage_cmd.add_argument("--format", choices=("jsonl", "csv"), default="jsonl")
     triage_cmd.add_argument("--out", help="Optional explicit output path.")
     triage_cmd.set_defaults(func=_cmd_triage)
+
+    bundle_cmd = sub.add_parser("bundle", help="Create deterministic forensics bundle zip for a run (and optional compare pair).")
+    bundle_cmd.add_argument("--run-b", required=True, help="Candidate/current run directory path.")
+    bundle_cmd.add_argument("--run-a", help="Optional baseline run directory path for compare artifact inclusion.")
+    bundle_cmd.add_argument("--out", help="Optional explicit bundle output path (.zip).")
+    bundle_cmd.set_defaults(func=_cmd_bundle)
 
     return parser
 

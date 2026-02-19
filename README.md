@@ -339,6 +339,8 @@ python -m tonesight_ns8.cli compare runs/<runA> runs/<runB> --top-n 10 --write
 python -m tonesight_ns8.cli gate --run-a runs/<baseline> --run-b runs/<candidate>
 python -m tonesight_ns8.cli triage --run-b runs/<candidate> --top-n 50 --format jsonl
 python -m tonesight_ns8.cli triage --run-a runs/<baseline> --run-b runs/<candidate> --top-n 50 --format csv
+python -m tonesight_ns8.cli bundle --run-b runs/<candidate>
+python -m tonesight_ns8.cli bundle --run-a runs/<baseline> --run-b runs/<candidate>
 ```
 
 Eval artifacts:

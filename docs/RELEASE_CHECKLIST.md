@@ -26,6 +26,7 @@ CLI smoke:
 ```bash
 tonesight-ns8 --help
 python -m tonesight_ns8.cli eval
+python -m tonesight_ns8.cli bundle --run-b runs/<run_id>
 ```
 
 ## Expected outcomes
@@ -38,6 +39,7 @@ python -m tonesight_ns8.cli eval
 - observability API tests pass when optional dependencies are installed
 - CLI entrypoint is installed and operational
 - eval smoke command returns a JSON payload with `run_id` and writes run artifacts
+- bundle command creates deterministic zip with `manifest.json`
 
 ## Release metadata checks
 

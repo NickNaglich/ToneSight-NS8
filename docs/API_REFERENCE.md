@@ -31,6 +31,7 @@ Stable public imports are the names exported by `tonesight_ns8.__all__`:
 - `run_eval_compare`
 - `run_gate`
 - `run_triage`
+- `run_bundle`
 - `register_mapping`
 - `get_mapping`
 - `list_mappings`
@@ -330,6 +331,26 @@ Ranking:
 Exports:
 - `output_format = "jsonl"` or `"csv"`
 - includes rationale fields such as `delta_v`, `delta_a`, `delta_d`, `threshold_margin`, `label`, and `tags`
+
+### `run_bundle(run_b: str, *, run_a: str | None = None, out_path: str | None = None) -> dict`
+
+Creates a deterministic forensics bundle ZIP for a run and optional compare pair.
+
+Run-only bundle includes:
+- `run/receipt.json`
+- `run/eval_summary.json`
+- `run/report.html`
+- `run/out.jsonl`
+- `manifest.json` (hashes/sizes for included files)
+
+Compare pair mode (`run_a` provided) additionally includes:
+- `compare/compare_summary.json`
+- `compare/compare_report.html`
+
+Determinism notes:
+- stable archive member ordering
+- fixed ZIP timestamps
+- manifest is canonical JSON with deterministic ordering
 
 ### `tonesight_from_label(label: str, family: str, r: int, c: int, k: int, taxonomy_path: str) -> dict`
 

@@ -7,6 +7,7 @@ from .api import (
     tonesight_receipt_from_segment,
 )
 from .analytics import summarize_session, summarize_speaker
+from .bundle_runner import run_bundle
 from .compare_runner import run_compare
 from .eval_compare_runner import run_eval_compare
 from .eval_runner import run_eval
@@ -42,6 +43,7 @@ __all__ = [
     "run_eval_compare",
     "run_gate",
     "run_triage",
+    "run_bundle",
     "register_mapping",
     "get_mapping",
     "list_mappings",

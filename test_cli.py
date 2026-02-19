@@ -138,6 +138,31 @@ def test_cli_triage(capsys):
     assert Path(triage_payload["output_path"]).exists()
 
 
+def test_cli_bundle(capsys):
+    out_root = _temp_dir("tmp_runs_bundle_cli")
+    rc_eval = main(
+        [
+            "eval",
+            "--goldset",
+            "data/goldset.jsonl",
+            "--out-root",
+            str(out_root),
+            "--taxonomy",
+            "taxonomy/tone_taxonomy.v1.json",
+            "--threshold-l1",
+            "3",
+        ]
+    )
+    eval_payload = json.loads(capsys.readouterr().out)
+    assert rc_eval == 0
+    run_dir = out_root / eval_payload["run_id"]
+    rc_bundle = main(["bundle", "--run-b", str(run_dir)])
+    bundle_payload = json.loads(capsys.readouterr().out)
+    assert rc_bundle == 0
+    assert bundle_payload["mode"] == "run_only"
+    assert Path(bundle_payload["bundle_path"]).exists()
+
+
 def test_cli_encode_label_requires_taxonomy_returns_json_error(capsys):
     rc = main(["encode", "--family", "TRF", "--r", "6", "--c", "4", "--k", "3", "--label", "empathetic"])
     err = json.loads(capsys.readouterr().err)
