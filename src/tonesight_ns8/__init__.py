@@ -20,6 +20,7 @@ from .mapping import (
 )
 from .ns8 import compute_A, resolve_to_seed, validate_inputs
 from .schema import Route, SegmentRecord, SessionSummary, SpeakerSummary, ToneReceipt
+from .triage_runner import run_triage
 
 __all__ = [
     "compute_A",
@@ -40,6 +41,7 @@ __all__ = [
     "run_compare",
     "run_eval_compare",
     "run_gate",
+    "run_triage",
     "register_mapping",
     "get_mapping",
     "list_mappings",

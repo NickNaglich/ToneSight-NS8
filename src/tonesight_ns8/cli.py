@@ -17,6 +17,7 @@ from . import (
     run_compare,
     run_eval_compare,
     run_eval,
+    run_triage,
     summarize_session,
     summarize_speaker,
     tonesight_from_label,
@@ -168,6 +169,17 @@ def _cmd_gate(args: argparse.Namespace) -> dict:
     )
 
 
+def _cmd_triage(args: argparse.Namespace) -> dict:
+    return run_triage(
+        args.run_b,
+        run_a=args.run_a,
+        top_n=args.top_n,
+        score=args.score,
+        output_format=args.format,
+        out_path=args.out,
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="tonesight-ns8",
@@ -241,6 +253,15 @@ def build_parser() -> argparse.ArgumentParser:
     gate_cmd.add_argument("--max-p95-l1-delta", type=float, default=0.2)
     gate_cmd.add_argument("--top-n", type=_non_negative_int, default=10)
     gate_cmd.set_defaults(func=_cmd_gate)
+
+    triage_cmd = sub.add_parser("triage", help="Export deterministic triage rows from one run or a run pair.")
+    triage_cmd.add_argument("--run-b", required=True, help="Candidate/current run directory path.")
+    triage_cmd.add_argument("--run-a", help="Optional baseline run directory path for diff triage mode.")
+    triage_cmd.add_argument("--top-n", type=_non_negative_int, default=50)
+    triage_cmd.add_argument("--score", default="compliance_l1")
+    triage_cmd.add_argument("--format", choices=("jsonl", "csv"), default="jsonl")
+    triage_cmd.add_argument("--out", help="Optional explicit output path.")
+    triage_cmd.set_defaults(func=_cmd_triage)
 
     return parser
 

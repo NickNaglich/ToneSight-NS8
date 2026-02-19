@@ -111,6 +111,33 @@ def test_cli_eval_compare(capsys):
     assert payload2["trace"]["defaults_hash"]
 
 
+def test_cli_triage(capsys):
+    out_root = _temp_dir("tmp_runs_triage_cli")
+    rc_eval = main(
+        [
+            "eval",
+            "--goldset",
+            "data/goldset.jsonl",
+            "--out-root",
+            str(out_root),
+            "--taxonomy",
+            "taxonomy/tone_taxonomy.v1.json",
+            "--threshold-l1",
+            "3",
+        ]
+    )
+    eval_payload = json.loads(capsys.readouterr().out)
+    assert rc_eval == 0
+    run_dir = out_root / eval_payload["run_id"]
+
+    rc_triage = main(["triage", "--run-b", str(run_dir), "--top-n", "3", "--format", "jsonl"])
+    triage_payload = json.loads(capsys.readouterr().out)
+    assert rc_triage == 0
+    assert triage_payload["mode"] == "single"
+    assert triage_payload["top_n_returned"] == 3
+    assert Path(triage_payload["output_path"]).exists()
+
+
 def test_cli_encode_label_requires_taxonomy_returns_json_error(capsys):
     rc = main(["encode", "--family", "TRF", "--r", "6", "--c", "4", "--k", "3", "--label", "empathetic"])
     err = json.loads(capsys.readouterr().err)

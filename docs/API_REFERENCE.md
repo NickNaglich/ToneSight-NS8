@@ -30,6 +30,7 @@ Stable public imports are the names exported by `tonesight_ns8.__all__`:
 - `run_compare`
 - `run_eval_compare`
 - `run_gate`
+- `run_triage`
 - `register_mapping`
 - `get_mapping`
 - `list_mappings`
@@ -313,6 +314,22 @@ Threshold checks:
 - fail if `delta_pass_rate < min_pass_rate_delta`
 - fail if `delta_avg_l1 > max_avg_l1_delta`
 - fail if `delta_p95_l1 > max_p95_l1_delta`
+
+### `run_triage(run_b: str, *, run_a: str | None = None, top_n: int = 50, score: str = "compliance_l1", output_format: str = "jsonl", out_path: str | None = None) -> dict`
+
+Creates deterministic triage exports from one run or a run pair.
+
+Modes:
+- single-run mode (`run_b` only)
+- diff mode (`run_a` + `run_b`)
+
+Ranking:
+- deterministic sort by selected `score` (descending), then `id` (ascending)
+- default `score = "compliance_l1"`
+
+Exports:
+- `output_format = "jsonl"` or `"csv"`
+- includes rationale fields such as `delta_v`, `delta_a`, `delta_d`, `threshold_margin`, `label`, and `tags`
 
 ### `tonesight_from_label(label: str, family: str, r: int, c: int, k: int, taxonomy_path: str) -> dict`
 

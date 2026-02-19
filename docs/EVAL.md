@@ -143,6 +143,22 @@ Exit codes:
 - `2`: regression threshold violated
 - `3`: incompatible runs (`dataset_hash`/`spec_version` mismatch)
 
+## Triage Command (Data QA)
+
+Export deterministic triage rows for reviewer prioritization:
+
+```bash
+python -m tonesight_ns8.cli triage --run-b runs/<candidate> --top-n 50 --format jsonl
+python -m tonesight_ns8.cli triage --run-a runs/<baseline> --run-b runs/<candidate> --top-n 50 --format csv
+```
+
+Behavior:
+- single-run mode: triage from one run (`--run-b`)
+- diff mode: triage from baseline/candidate pair (`--run-a` + `--run-b`)
+- deterministic ranking by `--score` (default `compliance_l1`), then `id`
+- exports `jsonl` or `csv`
+- rationale fields include `delta_v`, `delta_a`, `delta_d`, `threshold_margin`, `label`, `tags`
+
 ## Operational Notes
 
 - Determinism: for fixed inputs/config, scoring outputs and artifact schema are deterministic.
