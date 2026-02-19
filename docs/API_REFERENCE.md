@@ -315,3 +315,4 @@ Behavior:
 - Math and routing are governed by `docs/SPEC_NS8.md`.
 - Vectors in `vectors/ns8_test_vectors.json` are normative.
 - Any behavior change requires spec + vector updates.
+- Architect-level assurance mapping (axioms/invariants/traceability) is documented in `docs/NS8_CONTRACT_ASSURANCE.md`.

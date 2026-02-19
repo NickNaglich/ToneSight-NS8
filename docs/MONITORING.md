@@ -59,6 +59,7 @@ Recommendation:
 - Use `prometheus_client` Histogram and Counter.
 - Keep labels to `{route, method, status, backend, decision, dim, q}`.
 - Do not label metrics with `run_id` or request IDs.
+- Treat tone metrics as operational proxy signals for conformance/drift, not as direct emotion ground truth.
 
 ## 3) Grafana dashboards (recommended panels)
 

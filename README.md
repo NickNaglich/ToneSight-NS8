@@ -6,12 +6,18 @@ It is designed as a domain-agnostic Python library and reusable post-processing 
 
 ## Overview
 
-ToneSight NS8 addresses a common systems gap: a deterministic, testable mapping layer for discrete tone signals.
+ToneSight NS8 addresses a common systems gap: a deterministic, testable mapping layer for discrete VAD-based affect signals.
 The system prioritizes conformance, reproducibility, and regression detection over predictive modeling.
+It acts as a deterministic conformance layer between probabilistic upstream models and production monitoring/evaluation systems.
 
 Conceptual flow:
 
 `VAD bins -> Tone taxonomy -> NS8 mapping -> Deterministic anchor`
+
+Positioning summary:
+- ToneSight NS8 is a deterministic conformance layer for VAD-based affect telemetry.
+- It bridges probabilistic upstream affect outputs and production evaluation/monitoring systems.
+- It provides vector-verified behavioral stability for the NS8 mapping contract (not psychological ground truth).
 
 This repository currently focuses on:
 - strict NS8 math contract
@@ -23,6 +29,11 @@ This repository currently focuses on:
 
 Most systems can measure latency and correctness, but have weak controls for deterministic tone conformance and regression tracking.
 ToneSight NS8 focuses on that specific gap: deterministic encoding, reproducible evaluation artifacts, and stable run-to-run comparison.
+
+Input boundary:
+- ToneSight expects already-discretized VAD bins (`1..8`) or taxonomy labels.
+- It does not clean raw sensor/audio/text signals; those concerns stay upstream.
+- It does not infer emotions directly from raw content.
 
 ## Architecture (v1)
 
@@ -173,6 +184,7 @@ It is a deterministic structural mapping layer that operates on discrete VAD inp
 
 Authoritative reference:
 - `docs/SPEC_NS8.md`
+- `docs/NS8_CONTRACT_ASSURANCE.md`
 
 ## Tone Taxonomy
 
@@ -260,6 +272,9 @@ print(route)
   - spec version bump
   - updated vectors
   - updated tests
+
+Contract assurance and requirement-to-evidence matrix:
+- `docs/NS8_CONTRACT_ASSURANCE.md`
 
 ## Segment Contract
 
@@ -435,6 +450,7 @@ This repository includes optional, opt-in observability components that are not 
 - FastAPI observability app (`/health`, `/metrics`, `/eval/run`, `/eval/last`)
 - Prometheus scraping API metrics
 - Grafana dashboard provisioning
+- deterministic conformance telemetry suitable for run-to-run drift monitoring
 
 Start the stack:
 
@@ -486,6 +502,7 @@ curl -X POST http://localhost:8080/eval/run \
 |   |-- DEFAULTS_SCHEMA.md
 |   |-- EVAL.md
 |   |-- MONITORING.md
+|   |-- NS8_CONTRACT_ASSURANCE.md
 |   |-- RELEASE_CHECKLIST.md
 |   |-- RECEIPT_SCHEMA.md
 |   |-- SPEC_NS8.md

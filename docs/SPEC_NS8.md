@@ -2,6 +2,9 @@
 
 This file freezes the NS8 contract used in this repository.
 
+For implementation assurance mapping (requirements -> tests/artifacts), see:
+- `docs/NS8_CONTRACT_ASSURANCE.md`
+
 ## Constants
 
 - `spec_version: "1.0"`

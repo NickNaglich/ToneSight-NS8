@@ -33,6 +33,8 @@ Conformance interpretation:
 - this eval is a deterministic conformance check against target bins
 - intentional negative-anchor rows are included to test failure surfacing and regression behavior
 - `pass_rate` should not be interpreted as classifier accuracy
+- this workflow standardizes VAD-based affect telemetry; it is not psychological inference
+- run-to-run compare artifacts are intended to surface affective drift in system outputs over time
 
 ## Run Commands
 
