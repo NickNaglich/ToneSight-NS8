@@ -182,3 +182,14 @@ Behavior:
 
 Validation command:
 - `python tools/validate_goldset.py data/goldset.jsonl`
+
+## Shadow Strictness Modes (Live Pipeline)
+
+When validating live event envelopes in shadow mode, invalid rows follow one of:
+- `fail`: stop processing and raise on first invalid event
+- `drop`: skip invalid events and continue with valid set
+- `quarantine`: continue with valid events and write invalid events to quarantine JSONL with deterministic reason receipts
+
+Identity note:
+- stable event hashing excludes `timestamp_received` from hash input to keep replay identity deterministic
+- see `docs/IDENTITY_AND_HASHING.md`

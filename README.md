@@ -290,6 +290,7 @@ Normative defaults config contract:
 Release readiness checklist:
 - `docs/RELEASE_CHECKLIST.md`
 - `docs/LIVE_EVENT_SCHEMA.md`
+- `docs/IDENTITY_AND_HASHING.md`
 
 ## CLI Usage
 

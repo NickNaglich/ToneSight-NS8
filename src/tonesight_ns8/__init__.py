@@ -12,6 +12,8 @@ from .compare_runner import run_compare
 from .eval_compare_runner import run_eval_compare
 from .eval_runner import run_eval
 from .gate_runner import run_gate
+from .live_identity import canonical_live_event, stable_event_hash
+from .live_shadow_policy import apply_shadow_policy
 from .mapping import (
     get_default_mapping,
     get_default_mapping_id,
@@ -46,6 +48,9 @@ __all__ = [
     "run_triage",
     "run_bundle",
     "run_trend",
+    "canonical_live_event",
+    "stable_event_hash",
+    "apply_shadow_policy",
     "register_mapping",
     "get_mapping",
     "list_mappings",
