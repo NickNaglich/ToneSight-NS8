@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import os
 import time
 from dataclasses import asdict, is_dataclass
+from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 
@@ -52,6 +54,78 @@ TONE_P95_L1 = Gauge(
 )
 
 _LAST_EVAL: dict[str, Any] | None = None
+_RATE_LIMIT_STATE: dict[str, list[float]] = {}
+
+
+def _api_token() -> str | None:
+    value = os.getenv("TONESIGHT_API_TOKEN", "").strip()
+    return value or None
+
+
+def _rate_limit_per_minute() -> int:
+    raw = os.getenv("TONESIGHT_RATE_LIMIT_PER_MINUTE", "60").strip()
+    try:
+        parsed = int(raw)
+    except ValueError:
+        return 60
+    return max(1, parsed)
+
+
+def _allowed_roots() -> list[Path]:
+    raw = os.getenv("TONESIGHT_ALLOWED_PATHS", "").strip()
+    if not raw:
+        return [Path.cwd().resolve()]
+    roots: list[Path] = []
+    for item in raw.split(os.pathsep):
+        entry = item.strip()
+        if entry:
+            roots.append(Path(entry).resolve())
+    return roots or [Path.cwd().resolve()]
+
+
+def _within_allowed(path: Path, roots: list[Path]) -> bool:
+    for root in roots:
+        try:
+            path.relative_to(root)
+            return True
+        except ValueError:
+            continue
+    return False
+
+
+def _validate_allowed_path(value: str, *, expect_exists: bool) -> str:
+    candidate = Path(value)
+    resolved = candidate.resolve(strict=False)
+    roots = _allowed_roots()
+    if not _within_allowed(resolved, roots):
+        raise HTTPException(status_code=400, detail=f"path not allowed: {value}")
+    if expect_exists and not resolved.exists():
+        raise HTTPException(status_code=400, detail=f"path does not exist: {value}")
+    return str(resolved)
+
+
+def _enforce_auth(authorization: str | None) -> None:
+    token = _api_token()
+    if token is None:
+        raise HTTPException(status_code=503, detail="API token is not configured")
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="missing bearer token")
+    provided = authorization.split(" ", 1)[1].strip()
+    if provided != token:
+        raise HTTPException(status_code=401, detail="invalid bearer token")
+
+
+def _enforce_rate_limit(route: str, client_id: str) -> None:
+    limit = _rate_limit_per_minute()
+    now = time.time()
+    cutoff = now - 60.0
+    key = f"{route}:{client_id}"
+    entries = [ts for ts in _RATE_LIMIT_STATE.get(key, []) if ts >= cutoff]
+    if len(entries) >= limit:
+        _RATE_LIMIT_STATE[key] = entries
+        raise HTTPException(status_code=429, detail="rate limit exceeded")
+    entries.append(now)
+    _RATE_LIMIT_STATE[key] = entries
 
 
 def _to_jsonable(value: Any) -> Any:
@@ -83,25 +157,34 @@ def health() -> dict[str, str]:
 
 
 @app.get("/metrics")
-def metrics() -> PlainTextResponse:
+def metrics(request: Request, authorization: str | None = Header(default=None)) -> PlainTextResponse:
+    _enforce_auth(authorization)
+    _enforce_rate_limit("/metrics", request.client.host if request.client else "unknown")
     return PlainTextResponse(generate_latest().decode("utf-8"), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/eval/last")
-def eval_last() -> JSONResponse:
+def eval_last(request: Request, authorization: str | None = Header(default=None)) -> JSONResponse:
+    _enforce_auth(authorization)
+    _enforce_rate_limit("/eval/last", request.client.host if request.client else "unknown")
     if _LAST_EVAL is None:
         return JSONResponse({"status": "none", "message": "No eval has been run in this process yet."}, status_code=404)
     return JSONResponse(_to_jsonable(_LAST_EVAL))
 
 
 @app.post("/eval/run")
-def eval_run(payload: dict[str, Any]) -> JSONResponse:
+def eval_run(payload: dict[str, Any], request: Request, authorization: str | None = Header(default=None)) -> JSONResponse:
     global _LAST_EVAL
-    goldset_path = str(payload.get("goldset_path", ARTIFACT_DEFAULTS["goldset_path"]))
-    out_root = str(payload.get("out_root", EVAL_DEFAULTS["out_root"]))
-    taxonomy_path = str(payload.get("taxonomy_path", EVAL_DEFAULTS["taxonomy_path"]))
+    _enforce_auth(authorization)
+    _enforce_rate_limit("/eval/run", request.client.host if request.client else "unknown")
+
+    goldset_path = _validate_allowed_path(str(payload.get("goldset_path", ARTIFACT_DEFAULTS["goldset_path"])), expect_exists=True)
+    out_root = _validate_allowed_path(str(payload.get("out_root", EVAL_DEFAULTS["out_root"])), expect_exists=False)
+    taxonomy_path = _validate_allowed_path(str(payload.get("taxonomy_path", EVAL_DEFAULTS["taxonomy_path"])), expect_exists=True)
     threshold_l1 = int(payload.get("threshold_l1", EVAL_DEFAULTS["threshold_l1"]))
     calibration_path = payload.get("calibration_path")
+    if calibration_path:
+        calibration_path = _validate_allowed_path(str(calibration_path), expect_exists=True)
     capture_gpu = bool(payload.get("capture_gpu", False))
     mlflow_tracking_uri = payload.get("mlflow_tracking_uri")
 

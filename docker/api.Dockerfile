@@ -11,6 +11,8 @@ COPY data /app/data
 COPY taxonomy /app/taxonomy
 
 RUN pip install --no-cache-dir -e .
+RUN addgroup --system tonesight && adduser --system --ingroup tonesight tonesight && chown -R tonesight:tonesight /app
+USER tonesight
 
 EXPOSE 8080
 

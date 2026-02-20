@@ -341,6 +341,7 @@ python -m tonesight_ns8.cli triage --run-b runs/<candidate> --top-n 50 --format 
 python -m tonesight_ns8.cli triage --run-a runs/<baseline> --run-b runs/<candidate> --top-n 50 --format csv
 python -m tonesight_ns8.cli bundle --run-b runs/<candidate>
 python -m tonesight_ns8.cli bundle --run-a runs/<baseline> --run-b runs/<candidate>
+python -m tonesight_ns8.cli bundle --run-b runs/<candidate> --include-source-paths
 python -m tonesight_ns8.cli trend --out-root runs
 python -m tonesight_ns8.cli trend --out-root runs --group-by source
 ```
@@ -467,6 +468,9 @@ This repository includes optional, opt-in observability components that are not 
 Start the stack:
 
 ```bash
+export TONESIGHT_API_TOKEN="<strong-random-token>"
+export GF_SECURITY_ADMIN_USER="<grafana-admin-user>"
+export GF_SECURITY_ADMIN_PASSWORD="<strong-grafana-password>"
 docker compose up --build
 ```
 
@@ -474,7 +478,18 @@ Endpoints:
 - API: `http://localhost:8080/health`
 - API metrics: `http://localhost:8080/metrics`
 - Prometheus: `http://localhost:9090`
-- Grafana: `http://localhost:3000` (default `admin` / `admin`)
+- Grafana: `http://localhost:3000` (credentials from `GF_SECURITY_ADMIN_USER` / `GF_SECURITY_ADMIN_PASSWORD`)
+
+Protected API routes require bearer token:
+- `/metrics`
+- `/eval/run`
+- `/eval/last`
+
+Example:
+
+```bash
+curl -H "Authorization: Bearer $TONESIGHT_API_TOKEN" http://localhost:8080/metrics
+```
 
 Dashboard behavior notes:
 - `API RPS` and `API p95 latency` live panels are intentionally volatile at low traffic.
@@ -492,6 +507,7 @@ Trigger eval via API with optional calibration/MLflow/GPU settings:
 
 ```bash
 curl -X POST http://localhost:8080/eval/run \
+  -H "Authorization: Bearer $TONESIGHT_API_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"goldset_path":"data/goldset.jsonl","out_root":"runs","taxonomy_path":"taxonomy/tone_taxonomy.v1.json","threshold_l1":3,"calibration_path":"config/taxonomy_calibration.v1.json","capture_gpu":false,"mlflow_tracking_uri":""}'
 ```

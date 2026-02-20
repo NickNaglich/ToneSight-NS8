@@ -187,6 +187,7 @@ def _cmd_bundle(args: argparse.Namespace) -> dict:
         args.run_b,
         run_a=args.run_a,
         out_path=args.out,
+        include_source_paths=args.include_source_paths,
     )
 
 
@@ -285,6 +286,7 @@ def build_parser() -> argparse.ArgumentParser:
     bundle_cmd.add_argument("--run-b", required=True, help="Candidate/current run directory path.")
     bundle_cmd.add_argument("--run-a", help="Optional baseline run directory path for compare artifact inclusion.")
     bundle_cmd.add_argument("--out", help="Optional explicit bundle output path (.zip).")
+    bundle_cmd.add_argument("--include-source-paths", action="store_true", help="Include local source paths in bundle manifest (not external-safe).")
     bundle_cmd.set_defaults(func=_cmd_bundle)
 
     trend_cmd = sub.add_parser("trend", help="Create deterministic trend rollups across historical runs.")

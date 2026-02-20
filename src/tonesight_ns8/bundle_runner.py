@@ -59,6 +59,7 @@ def run_bundle(
     *,
     run_a: str | None = None,
     out_path: str | None = None,
+    include_source_paths: bool = False,
 ) -> dict[str, Any]:
     """Create a deterministic forensics bundle zip from run artifacts."""
     run_b_path = Path(run_b)
@@ -82,17 +83,19 @@ def run_bundle(
         manifest_files.append(
             {
                 "archive_path": archive_name,
-                "source_path": str(src_path),
                 "sha256": _sha256_bytes(data),
                 "size_bytes": len(data),
             }
         )
+        if include_source_paths:
+            manifest_files[-1]["source_path"] = str(src_path)
 
     manifest = {
         "spec_version": "1.0",
         "bundle_version": "1.0",
         "run_b": str(run_b_path),
         "run_a": str(run_a_path) if run_a_path else None,
+        "external_safe": not include_source_paths,
         "file_count": len(manifest_files),
         "files": manifest_files,
     }
@@ -109,6 +112,6 @@ def run_bundle(
         "mode": "run_compare" if run_a_path else "run_only",
         "file_count": len(manifest_files),
         "manifest_path": "manifest.json",
+        "external_safe": not include_source_paths,
         "manifest": manifest,
     }
-

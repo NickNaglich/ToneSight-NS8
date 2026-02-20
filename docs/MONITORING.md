@@ -32,6 +32,22 @@ uvicorn tonesight_ns8.observability_api:app --host 0.0.0.0 --port 8080
 - Grafana: `http://localhost:3000`
 - API: `http://localhost:8080`
 
+Required environment for secure local startup:
+- `TONESIGHT_API_TOKEN` (bearer auth for `/metrics`, `/eval/run`, `/eval/last`)
+- `TONESIGHT_ALLOWED_PATHS` (path allowlist for eval payload paths; defaults to current working directory)
+- `TONESIGHT_RATE_LIMIT_PER_MINUTE` (default `60`)
+- `GF_SECURITY_ADMIN_USER`
+- `GF_SECURITY_ADMIN_PASSWORD`
+
+Example:
+
+```bash
+export TONESIGHT_API_TOKEN="<strong-random-token>"
+export GF_SECURITY_ADMIN_USER="<grafana-admin-user>"
+export GF_SECURITY_ADMIN_PASSWORD="<strong-grafana-password>"
+docker compose up --build
+```
+
 ## 2) Prometheus metrics (API)
 
 ### Operational

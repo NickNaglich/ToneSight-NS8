@@ -333,7 +333,7 @@ Exports:
 - `output_format = "jsonl"` or `"csv"`
 - includes rationale fields such as `delta_v`, `delta_a`, `delta_d`, `threshold_margin`, `label`, and `tags`
 
-### `run_bundle(run_b: str, *, run_a: str | None = None, out_path: str | None = None) -> dict`
+### `run_bundle(run_b: str, *, run_a: str | None = None, out_path: str | None = None, include_source_paths: bool = False) -> dict`
 
 Creates a deterministic forensics bundle ZIP for a run and optional compare pair.
 
@@ -352,6 +352,10 @@ Determinism notes:
 - stable archive member ordering
 - fixed ZIP timestamps
 - manifest is canonical JSON with deterministic ordering
+
+External-safe defaults:
+- `include_source_paths=False` omits host filesystem paths from manifest entries
+- set `include_source_paths=True` only for internal/debug bundles
 
 ### `run_trend(out_root: str, *, group_by: str | None = None, out_path: str | None = None) -> dict`
 

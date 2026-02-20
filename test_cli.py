@@ -160,6 +160,7 @@ def test_cli_bundle(capsys):
     bundle_payload = json.loads(capsys.readouterr().out)
     assert rc_bundle == 0
     assert bundle_payload["mode"] == "run_only"
+    assert bundle_payload["external_safe"] is True
     assert Path(bundle_payload["bundle_path"]).exists()
 
 

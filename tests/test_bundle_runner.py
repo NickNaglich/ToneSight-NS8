@@ -74,7 +74,9 @@ def test_run_bundle_run_only_and_manifest_deterministic():
         assert names == ["manifest.json", "run/eval_summary.json", "run/out.jsonl", "run/receipt.json", "run/report.html"]
         manifest = json.loads(zf.read("manifest.json").decode("utf-8"))
         assert manifest["file_count"] == 4
+        assert manifest["external_safe"] is True
         assert len(manifest["files"]) == 4
+        assert all("source_path" not in item for item in manifest["files"])
 
 
 def test_run_bundle_with_compare_artifacts():
@@ -97,6 +99,19 @@ def test_run_bundle_with_compare_artifacts():
         assert manifest["file_count"] == 6
 
 
+def test_run_bundle_include_source_paths():
+    root = _temp_dir("tmp_bundle_source_paths")
+    run_b = root / "run_B"
+    _mk_run(run_b, run_id="run_B", dataset_hash="abc123")
+
+    out_zip = root / "bundle_with_paths.zip"
+    run_bundle(str(run_b), out_path=str(out_zip), include_source_paths=True)
+    with ZipFile(out_zip, "r") as zf:
+        manifest = json.loads(zf.read("manifest.json").decode("utf-8"))
+    assert manifest["external_safe"] is False
+    assert all("source_path" in item for item in manifest["files"])
+
+
 def test_cli_bundle(capsys):
     root = _temp_dir("tmp_bundle_cli")
     run_b = root / "run_B"
@@ -106,4 +121,4 @@ def test_cli_bundle(capsys):
     assert rc == 0
     assert payload["mode"] == "run_only"
     assert Path(payload["bundle_path"]).exists()
-
+    assert payload["external_safe"] is True
