@@ -34,6 +34,13 @@ jobs:
           OUT="$(python -m tonesight_ns8.cli eval)"
           python -c "import json,sys; p=json.loads(sys.argv[1]); assert p.get('run_id'); assert p.get('out_dir')" "$OUT"
 
+      - name: Live replay smoke (golden capture)
+        run: |
+          CAPTURE="$(python -m tonesight_ns8.cli live-capture --events tests/fixtures/live_capture.small.jsonl)"
+          CAPTURE_DIR="$(python -c "import json,sys; print(json.loads(sys.argv[1])['capture_dir'])" "$CAPTURE")"
+          REPLAY="$(python -m tonesight_ns8.cli live-replay --capture "$CAPTURE_DIR" --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine)"
+          python -c "import json,sys; p=json.loads(sys.argv[1]); assert p.get('run_id'); assert p.get('out_dir')" "$REPLAY"
+
       - name: Run tests
         run: |
           python tools/validate_defaults.py

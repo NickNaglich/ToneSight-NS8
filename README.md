@@ -346,6 +346,9 @@ python -m tonesight_ns8.cli bundle --run-a runs/<baseline> --run-b runs/<candida
 python -m tonesight_ns8.cli bundle --run-b runs/<candidate> --include-source-paths
 python -m tonesight_ns8.cli trend --out-root runs
 python -m tonesight_ns8.cli trend --out-root runs --group-by source
+python -m tonesight_ns8.cli live-capture --events tests/fixtures/live_capture.small.jsonl --out-root runs
+python -m tonesight_ns8.cli live-replay --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
+python -m tonesight_ns8.cli live-verify --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
 ```
 
 Eval artifacts:
@@ -366,6 +369,15 @@ Gate command (`gate`) exit codes:
 Optional eval artifacts:
 - `runs/<run_id>/gpu_before.json`
 - `runs/<run_id>/gpu_after.json`
+
+Live replay artifacts:
+- `runs/captures/<capture_id>/events.raw.jsonl`
+- `runs/captures/<capture_id>/capture_manifest.json`
+- `runs/<run_live_id>/out.jsonl`
+- `runs/<run_live_id>/eval_summary.json`
+- `runs/<run_live_id>/report.html`
+- `runs/<run_live_id>/receipt.json`
+- `runs/<run_live_id>/quarantine.jsonl` (when `--shadow-strict quarantine` and invalid events exist)
 
 ## 30-Second Local Demo
 
@@ -456,6 +468,13 @@ Live event envelope validation:
 
 ```bash
 python tools/validate_live_event.py tests/fixtures/live_event.valid.jsonl
+```
+
+Live shadow replay validation:
+
+```bash
+python -m tonesight_ns8.cli live-capture --events tests/fixtures/live_capture.small.jsonl --out-root runs
+python -m tonesight_ns8.cli live-verify --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
 ```
 
 Automated validation workflow (tests + goldset validator):

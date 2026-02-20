@@ -18,6 +18,9 @@ from . import (
     run_compare,
     run_eval_compare,
     run_eval,
+    run_live_capture,
+    run_live_replay,
+    run_live_verify,
     run_trend,
     run_triage,
     summarize_session,
@@ -199,6 +202,33 @@ def _cmd_trend(args: argparse.Namespace) -> dict:
     )
 
 
+def _cmd_live_capture(args: argparse.Namespace) -> dict:
+    return run_live_capture(
+        args.events,
+        out_root=args.out_root,
+    )
+
+
+def _cmd_live_replay(args: argparse.Namespace) -> dict:
+    return run_live_replay(
+        args.capture,
+        out_root=args.out_root,
+        taxonomy_path=args.taxonomy,
+        threshold_l1=args.threshold_l1,
+        shadow_strict=args.shadow_strict,
+    )
+
+
+def _cmd_live_verify(args: argparse.Namespace) -> dict:
+    return run_live_verify(
+        args.capture,
+        out_root=args.out_root,
+        taxonomy_path=args.taxonomy,
+        threshold_l1=args.threshold_l1,
+        shadow_strict=args.shadow_strict,
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="tonesight-ns8",
@@ -294,6 +324,27 @@ def build_parser() -> argparse.ArgumentParser:
     trend_cmd.add_argument("--group-by", help="Optional row metadata field for per-run grouping summaries.")
     trend_cmd.add_argument("--out", help="Optional explicit trend summary output path.")
     trend_cmd.set_defaults(func=_cmd_trend)
+
+    live_capture_cmd = sub.add_parser("live-capture", help="Validate and persist deterministic live capture artifacts.")
+    live_capture_cmd.add_argument("--events", required=True, help="Path to LiveEvent JSONL input.")
+    live_capture_cmd.add_argument("--out-root", default=EVAL_DEFAULTS["out_root"])
+    live_capture_cmd.set_defaults(func=_cmd_live_capture)
+
+    live_replay_cmd = sub.add_parser("live-replay", help="Replay a capture into deterministic run artifacts.")
+    live_replay_cmd.add_argument("--capture", required=True, help="Capture directory or events.raw.jsonl path.")
+    live_replay_cmd.add_argument("--out-root", default=EVAL_DEFAULTS["out_root"])
+    live_replay_cmd.add_argument("--taxonomy", default=EVAL_DEFAULTS["taxonomy_path"])
+    live_replay_cmd.add_argument("--threshold-l1", type=_non_negative_int, default=EVAL_DEFAULTS["threshold_l1"])
+    live_replay_cmd.add_argument("--shadow-strict", choices=("fail", "drop", "quarantine"), default="quarantine")
+    live_replay_cmd.set_defaults(func=_cmd_live_replay)
+
+    live_verify_cmd = sub.add_parser("live-verify", help="Replay capture twice and assert deterministic artifact hashes.")
+    live_verify_cmd.add_argument("--capture", required=True, help="Capture directory or events.raw.jsonl path.")
+    live_verify_cmd.add_argument("--out-root", default=EVAL_DEFAULTS["out_root"])
+    live_verify_cmd.add_argument("--taxonomy", default=EVAL_DEFAULTS["taxonomy_path"])
+    live_verify_cmd.add_argument("--threshold-l1", type=_non_negative_int, default=EVAL_DEFAULTS["threshold_l1"])
+    live_verify_cmd.add_argument("--shadow-strict", choices=("fail", "drop", "quarantine"), default="quarantine")
+    live_verify_cmd.set_defaults(func=_cmd_live_verify)
 
     return parser
 

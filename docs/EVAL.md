@@ -174,11 +174,36 @@ Behavior:
 - computes deltas vs previous compatible run for `pass_rate`, `avg_l1`, `p95_l1`
 - optional grouping by row metadata field (`source`, `agent`, `prompt_id`, etc.) with per-group `count`, `avg_l1`, `fail_rate`
 
+## Live Shadow Harness (Phase 17)
+
+Deterministic capture/replay/verify flow for live-shaped events:
+
+```bash
+python -m tonesight_ns8.cli live-capture --events tests/fixtures/live_capture.small.jsonl --out-root runs
+python -m tonesight_ns8.cli live-replay --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
+python -m tonesight_ns8.cli live-verify --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
+```
+
+Behavior:
+- `live-capture`: validates LiveEvent envelope and writes deterministic capture artifacts
+- `live-replay`: maps upstream signal (`upstream_vad` or `upstream_label`) into standard run artifacts
+- `live-verify`: replays the same capture twice and checks hash identity for deterministic artifacts
+
+Live artifacts:
+- `runs/captures/<capture_id>/events.raw.jsonl`
+- `runs/captures/<capture_id>/capture_manifest.json`
+- `runs/<run_live_id>/out.jsonl`
+- `runs/<run_live_id>/eval_summary.json`
+- `runs/<run_live_id>/report.html`
+- `runs/<run_live_id>/receipt.json`
+- `runs/<run_live_id>/quarantine.jsonl` (only when quarantine mode receives invalid events)
+
 ## Operational Notes
 
 - Determinism: for fixed inputs/config, scoring outputs and artifact schema are deterministic.
 - Run metadata (`run_id`, timestamps, artifact paths) is expected to vary per run.
 - GPU snapshots are best-effort and should not fail eval on non-GPU systems.
+- For live replay, run IDs are deterministic for fixed capture + config, and `live-verify` asserts artifact hash stability.
 
 Validation command:
 - `python tools/validate_goldset.py data/goldset.jsonl`

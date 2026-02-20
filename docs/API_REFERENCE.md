@@ -33,6 +33,9 @@ Stable public imports are the names exported by `tonesight_ns8.__all__`:
 - `run_triage`
 - `run_bundle`
 - `run_trend`
+ - `run_live_capture`
+ - `run_live_replay`
+ - `run_live_verify`
 - `register_mapping`
 - `get_mapping`
 - `list_mappings`
@@ -167,6 +170,9 @@ Current wrappers support optional `mapping_id`:
 CLI support:
 - `encode ... --mapping ns8`
 - `decode ... --mapping ns8`
+- `live-capture --events <path>`
+- `live-replay --capture <capture_dir_or_events_jsonl>`
+- `live-verify --capture <capture_dir_or_events_jsonl>`
 
 Conformance harness:
 - `tests/mapping_conformance.py` provides reusable assertions for adapter determinism, route shape, anchor range, and invalid-input rejection.
@@ -369,6 +375,41 @@ Inputs:
 
 Output:
 - writes `trend_summary.json` (default path: `<out_root>/trend_summary.json`)
+
+### `run_live_capture(events_path: str, *, out_root: str = "runs") -> dict`
+
+Validates LiveEvent JSONL and writes deterministic capture artifacts.
+
+Writes:
+- `<out_root>/captures/<capture_id>/events.raw.jsonl`
+- `<out_root>/captures/<capture_id>/capture_manifest.json`
+
+Returns:
+- `capture_id`, `capture_hash`, `capture_dir`, `event_count`, `manifest_path`
+
+### `run_live_replay(capture: str, *, out_root: str = "runs", taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", threshold_l1: int = 3, shadow_strict: str = "quarantine") -> dict`
+
+Replays a validated capture into standard deterministic run artifacts.
+
+Writes:
+- `<out_root>/<run_live_id>/out.jsonl`
+- `<out_root>/<run_live_id>/eval_summary.json`
+- `<out_root>/<run_live_id>/report.html`
+- `<out_root>/<run_live_id>/receipt.json`
+- `<out_root>/<run_live_id>/quarantine.jsonl` (when quarantine mode and invalid events exist)
+
+Returns:
+- run metadata, summary, receipt, and shadow policy result
+
+### `run_live_verify(capture: str, *, out_root: str = "runs", taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", threshold_l1: int = 3, shadow_strict: str = "quarantine") -> dict`
+
+Runs `run_live_replay` twice over the same capture and compares artifact hashes.
+
+Returns:
+- `stable` boolean
+- artifact hash maps for first/second replay
+- `mismatched_artifacts`
+- `exit_code` (`0` on stable output, `2` on mismatch)
 - includes ordered run list with:
   - `pass_rate`, `avg_l1`, `p95_l1`
   - run-over-run deltas against previous compatible run

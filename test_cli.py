@@ -199,3 +199,78 @@ def test_cli_encode_label_requires_taxonomy_returns_json_error(capsys):
 def test_cli_rejects_out_of_range_ns8_inputs():
     with pytest.raises(SystemExit):
         main(["decode", "--family", "TRF", "--r", "9", "--c", "4", "--k", "3"])
+
+
+def test_cli_live_capture_and_replay(capsys):
+    out_root = _temp_dir("tmp_live_cli")
+    rc_capture = main(
+        [
+            "live-capture",
+            "--events",
+            "tests/fixtures/live_capture.small.jsonl",
+            "--out-root",
+            str(out_root),
+        ]
+    )
+    capture_payload = json.loads(capsys.readouterr().out)
+    assert rc_capture == 0
+    assert Path(capture_payload["capture_dir"]).exists()
+
+    rc_replay = main(
+        [
+            "live-replay",
+            "--capture",
+            capture_payload["capture_dir"],
+            "--out-root",
+            str(out_root),
+            "--taxonomy",
+            "taxonomy/tone_taxonomy.v1.json",
+            "--threshold-l1",
+            "3",
+            "--shadow-strict",
+            "quarantine",
+        ]
+    )
+    replay_payload = json.loads(capsys.readouterr().out)
+    assert rc_replay == 0
+    run_dir = Path(replay_payload["out_dir"])
+    assert run_dir.exists()
+    assert (run_dir / "out.jsonl").exists()
+    assert (run_dir / "eval_summary.json").exists()
+    assert (run_dir / "report.html").exists()
+    assert (run_dir / "receipt.json").exists()
+
+
+def test_cli_live_verify(capsys):
+    out_root = _temp_dir("tmp_live_verify_cli")
+    rc_capture = main(
+        [
+            "live-capture",
+            "--events",
+            "tests/fixtures/live_capture.small.jsonl",
+            "--out-root",
+            str(out_root),
+        ]
+    )
+    capture_payload = json.loads(capsys.readouterr().out)
+    assert rc_capture == 0
+
+    rc_verify = main(
+        [
+            "live-verify",
+            "--capture",
+            capture_payload["capture_dir"],
+            "--out-root",
+            str(out_root),
+            "--taxonomy",
+            "taxonomy/tone_taxonomy.v1.json",
+            "--threshold-l1",
+            "3",
+            "--shadow-strict",
+            "quarantine",
+        ]
+    )
+    verify_payload = json.loads(capsys.readouterr().out)
+    assert rc_verify == 0
+    assert verify_payload["stable"] is True
+    assert verify_payload["mismatched_artifacts"] == []
