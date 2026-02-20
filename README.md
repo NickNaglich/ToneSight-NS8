@@ -289,6 +289,7 @@ Normative defaults config contract:
 
 Release readiness checklist:
 - `docs/RELEASE_CHECKLIST.md`
+- `docs/LIVE_EVENT_SCHEMA.md`
 
 ## CLI Usage
 
@@ -448,6 +449,12 @@ Validate dataset integrity before eval:
 
 ```bash
 python tools/validate_goldset.py data/goldset.jsonl
+```
+
+Live event envelope validation:
+
+```bash
+python tools/validate_live_event.py tests/fixtures/live_event.valid.jsonl
 ```
 
 Automated validation workflow (tests + goldset validator):

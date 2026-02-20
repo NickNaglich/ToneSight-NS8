@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tonesight.local/schemas/live_event.schema.json",
+  "title": "ToneSight LiveEvent",
+  "type": "object",
+  "required": [
+    "event_id",
+    "source",
+    "timestamp_received",
+    "meta",
+    "privacy_flags"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timestamp_received": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "timestamp_emitted": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "segments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "text"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "text": { "type": "string", "minLength": 1 },
+          "start_sec": { "type": "number" },
+          "end_sec": { "type": "number" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "upstream_vad": {
+      "type": "object",
+      "required": ["V", "A", "D"],
+      "properties": {
+        "V": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "A": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "D": { "type": "integer", "minimum": 1, "maximum": 8 }
+      },
+      "additionalProperties": false
+    },
+    "upstream_label": {
+      "type": "string",
+      "minLength": 1
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "session_id": { "type": "string", "minLength": 1 },
+        "agent_id": { "type": "string", "minLength": 1 },
+        "user_id": { "type": "string", "minLength": 1 },
+        "tenant_id": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    },
+    "privacy_flags": {
+      "type": "object",
+      "required": ["contains_pii", "allow_store_raw"],
+      "properties": {
+        "contains_pii": { "type": "boolean" },
+        "allow_store_raw": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "anyOf": [
+    { "required": ["text"] },
+    { "required": ["segments"] }
+  ]
+}
+
