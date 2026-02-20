@@ -159,6 +159,21 @@ Behavior:
 - exports `jsonl` or `csv`
 - rationale fields include `delta_v`, `delta_a`, `delta_d`, `threshold_margin`, `label`, `tags`
 
+## Trend Command (Run History)
+
+Aggregate deterministic run-over-run metrics from artifact history:
+
+```bash
+python -m tonesight_ns8.cli trend --out-root runs
+python -m tonesight_ns8.cli trend --out-root runs --group-by source
+```
+
+Behavior:
+- discovers compatible run artifacts in `out-root` and emits `trend_summary.json`
+- run list is deterministically ordered by `run_id`
+- computes deltas vs previous compatible run for `pass_rate`, `avg_l1`, `p95_l1`
+- optional grouping by row metadata field (`source`, `agent`, `prompt_id`, etc.) with per-group `count`, `avg_l1`, `fail_rate`
+
 ## Operational Notes
 
 - Determinism: for fixed inputs/config, scoring outputs and artifact schema are deterministic.

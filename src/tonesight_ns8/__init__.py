@@ -21,6 +21,7 @@ from .mapping import (
 )
 from .ns8 import compute_A, resolve_to_seed, validate_inputs
 from .schema import Route, SegmentRecord, SessionSummary, SpeakerSummary, ToneReceipt
+from .trend_runner import run_trend
 from .triage_runner import run_triage
 
 __all__ = [
@@ -44,6 +45,7 @@ __all__ = [
     "run_gate",
     "run_triage",
     "run_bundle",
+    "run_trend",
     "register_mapping",
     "get_mapping",
     "list_mappings",

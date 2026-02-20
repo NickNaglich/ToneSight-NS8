@@ -341,6 +341,8 @@ python -m tonesight_ns8.cli triage --run-b runs/<candidate> --top-n 50 --format 
 python -m tonesight_ns8.cli triage --run-a runs/<baseline> --run-b runs/<candidate> --top-n 50 --format csv
 python -m tonesight_ns8.cli bundle --run-b runs/<candidate>
 python -m tonesight_ns8.cli bundle --run-a runs/<baseline> --run-b runs/<candidate>
+python -m tonesight_ns8.cli trend --out-root runs
+python -m tonesight_ns8.cli trend --out-root runs --group-by source
 ```
 
 Eval artifacts:

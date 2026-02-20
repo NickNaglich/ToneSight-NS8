@@ -163,6 +163,30 @@ def test_cli_bundle(capsys):
     assert Path(bundle_payload["bundle_path"]).exists()
 
 
+def test_cli_trend(capsys):
+    out_root = _temp_dir("tmp_runs_trend_cli")
+    rc_eval = main(
+        [
+            "eval",
+            "--goldset",
+            "data/goldset.jsonl",
+            "--out-root",
+            str(out_root),
+            "--taxonomy",
+            "taxonomy/tone_taxonomy.v1.json",
+            "--threshold-l1",
+            "3",
+        ]
+    )
+    _ = json.loads(capsys.readouterr().out)
+    assert rc_eval == 0
+    rc_trend = main(["trend", "--out-root", str(out_root), "--group-by", "source"])
+    trend_payload = json.loads(capsys.readouterr().out)
+    assert rc_trend == 0
+    assert trend_payload["run_count"] == 1
+    assert Path(trend_payload["trend_summary_path"]).exists()
+
+
 def test_cli_encode_label_requires_taxonomy_returns_json_error(capsys):
     rc = main(["encode", "--family", "TRF", "--r", "6", "--c", "4", "--k", "3", "--label", "empathetic"])
     err = json.loads(capsys.readouterr().err)

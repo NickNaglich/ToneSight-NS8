@@ -60,6 +60,7 @@ Recommendation:
 - Keep labels to `{route, method, status, backend, decision, dim, q}`.
 - Do not label metrics with `run_id` or request IDs.
 - Treat tone metrics as operational proxy signals for conformance/drift, not as direct emotion ground truth.
+- For longitudinal trend views without live providers, prefer artifact rollups via `python -m tonesight_ns8.cli trend --out-root runs` and publish `trend_summary.json`.
 
 ## 3) Grafana dashboards (recommended panels)
 

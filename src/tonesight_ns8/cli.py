@@ -18,6 +18,7 @@ from . import (
     run_compare,
     run_eval_compare,
     run_eval,
+    run_trend,
     run_triage,
     summarize_session,
     summarize_speaker,
@@ -189,6 +190,14 @@ def _cmd_bundle(args: argparse.Namespace) -> dict:
     )
 
 
+def _cmd_trend(args: argparse.Namespace) -> dict:
+    return run_trend(
+        args.out_root,
+        group_by=args.group_by,
+        out_path=args.out,
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="tonesight-ns8",
@@ -277,6 +286,12 @@ def build_parser() -> argparse.ArgumentParser:
     bundle_cmd.add_argument("--run-a", help="Optional baseline run directory path for compare artifact inclusion.")
     bundle_cmd.add_argument("--out", help="Optional explicit bundle output path (.zip).")
     bundle_cmd.set_defaults(func=_cmd_bundle)
+
+    trend_cmd = sub.add_parser("trend", help="Create deterministic trend rollups across historical runs.")
+    trend_cmd.add_argument("--out-root", default=EVAL_DEFAULTS["out_root"])
+    trend_cmd.add_argument("--group-by", help="Optional row metadata field for per-run grouping summaries.")
+    trend_cmd.add_argument("--out", help="Optional explicit trend summary output path.")
+    trend_cmd.set_defaults(func=_cmd_trend)
 
     return parser
 

@@ -56,6 +56,28 @@ def _label_stats(rows: list[dict[str, Any]]) -> dict[str, dict[str, float]]:
     return out
 
 
+def group_l1_stats(rows: list[dict[str, Any]], group_by: str) -> dict[str, dict[str, float]]:
+    """Compute deterministic per-group count/avg_l1/fail_rate from out.jsonl rows."""
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        raw_value = row.get(group_by)
+        key = "__missing__" if raw_value in (None, "") else str(raw_value)
+        groups.setdefault(key, []).append(row)
+
+    out: dict[str, dict[str, float]] = {}
+    for key in sorted(groups):
+        group_rows = groups[key]
+        n = len(group_rows)
+        l1_sum = sum(float(r.get("compliance_l1", 0.0)) for r in group_rows)
+        fail_count = sum(1 for r in group_rows if not bool(r.get("pass", False)))
+        out[key] = {
+            "count": float(n),
+            "avg_l1": (l1_sum / n) if n else 0.0,
+            "fail_rate": (fail_count / n) if n else 0.0,
+        }
+    return out
+
+
 def _trend(delta: float | None, *, higher_is_better: bool) -> str:
     if delta is None:
         return "unknown"

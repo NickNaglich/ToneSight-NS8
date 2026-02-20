@@ -4,7 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from tonesight_ns8.cli import main
-from tonesight_ns8.compare_runner import run_compare
+from tonesight_ns8.compare_runner import group_l1_stats, run_compare
 
 
 def _write_json(path: Path, payload: dict) -> None:
@@ -129,3 +129,16 @@ def test_cli_compare(capsys):
     assert payload["compare_summary"]["run_a"]["run_id"] == "run_A"
     assert payload["compare_summary"]["regression_coverage"]["top_n_requested"] == 5
     assert payload["compare_summary_path"] is not None
+
+
+def test_group_l1_stats_deterministic():
+    rows = [
+        {"id": "a", "source": "s1", "compliance_l1": 2, "pass": False},
+        {"id": "b", "source": "s1", "compliance_l1": 0, "pass": True},
+        {"id": "c", "source": "", "compliance_l1": 1, "pass": True},
+    ]
+    stats = group_l1_stats(rows, "source")
+    assert list(stats.keys()) == ["__missing__", "s1"]
+    assert stats["s1"]["count"] == 2.0
+    assert stats["s1"]["avg_l1"] == 1.0
+    assert stats["s1"]["fail_rate"] == 0.5

@@ -32,6 +32,7 @@ Stable public imports are the names exported by `tonesight_ns8.__all__`:
 - `run_gate`
 - `run_triage`
 - `run_bundle`
+- `run_trend`
 - `register_mapping`
 - `get_mapping`
 - `list_mappings`
@@ -351,6 +352,27 @@ Determinism notes:
 - stable archive member ordering
 - fixed ZIP timestamps
 - manifest is canonical JSON with deterministic ordering
+
+### `run_trend(out_root: str, *, group_by: str | None = None, out_path: str | None = None) -> dict`
+
+Aggregates deterministic run-over-run trend summaries from historical run artifacts.
+
+Inputs:
+- run discovery from `out_root/*` directories containing:
+  - `eval_summary.json`
+  - `receipt.json`
+  - `out.jsonl`
+
+Output:
+- writes `trend_summary.json` (default path: `<out_root>/trend_summary.json`)
+- includes ordered run list with:
+  - `pass_rate`, `avg_l1`, `p95_l1`
+  - run-over-run deltas against previous compatible run
+  - `delta_skipped_reason` when previous run is incompatible (`dataset_hash`/`spec_version` mismatch)
+
+Grouping (optional):
+- `group_by` aggregates per-run stats from row metadata fields (for example `source`, `agent`, `prompt_id`)
+- group metrics include `count`, `avg_l1`, and `fail_rate`
 
 ### `tonesight_from_label(label: str, family: str, r: int, c: int, k: int, taxonomy_path: str) -> dict`
 
