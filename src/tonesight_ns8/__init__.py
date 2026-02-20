@@ -23,6 +23,8 @@ from .mapping import (
     register_mapping,
 )
 from .ns8 import compute_A, resolve_to_seed, validate_inputs
+from .redaction import redact_live_event, redact_text
+from .retention import run_retention_purge
 from .schema import Route, SegmentRecord, SessionSummary, SpeakerSummary, ToneReceipt
 from .trend_runner import run_trend
 from .triage_runner import run_triage
@@ -55,6 +57,9 @@ __all__ = [
     "run_live_capture",
     "run_live_replay",
     "run_live_verify",
+    "redact_text",
+    "redact_live_event",
+    "run_retention_purge",
     "register_mapping",
     "get_mapping",
     "list_mappings",

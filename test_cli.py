@@ -1,5 +1,7 @@
 import json
+import os
 import shutil
+import time
 from pathlib import Path
 from uuid import uuid4
 
@@ -274,3 +276,27 @@ def test_cli_live_verify(capsys):
     assert rc_verify == 0
     assert verify_payload["stable"] is True
     assert verify_payload["mismatched_artifacts"] == []
+
+
+def test_cli_purge_dry_run_and_apply(capsys):
+    out_root = _temp_dir("tmp_purge_cli")
+    old_run = out_root / "run_old"
+    old_run.mkdir(parents=True, exist_ok=True)
+    (old_run / "out.jsonl").write_text("{}", encoding="utf-8")
+    ts = time.time() - (40 * 86400)
+    os.utime(old_run, (ts, ts))
+    os.utime(old_run / "out.jsonl", (ts, ts))
+
+    rc_dry = main(["purge", "--out-root", str(out_root), "--older-than-days", "30"])
+    dry_payload = json.loads(capsys.readouterr().out)
+    assert rc_dry == 0
+    assert dry_payload["dry_run"] is True
+    assert dry_payload["would_delete_count"] >= 1
+    assert old_run.exists()
+
+    rc_apply = main(["purge", "--out-root", str(out_root), "--older-than-days", "30", "--apply"])
+    apply_payload = json.loads(capsys.readouterr().out)
+    assert rc_apply == 0
+    assert apply_payload["dry_run"] is False
+    assert apply_payload["would_delete_count"] >= 1
+    assert apply_payload["deleted_count"] + apply_payload["failed_count"] >= 1

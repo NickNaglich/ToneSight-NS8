@@ -188,6 +188,7 @@ Behavior:
 - `live-capture`: validates LiveEvent envelope and writes deterministic capture artifacts
 - `live-replay`: maps upstream signal (`upstream_vad` or `upstream_label`) into standard run artifacts
 - `live-verify`: replays the same capture twice and checks hash identity for deterministic artifacts
+- `live-replay`/`live-verify` apply deterministic text redaction by default (disable with `--disable-redaction` only for internal debugging)
 
 Live artifacts:
 - `runs/captures/<capture_id>/events.raw.jsonl`
@@ -197,6 +198,21 @@ Live artifacts:
 - `runs/<run_live_id>/report.html`
 - `runs/<run_live_id>/receipt.json`
 - `runs/<run_live_id>/quarantine.jsonl` (only when quarantine mode receives invalid events)
+- replay summaries include `redaction_summary` token counts
+
+## Retention Purge
+
+Deterministic retention cleanup:
+
+```bash
+python -m tonesight_ns8.cli purge --out-root runs --older-than-days 30
+python -m tonesight_ns8.cli purge --out-root runs --older-than-days 30 --apply
+```
+
+Safety defaults:
+- dry-run unless `--apply`
+- capture directories skipped unless `--include-captures`
+- run directories containing `bundles/` skipped unless `--include-bundles`
 
 ## Operational Notes
 

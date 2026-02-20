@@ -93,3 +93,31 @@ def test_live_replay_quarantine_for_missing_upstream_signal():
     assert len(quarantine_rows) == 1
     assert quarantine_rows[0]["error"]["code"] == "missing_upstream_signal"
 
+
+def test_live_replay_applies_redaction_and_receipt_summary():
+    out_root = _temp_dir("tmp_live_redaction")
+    events_path = out_root / "events.redact.jsonl"
+    rows = [
+        {
+            "event_id": "evt_redact",
+            "source": "chat",
+            "timestamp_received": "2026-02-20T12:00:00Z",
+            "text": "Email me at user@example.com or call 555-123-4567",
+            "upstream_label": "empathetic",
+            "meta": {"session_id": "s1"},
+            "privacy_flags": {"contains_pii": True, "allow_store_raw": False},
+        }
+    ]
+    events_path.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+    capture = run_live_capture(str(events_path), out_root=str(out_root))
+    replay = run_live_replay(
+        capture["capture_dir"],
+        out_root=str(out_root),
+        taxonomy_path="taxonomy/tone_taxonomy.v1.json",
+        threshold_l1=3,
+        shadow_strict="quarantine",
+    )
+    out_rows = [json.loads(line) for line in (Path(replay["out_dir"]) / "out.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
+    assert out_rows[0]["text"] == "Email me at [EMAIL] or call [PHONE]"
+    assert replay["summary"]["redaction_summary"] == {"EMAIL": 1, "PHONE": 1, "SSN": 0}
+    assert replay["receipt"]["redaction_summary"] == {"EMAIL": 1, "PHONE": 1, "SSN": 0}

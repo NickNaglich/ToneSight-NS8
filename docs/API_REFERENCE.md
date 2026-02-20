@@ -36,6 +36,9 @@ Stable public imports are the names exported by `tonesight_ns8.__all__`:
  - `run_live_capture`
  - `run_live_replay`
  - `run_live_verify`
+ - `redact_text`
+ - `redact_live_event`
+ - `run_retention_purge`
 - `register_mapping`
 - `get_mapping`
 - `list_mappings`
@@ -387,7 +390,7 @@ Writes:
 Returns:
 - `capture_id`, `capture_hash`, `capture_dir`, `event_count`, `manifest_path`
 
-### `run_live_replay(capture: str, *, out_root: str = "runs", taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", threshold_l1: int = 3, shadow_strict: str = "quarantine") -> dict`
+### `run_live_replay(capture: str, *, out_root: str = "runs", taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", threshold_l1: int = 3, shadow_strict: str = "quarantine", redact: bool = True) -> dict`
 
 Replays a validated capture into standard deterministic run artifacts.
 
@@ -400,8 +403,9 @@ Writes:
 
 Returns:
 - run metadata, summary, receipt, and shadow policy result
+- includes deterministic `redaction_summary` in summary/receipt when redaction is enabled
 
-### `run_live_verify(capture: str, *, out_root: str = "runs", taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", threshold_l1: int = 3, shadow_strict: str = "quarantine") -> dict`
+### `run_live_verify(capture: str, *, out_root: str = "runs", taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", threshold_l1: int = 3, shadow_strict: str = "quarantine", redact: bool = True) -> dict`
 
 Runs `run_live_replay` twice over the same capture and compares artifact hashes.
 
@@ -410,6 +414,23 @@ Returns:
 - artifact hash maps for first/second replay
 - `mismatched_artifacts`
 - `exit_code` (`0` on stable output, `2` on mismatch)
+
+### `redact_text(text: str | None) -> tuple[str | None, dict[str, int]]`
+
+Deterministically redacts configured token classes (`EMAIL`, `PHONE`, `SSN`) using fixed replacement tokens.
+
+### `redact_live_event(event: dict[str, Any]) -> tuple[dict[str, Any], dict[str, int]]`
+
+Returns a redacted copy of a live event and aggregated token counts across `text` and `segments[].text`.
+
+### `run_retention_purge(*, out_root: str, older_than_days: int, dry_run: bool = True, include_bundles: bool = False, include_captures: bool = False) -> dict`
+
+Deterministic retention cleanup helper used by CLI `purge`.
+
+Behavior:
+- default dry-run mode
+- skips capture directories unless explicitly included
+- skips run directories containing `bundles/` unless explicitly included
 - includes ordered run list with:
   - `pass_rate`, `avg_l1`, `p95_l1`
   - run-over-run deltas against previous compatible run

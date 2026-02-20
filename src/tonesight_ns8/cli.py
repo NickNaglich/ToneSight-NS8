@@ -21,6 +21,7 @@ from . import (
     run_live_capture,
     run_live_replay,
     run_live_verify,
+    run_retention_purge,
     run_trend,
     run_triage,
     summarize_session,
@@ -216,6 +217,7 @@ def _cmd_live_replay(args: argparse.Namespace) -> dict:
         taxonomy_path=args.taxonomy,
         threshold_l1=args.threshold_l1,
         shadow_strict=args.shadow_strict,
+        redact=not args.disable_redaction,
     )
 
 
@@ -226,6 +228,17 @@ def _cmd_live_verify(args: argparse.Namespace) -> dict:
         taxonomy_path=args.taxonomy,
         threshold_l1=args.threshold_l1,
         shadow_strict=args.shadow_strict,
+        redact=not args.disable_redaction,
+    )
+
+
+def _cmd_purge(args: argparse.Namespace) -> dict:
+    return run_retention_purge(
+        out_root=args.out_root,
+        older_than_days=args.older_than_days,
+        dry_run=not args.apply,
+        include_bundles=args.include_bundles,
+        include_captures=args.include_captures,
     )
 
 
@@ -336,6 +349,7 @@ def build_parser() -> argparse.ArgumentParser:
     live_replay_cmd.add_argument("--taxonomy", default=EVAL_DEFAULTS["taxonomy_path"])
     live_replay_cmd.add_argument("--threshold-l1", type=_non_negative_int, default=EVAL_DEFAULTS["threshold_l1"])
     live_replay_cmd.add_argument("--shadow-strict", choices=("fail", "drop", "quarantine"), default="quarantine")
+    live_replay_cmd.add_argument("--disable-redaction", action="store_true")
     live_replay_cmd.set_defaults(func=_cmd_live_replay)
 
     live_verify_cmd = sub.add_parser("live-verify", help="Replay capture twice and assert deterministic artifact hashes.")
@@ -344,7 +358,16 @@ def build_parser() -> argparse.ArgumentParser:
     live_verify_cmd.add_argument("--taxonomy", default=EVAL_DEFAULTS["taxonomy_path"])
     live_verify_cmd.add_argument("--threshold-l1", type=_non_negative_int, default=EVAL_DEFAULTS["threshold_l1"])
     live_verify_cmd.add_argument("--shadow-strict", choices=("fail", "drop", "quarantine"), default="quarantine")
+    live_verify_cmd.add_argument("--disable-redaction", action="store_true")
     live_verify_cmd.set_defaults(func=_cmd_live_verify)
+
+    purge_cmd = sub.add_parser("purge", help="Purge old run artifacts with deterministic retention controls.")
+    purge_cmd.add_argument("--out-root", default=EVAL_DEFAULTS["out_root"])
+    purge_cmd.add_argument("--older-than-days", type=_non_negative_int, default=30)
+    purge_cmd.add_argument("--apply", action="store_true", help="Actually delete paths (default is dry-run).")
+    purge_cmd.add_argument("--include-bundles", action="store_true", help="Allow purging run directories containing bundles.")
+    purge_cmd.add_argument("--include-captures", action="store_true", help="Allow purging capture directories under out-root/captures.")
+    purge_cmd.set_defaults(func=_cmd_purge)
 
     return parser
 

@@ -12,6 +12,7 @@ from .eval_runner import _render_eval_report_html
 from .live_identity import canonical_live_event, stable_event_hash
 from .live_event_validation import validate_live_event_file
 from .live_shadow_policy import apply_shadow_policy
+from .redaction import redact_live_event
 from .taxonomy import UnknownToneLabel, get_vad, load_taxonomy
 
 
@@ -125,6 +126,7 @@ def run_live_replay(
     taxonomy_path: str = EVAL_DEFAULTS["taxonomy_path"],
     threshold_l1: int = EVAL_DEFAULTS["threshold_l1"],
     shadow_strict: str = "quarantine",
+    redact: bool = True,
 ) -> dict[str, Any]:
     """Replay a live capture into deterministic run artifacts."""
     events_path, capture_id, events, capture_hash = _load_capture_events(capture)
@@ -145,32 +147,39 @@ def run_live_replay(
     scored: list[dict[str, Any]] = []
     invalid_events: list[dict[str, Any]] = []
     valid_events: list[dict[str, Any]] = []
+    redaction_summary = {"EMAIL": 0, "PHONE": 0, "SSN": 0}
 
     for event in events:
+        working_event = dict(event)
+        if redact:
+            working_event, counts = redact_live_event(working_event)
+            for key, value in counts.items():
+                redaction_summary[key] += int(value)
+
         try:
-            pred_vad = _pred_vad_for_event(event, taxonomy)
+            pred_vad = _pred_vad_for_event(working_event, taxonomy)
         except (ValueError, KeyError, TypeError, UnknownToneLabel) as exc:
             invalid_events.append(
                 {
-                    "event_id": event.get("event_id"),
-                    "event_hash": stable_event_hash(event),
+                    "event_id": working_event.get("event_id"),
+                    "event_hash": stable_event_hash(working_event),
                     "error": {"code": "missing_upstream_signal", "message": str(exc)},
-                    "event": event,
+                    "event": working_event,
                 }
             )
             continue
 
-        valid_events.append(event)
-        text = event.get("text")
-        if text is None and event.get("segments"):
-            text = " ".join(str(seg.get("text", "")).strip() for seg in event["segments"]).strip()
+        valid_events.append(working_event)
+        text = working_event.get("text")
+        if text is None and working_event.get("segments"):
+            text = " ".join(str(seg.get("text", "")).strip() for seg in working_event["segments"]).strip()
         scored.append(
             {
-                "id": event.get("event_id"),
-                "label": event.get("upstream_label"),
-                "source": event.get("source"),
-                "agent": (event.get("meta") or {}).get("agent_id"),
-                "timestamp": event.get("timestamp_emitted") or event.get("timestamp_received"),
+                "id": working_event.get("event_id"),
+                "label": working_event.get("upstream_label"),
+                "source": working_event.get("source"),
+                "agent": (working_event.get("meta") or {}).get("agent_id"),
+                "timestamp": working_event.get("timestamp_emitted") or working_event.get("timestamp_received"),
                 "text": text,
                 "tags": ["live_replay", "shadow_mode"],
                 "target_vad": {"V": pred_vad[0], "A": pred_vad[1], "D": pred_vad[2]},
@@ -183,7 +192,7 @@ def run_live_replay(
                 "threshold_margin": int(threshold_l1),
                 "accuracy_l1": None,
                 "pass": True,
-                "event_hash": stable_event_hash(event),
+                "event_hash": stable_event_hash(working_event),
                 "capture_id": capture_id,
             }
         )
@@ -218,6 +227,7 @@ def run_live_replay(
         "invalid_count": policy["invalid_count"],
         "quarantined_count": policy["quarantined_count"],
         "shadow_mode": policy["mode"],
+        "redaction_summary": redaction_summary,
     }
 
     receipt = {
@@ -234,6 +244,7 @@ def run_live_replay(
             "taxonomy_path": taxonomy_path,
             "shadow_strict": policy["mode"],
             "source_mode": "live_replay",
+            "redact": redact,
         },
         "artifacts": {
             "out_jsonl": str(out_dir / "out.jsonl"),
@@ -244,6 +255,7 @@ def run_live_replay(
     }
     if policy["quarantine_path"]:
         receipt["artifacts"]["quarantine_jsonl"] = policy["quarantine_path"]
+    receipt["redaction_summary"] = redaction_summary
 
     _write_jsonl(out_dir / "out.jsonl", scored)
     (out_dir / "eval_summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
@@ -269,6 +281,7 @@ def run_live_verify(
     taxonomy_path: str = EVAL_DEFAULTS["taxonomy_path"],
     threshold_l1: int = EVAL_DEFAULTS["threshold_l1"],
     shadow_strict: str = "quarantine",
+    redact: bool = True,
 ) -> dict[str, Any]:
     """Replay twice and verify deterministic artifact hashes are identical."""
     first = run_live_replay(
@@ -277,6 +290,7 @@ def run_live_verify(
         taxonomy_path=taxonomy_path,
         threshold_l1=threshold_l1,
         shadow_strict=shadow_strict,
+        redact=redact,
     )
     run_dir = Path(first["out_dir"])
     first_hashes = {
@@ -294,6 +308,7 @@ def run_live_verify(
         taxonomy_path=taxonomy_path,
         threshold_l1=threshold_l1,
         shadow_strict=shadow_strict,
+        redact=redact,
     )
     second_hashes = {
         "out_jsonl": _file_hash(run_dir / "out.jsonl"),

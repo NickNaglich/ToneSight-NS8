@@ -291,6 +291,8 @@ Release readiness checklist:
 - `docs/RELEASE_CHECKLIST.md`
 - `docs/LIVE_EVENT_SCHEMA.md`
 - `docs/IDENTITY_AND_HASHING.md`
+- `docs/PRIVACY_REDACTION.md`
+- `docs/RETENTION_POLICY.md`
 
 ## CLI Usage
 
@@ -349,6 +351,8 @@ python -m tonesight_ns8.cli trend --out-root runs --group-by source
 python -m tonesight_ns8.cli live-capture --events tests/fixtures/live_capture.small.jsonl --out-root runs
 python -m tonesight_ns8.cli live-replay --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
 python -m tonesight_ns8.cli live-verify --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
+python -m tonesight_ns8.cli purge --out-root runs --older-than-days 30
+python -m tonesight_ns8.cli purge --out-root runs --older-than-days 30 --apply
 ```
 
 Eval artifacts:
@@ -378,6 +382,7 @@ Live replay artifacts:
 - `runs/<run_live_id>/report.html`
 - `runs/<run_live_id>/receipt.json`
 - `runs/<run_live_id>/quarantine.jsonl` (when `--shadow-strict quarantine` and invalid events exist)
+- `redaction_summary` in replay `eval_summary.json` and `receipt.json`
 
 ## 30-Second Local Demo
 
@@ -475,6 +480,13 @@ Live shadow replay validation:
 ```bash
 python -m tonesight_ns8.cli live-capture --events tests/fixtures/live_capture.small.jsonl --out-root runs
 python -m tonesight_ns8.cli live-verify --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
+```
+
+Retention dry-run/apply:
+
+```bash
+python -m tonesight_ns8.cli purge --out-root runs --older-than-days 30
+python -m tonesight_ns8.cli purge --out-root runs --older-than-days 30 --apply
 ```
 
 Automated validation workflow (tests + goldset validator):
