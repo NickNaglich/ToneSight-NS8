@@ -229,6 +229,25 @@ No plotting is included in core. Visualization is downstream.
 Derived metrics contract reference:
 - `docs/DERIVED_METRICS.md`
 
+## Security
+
+Repository security process:
+- vulnerability disclosure policy: `SECURITY.md`
+- contribution/security guidance: `CONTRIBUTING.md`
+- automated CI security checks: `.github/workflows/security.yml`
+
+Local high-signal checks:
+
+```bash
+# Secrets
+gitleaks detect --source . --redact --no-git
+gitleaks detect --source . --redact
+
+# Dependencies / SAST
+pip-audit
+bandit -r src
+```
+
 ## API Reference
 
 Detailed API is documented in:

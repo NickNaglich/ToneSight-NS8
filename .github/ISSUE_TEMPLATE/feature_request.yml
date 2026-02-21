@@ -1,0 +1,28 @@
+name: Feature request
+description: Propose a deterministic, scope-aligned enhancement.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Goal
+      description: What outcome do you need?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Describe the expected behavior and contract impact.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: List concrete pass/fail criteria.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
