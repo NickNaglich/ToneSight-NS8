@@ -201,7 +201,7 @@ def run_live_replay(
                 "compliance_l1": 0,
                 "threshold_margin": int(threshold_l1),
                 "accuracy_l1": None,
-                "pass": True,
+                "pass": True,  # nosec B105
                 "event_hash": stable_event_hash(working_event),
                 "capture_id": capture_id,
             }

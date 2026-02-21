@@ -29,7 +29,7 @@ def _find_previous_run(
             continue
         try:
             payload = json.loads(receipt.read_text(encoding="utf-8"))
-        except Exception:
+        except (OSError, json.JSONDecodeError):
             continue
         candidates.append((child, payload))
     if not candidates:

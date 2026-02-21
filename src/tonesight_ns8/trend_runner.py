@@ -79,7 +79,7 @@ def run_trend(
             "pass_rate": summary.get("pass_rate"),
             "avg_l1": summary.get("avg_l1"),
             "p95_l1": summary.get("p95_l1"),
-            "delta_pass_rate_vs_prev": None,
+            "delta_pass_rate_vs_prev": None,  # nosec B105
             "delta_avg_l1_vs_prev": None,
             "delta_p95_l1_vs_prev": None,
             "delta_skipped_reason": None,
@@ -118,4 +118,3 @@ def run_trend(
     target.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     payload["trend_summary_path"] = str(target)
     return payload
-

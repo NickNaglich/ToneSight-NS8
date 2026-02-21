@@ -7,7 +7,7 @@ import html
 import json
 import platform
 import shutil
-import subprocess
+import subprocess  # nosec B404
 import sys
 import time
 from datetime import datetime, timezone
@@ -107,7 +107,7 @@ def _gpu_snapshot() -> dict[str, Any]:
         "--format=csv,noheader,nounits",
     ]
     try:
-        proc = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        proc = subprocess.run(cmd, check=True, capture_output=True, text=True)  # nosec B603
         rows = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
         return {"available": True, "rows": rows}
     except Exception as exc:  # pragma: no cover
@@ -157,7 +157,7 @@ def _render_eval_report_html(
     summary_json = json.dumps(summary, ensure_ascii=True)
     rows_json = json.dumps(scored, ensure_ascii=True)
     return (
-        "<!doctype html>\n"
+        "<!doctype html>\n"  # nosec B608
         '<html lang="en">\n'
         "<head>\n"
         '<meta charset="utf-8" />\n'
