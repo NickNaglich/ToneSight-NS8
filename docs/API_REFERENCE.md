@@ -205,7 +205,7 @@ Determinism guarantees:
 - stable sort by segment time/identity before aggregation
 - stable result regardless of input ordering
 
-### `summarize_session(session_id: str, segments: list[SegmentRecord], arousal_spike_threshold: int = 7) -> SessionSummary`
+### `summarize_session(session_id: str, segments: list[SegmentRecord], arousal_spike_threshold: int = 7, drift_window_k: int = 2) -> SessionSummary`
 
 Computes deterministic session-level summary.
 
@@ -213,6 +213,7 @@ Inputs:
 - `session_id`: stable session identifier
 - `segments`: list of `SegmentRecord`
 - `arousal_spike_threshold`: integer in `1..8`
+- `drift_window_k`: integer `>= 1` selecting first/last boundary window size
 
 Output:
 - `SessionSummary` with centroid, distributions, and spike stats
@@ -221,6 +222,8 @@ Output:
   - `spike_density` (alias of `spike_rate`)
   - `arousal_momentum`
   - `tone_stability_index`
+  - drift metrics: `drift_v`, `drift_a`, `drift_d`, optional `drift_anchor`
+  - resolved `drift_window_k` used for the calculation
 
 Determinism guarantees:
 - stable sort before aggregation

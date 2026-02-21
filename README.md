@@ -219,6 +219,7 @@ Core analytics produce deterministic JSON-serializable summaries:
 - arousal momentum (`mean_momentum`, `positive_momentum_ratio`)
 - tone stability index (bounded `0..1` from normalized volatility)
 - session tone profile (aggregate centroid + distributions)
+- session drift (`drift_v`, `drift_a`, `drift_d`, optional `drift_anchor`) over deterministic boundary windows
 - arousal spike detection (configurable threshold; default `7`)
 - spike density (backward-compatible alias of spike rate)
 - distributions/histograms for `V`, `A`, `D`, and NS8 anchor `A`

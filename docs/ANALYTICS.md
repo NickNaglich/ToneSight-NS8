@@ -55,6 +55,21 @@ Across all session segments:
 - aggregate centroid (`mean(V), mean(A), mean(D)`)
 - aggregate distributions
 
+### Session drift metrics
+
+Directional shift between start/end boundary windows:
+- `drift_v`
+- `drift_a`
+- `drift_d`
+- `drift_anchor` (optional; included when anchor values are present in both windows)
+
+Window policy:
+- use first `k` and last `k` segments from deterministic session ordering
+- `k` is configured via `drift_window_k` (default `2`)
+- bounded behavior:
+  - empty session: `k=0`, drifts are `0.0` (`drift_anchor=null`)
+  - short sessions: `k=min(requested_k, count_segments)`; overlap is deterministic
+
 ### Arousal spike detection
 
 Default threshold:
@@ -111,6 +126,11 @@ Session summary (shape):
     "D": [0, 0, 1, 2, 2, 1, 0, 0],
     "anchor_A": [1, 1, 1, 1, 0, 1, 0, 1]
   },
+  "drift_window_k": 2,
+  "drift_v": -0.5,
+  "drift_a": 1.0,
+  "drift_d": 0.5,
+  "drift_anchor": 1.5,
   "spike_count": 2,
   "spike_rate": 0.3333,
   "spike_density": 0.3333,

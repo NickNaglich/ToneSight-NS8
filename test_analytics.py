@@ -53,6 +53,11 @@ def test_summarize_session_spikes_and_totals():
     assert session.spike_count == 2
     assert session.spike_rate == 2 / 6
     assert session.spike_density == session.spike_rate
+    assert session.drift_window_k == 2
+    assert session.drift_v == -0.5
+    assert session.drift_a == 1.0
+    assert session.drift_d == 0.5
+    assert session.drift_anchor == 1.5
     assert session.arousal_momentum == {"mean_momentum": 1.0, "positive_momentum_ratio": 0.6, "count_transitions": 5.0}
     assert session.tone_stability_index == 0.457143
     assert session.spike_segments == ["seg_02", "seg_06"]
@@ -88,12 +93,22 @@ def test_derived_metrics_empty_and_single_segment_inputs():
     assert speaker.tone_stability_index == 1.0
     assert session.arousal_momentum == {"mean_momentum": 0.0, "positive_momentum_ratio": 0.0, "count_transitions": 0.0}
     assert session.tone_stability_index == 1.0
+    assert session.drift_window_k == 1
+    assert session.drift_v == 0.0
+    assert session.drift_a == 0.0
+    assert session.drift_d == 0.0
+    assert session.drift_anchor == 0.0
     assert session.spike_rate == 0.0
     assert session.spike_density == 0.0
 
     empty_session = summarize_session("session_empty", [])
     assert empty_session.arousal_momentum == {"mean_momentum": 0.0, "positive_momentum_ratio": 0.0, "count_transitions": 0.0}
     assert empty_session.tone_stability_index == 1.0
+    assert empty_session.drift_window_k == 0
+    assert empty_session.drift_v == 0.0
+    assert empty_session.drift_a == 0.0
+    assert empty_session.drift_d == 0.0
+    assert empty_session.drift_anchor is None
     assert empty_session.spike_rate == 0.0
     assert empty_session.spike_density == 0.0
 
@@ -110,3 +125,26 @@ def test_derived_metrics_stable_float_precision_rounding():
     assert speaker.arousal_momentum["mean_momentum"] == 1.333333
     assert speaker.arousal_momentum["positive_momentum_ratio"] == 1.0
     assert speaker.tone_stability_index == 0.809524
+
+
+def test_session_drift_window_policy_and_unordered_determinism():
+    ordered = _fixture_segments()
+    shuffled = [ordered[4], ordered[2], ordered[0], ordered[5], ordered[1], ordered[3]]
+
+    session_k1 = summarize_session("session_001", ordered, drift_window_k=1)
+    assert session_k1.drift_window_k == 1
+    assert session_k1.drift_v == -3.0
+    assert session_k1.drift_a == 5.0
+    assert session_k1.drift_d == 2.0
+    assert session_k1.drift_anchor == 6.0
+
+    session_k9 = summarize_session("session_001", ordered, drift_window_k=9)
+    assert session_k9.drift_window_k == 6
+    assert session_k9.drift_v == 0.0
+    assert session_k9.drift_a == 0.0
+    assert session_k9.drift_d == 0.0
+    assert session_k9.drift_anchor == 0.0
+
+    session_ordered = summarize_session("session_001", ordered, drift_window_k=2)
+    session_shuffled = summarize_session("session_001", shuffled, drift_window_k=2)
+    assert session_ordered == session_shuffled

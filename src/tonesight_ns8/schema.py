@@ -44,6 +44,11 @@ class SessionSummary:
     count_segments: int
     vad_centroid: tuple[float, float, float]
     distributions: dict[str, list[int]]
+    drift_window_k: int
+    drift_v: float
+    drift_a: float
+    drift_d: float
+    drift_anchor: Optional[float]
     spike_count: int
     spike_rate: float
     spike_density: float
