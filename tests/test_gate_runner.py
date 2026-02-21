@@ -35,6 +35,12 @@ def _mk_run(
     avg_l1: float,
     p95_l1: float,
     rows: list[dict],
+    taxonomy_hash: str = "tax123",
+    defaults_hash: str = "def123",
+    defaults_spec_version: str = "1.0",
+    mapping_id: str = "ns8",
+    mapping_version: str = "1.0",
+    calibration_path: str | None = None,
 ) -> None:
     path.mkdir(parents=True, exist_ok=True)
     _write_json(
@@ -56,8 +62,20 @@ def _mk_run(
             "run_id": run_id,
             "dataset_path": "data/goldset.jsonl",
             "dataset_hash": dataset_hash,
+            "taxonomy_hash": taxonomy_hash,
+            "defaults_hash": defaults_hash,
+            "defaults_spec_version": defaults_spec_version,
+            "mapping_id": mapping_id,
+            "mapping_version": mapping_version,
             "row_count": len(rows),
-            "config": {"threshold_l1": 3, "taxonomy_path": "taxonomy/tone_taxonomy.v1.json"},
+            "config": {
+                "threshold_l1": 3,
+                "taxonomy_path": "taxonomy/tone_taxonomy.v1.json",
+                "calibration_path": calibration_path,
+                "mapping_id": mapping_id,
+                "mapping_version": mapping_version,
+                "defaults_spec_version": defaults_spec_version,
+            },
             "artifacts": {
                 "out_jsonl": str(path / "out.jsonl"),
                 "eval_summary_json": str(path / "eval_summary.json"),
@@ -160,7 +178,119 @@ def test_run_gate_incompatible():
     payload = run_gate(str(run_a), str(run_b))
     assert payload["decision"] == "incompatible"
     assert payload["exit_code"] == 3
-    assert len(payload["incompatibilities"]) == 2
+    reasons = {item["reason"] for item in payload["incompatibilities"]}
+    assert "dataset_hash_mismatch" in reasons
+    assert "spec_version_mismatch" in reasons
+
+
+def test_run_gate_profile_and_override_thresholds():
+    root = _temp_dir("tmp_gate_profile")
+    run_a = root / "run_A"
+    run_b = root / "run_B"
+    rows_a = [{"id": "id_1", "label": "calm", "compliance_l1": 0, "delta_v": 0, "delta_a": 0, "delta_d": 0, "pass": True}]
+    rows_b = [{"id": "id_1", "label": "calm", "compliance_l1": 1, "delta_v": 0, "delta_a": 1, "delta_d": 0, "pass": True}]
+    _mk_run(
+        run_a,
+        run_id="run_A",
+        dataset_hash="abc123",
+        spec_version="1.0",
+        pass_rate=1.0,
+        avg_l1=0.0,
+        p95_l1=0.0,
+        rows=rows_a,
+    )
+    _mk_run(
+        run_b,
+        run_id="run_B",
+        dataset_hash="abc123",
+        spec_version="1.0",
+        pass_rate=0.99,
+        avg_l1=0.2,
+        p95_l1=0.2,
+        rows=rows_b,
+    )
+    payload = run_gate(
+        str(run_a),
+        str(run_b),
+        profile="strict_regression",
+        max_avg_l1_delta=0.3,
+    )
+    assert payload["profile"] == "strict_regression"
+    assert payload["thresholds"]["max_avg_l1_delta"] == 0.3
+
+
+def test_run_gate_incompatible_live_identity_fields():
+    root = _temp_dir("tmp_gate_live_identity")
+    run_a = root / "run_A"
+    run_b = root / "run_B"
+    rows = [{"id": "id_1", "label": "calm", "compliance_l1": 0, "delta_v": 0, "delta_a": 0, "delta_d": 0, "pass": True}]
+    _mk_run(
+        run_a,
+        run_id="run_A",
+        dataset_hash="abc123",
+        spec_version="1.0",
+        pass_rate=1.0,
+        avg_l1=0.0,
+        p95_l1=0.0,
+        rows=rows,
+        taxonomy_hash="tax_a",
+        defaults_spec_version="1.0",
+        mapping_id="ns8",
+        mapping_version="1.0",
+        calibration_path="",
+    )
+    _mk_run(
+        run_b,
+        run_id="run_B",
+        dataset_hash="abc123",
+        spec_version="1.0",
+        pass_rate=1.0,
+        avg_l1=0.0,
+        p95_l1=0.0,
+        rows=rows,
+        taxonomy_hash="tax_b",
+        defaults_spec_version="2.0",
+        mapping_id="custom",
+        mapping_version="9.9",
+        calibration_path="config/calib.v2.json",
+    )
+    payload = run_gate(str(run_a), str(run_b))
+    assert payload["decision"] == "incompatible"
+    reasons = {item["reason"] for item in payload["incompatibilities"]}
+    assert "mapping_id_mismatch" in reasons
+    assert "mapping_version_mismatch" in reasons
+    assert "taxonomy_identity_mismatch" in reasons
+    assert "defaults_schema_version_mismatch" in reasons
+    assert "calibration_identity_mismatch" in reasons
+
+
+def test_run_gate_live_dataset_mismatch_allowed():
+    root = _temp_dir("tmp_gate_live_allow_dataset")
+    run_a = root / "run_A"
+    run_b = root / "run_B"
+    rows = [{"id": "id_1", "label": "calm", "compliance_l1": 1, "delta_v": 0, "delta_a": 1, "delta_d": 0, "pass": True}]
+    _mk_run(
+        run_a,
+        run_id="run_A",
+        dataset_hash="live_a",
+        spec_version="1.0",
+        pass_rate=1.0,
+        avg_l1=1.0,
+        p95_l1=1.0,
+        rows=rows,
+    )
+    _mk_run(
+        run_b,
+        run_id="run_B",
+        dataset_hash="live_b",
+        spec_version="1.0",
+        pass_rate=1.0,
+        avg_l1=1.0,
+        p95_l1=1.0,
+        rows=rows,
+    )
+    payload = run_gate(str(run_a), str(run_b), require_dataset_match=False)
+    assert payload["decision"] == "passed"
 
 
 def test_cli_gate_exit_codes(capsys):
@@ -194,3 +324,33 @@ def test_cli_gate_exit_codes(capsys):
     assert rc == 2
     assert payload["decision"] == "regressed"
 
+
+def test_cli_gate_profile(capsys):
+    root = _temp_dir("tmp_gate_cli_profile")
+    run_a = root / "run_A"
+    run_b = root / "run_B"
+    rows = [{"id": "id_1", "label": "calm", "compliance_l1": 1, "delta_v": 0, "delta_a": 1, "delta_d": 0, "pass": True}]
+    _mk_run(
+        run_a,
+        run_id="run_A",
+        dataset_hash="abc123",
+        spec_version="1.0",
+        pass_rate=1.0,
+        avg_l1=1.0,
+        p95_l1=1.0,
+        rows=rows,
+    )
+    _mk_run(
+        run_b,
+        run_id="run_B",
+        dataset_hash="abc123",
+        spec_version="1.0",
+        pass_rate=1.0,
+        avg_l1=1.0,
+        p95_l1=1.0,
+        rows=rows,
+    )
+    rc = main(["gate", "--run-a", str(run_a), "--run-b", str(run_b), "--profile", "support_chat"])
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert payload["profile"] == "support_chat"

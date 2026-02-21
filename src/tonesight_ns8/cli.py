@@ -168,10 +168,13 @@ def _cmd_gate(args: argparse.Namespace) -> dict:
     return run_gate(
         args.run_a,
         args.run_b,
+        profile=args.profile,
+        gate_profiles_path=args.gate_profiles,
         min_pass_rate_delta=args.min_pass_rate_delta,
         max_avg_l1_delta=args.max_avg_l1_delta,
         max_p95_l1_delta=args.max_p95_l1_delta,
         top_n=args.top_n,
+        require_dataset_match=not args.allow_dataset_mismatch,
     )
 
 
@@ -310,9 +313,16 @@ def build_parser() -> argparse.ArgumentParser:
     gate_cmd = sub.add_parser("gate", help="Run deterministic CI gate checks over compare deltas.")
     gate_cmd.add_argument("--run-a", required=True, help="Baseline run directory path.")
     gate_cmd.add_argument("--run-b", required=True, help="Candidate run directory path.")
-    gate_cmd.add_argument("--min-pass-rate-delta", type=float, default=-0.02)
-    gate_cmd.add_argument("--max-avg-l1-delta", type=float, default=0.2)
-    gate_cmd.add_argument("--max-p95-l1-delta", type=float, default=0.2)
+    gate_cmd.add_argument("--profile", help="Optional gate profile name from gate profiles config.")
+    gate_cmd.add_argument("--gate-profiles", default="config/gate_profiles.json")
+    gate_cmd.add_argument("--min-pass-rate-delta", type=float, default=None)
+    gate_cmd.add_argument("--max-avg-l1-delta", type=float, default=None)
+    gate_cmd.add_argument("--max-p95-l1-delta", type=float, default=None)
+    gate_cmd.add_argument(
+        "--allow-dataset-mismatch",
+        action="store_true",
+        help="Disable dataset_hash compatibility gate (useful for live non-goldset comparisons).",
+    )
     gate_cmd.add_argument("--top-n", type=_non_negative_int, default=10)
     gate_cmd.set_defaults(func=_cmd_gate)
 

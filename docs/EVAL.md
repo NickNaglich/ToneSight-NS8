@@ -131,17 +131,28 @@ Use deterministic gate checks against run-to-run compare deltas:
 
 ```bash
 python -m tonesight_ns8.cli gate --run-a runs/<baseline> --run-b runs/<candidate>
+python -m tonesight_ns8.cli gate --run-a runs/<baseline> --run-b runs/<candidate> --profile support_chat
 ```
 
 Threshold flags:
 - `--min-pass-rate-delta` (default `-0.02`)
 - `--max-avg-l1-delta` (default `0.2`)
 - `--max-p95-l1-delta` (default `0.2`)
+- `--profile <name>` (loads thresholds from `config/gate_profiles.json`)
 
 Exit codes:
 - `0`: gate passed
 - `2`: regression threshold violated
 - `3`: incompatible runs (`dataset_hash`/`spec_version` mismatch)
+
+Compatibility gates include:
+- `spec_version`
+- `mapping_id`
+- `mapping_version`
+- `taxonomy_identity` (`taxonomy_hash` or taxonomy path fallback)
+- `calibration_identity`
+- `defaults_schema_version`
+- optional `dataset_hash` gate (disable via `--allow-dataset-mismatch` for live non-goldset comparisons)
 
 ## Triage Command (Data QA)
 

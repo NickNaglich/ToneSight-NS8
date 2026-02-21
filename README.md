@@ -341,6 +341,8 @@ python -m tonesight_ns8.cli eval-compare
 python -m tonesight_ns8.cli eval-compare --goldset data/goldset.jsonl --out-root runs --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --top-n 10
 python -m tonesight_ns8.cli compare runs/<runA> runs/<runB> --top-n 10 --write
 python -m tonesight_ns8.cli gate --run-a runs/<baseline> --run-b runs/<candidate>
+python -m tonesight_ns8.cli gate --run-a runs/<baseline> --run-b runs/<candidate> --profile support_chat
+python -m tonesight_ns8.cli gate --run-a runs/<baseline> --run-b runs/<candidate> --allow-dataset-mismatch
 python -m tonesight_ns8.cli triage --run-b runs/<candidate> --top-n 50 --format jsonl
 python -m tonesight_ns8.cli triage --run-a runs/<baseline> --run-b runs/<candidate> --top-n 50 --format csv
 python -m tonesight_ns8.cli bundle --run-b runs/<candidate>
@@ -369,6 +371,11 @@ Gate command (`gate`) exit codes:
 - `0`: gate passed
 - `2`: regression threshold violated
 - `3`: incompatible runs (`dataset_hash`/`spec_version` mismatch)
+
+Gate profiles:
+- configured in `config/gate_profiles.json`
+- selected with `--profile <name>`
+- explicit CLI thresholds still override selected profile values
 
 Optional eval artifacts:
 - `runs/<run_id>/gpu_before.json`

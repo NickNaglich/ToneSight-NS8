@@ -35,6 +35,14 @@ def _file_hash(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
 
 
+def _defaults_spec_version(path: Path) -> str:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return ""
+    return str(payload.get("spec_version", ""))
+
+
 def _capture_hash(events: list[dict[str, Any]]) -> str:
     canonical_rows = [canonical_live_event(row) for row in events]
     encoded = json.dumps(canonical_rows, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -132,7 +140,9 @@ def run_live_replay(
     events_path, capture_id, events, capture_hash = _load_capture_events(capture)
     taxonomy = load_taxonomy(taxonomy_path)
     taxonomy_hash = _file_hash(Path(taxonomy_path))
-    defaults_hash = _file_hash(_resolve_defaults_path())
+    defaults_path = _resolve_defaults_path()
+    defaults_hash = _file_hash(defaults_path)
+    defaults_spec_version = _defaults_spec_version(defaults_path)
     run_hash = _replay_hash(
         capture_hash=capture_hash,
         taxonomy_hash=taxonomy_hash,
@@ -238,6 +248,9 @@ def run_live_replay(
         "capture_hash": capture_hash[:12],
         "taxonomy_hash": taxonomy_hash,
         "defaults_hash": defaults_hash,
+        "defaults_spec_version": defaults_spec_version,
+        "mapping_id": "ns8",
+        "mapping_version": "1.0",
         "row_count": total,
         "config": {
             "threshold_l1": int(threshold_l1),
@@ -245,6 +258,10 @@ def run_live_replay(
             "shadow_strict": policy["mode"],
             "source_mode": "live_replay",
             "redact": redact,
+            "mapping_id": "ns8",
+            "mapping_version": "1.0",
+            "defaults_spec_version": defaults_spec_version,
+            "calibration_path": "",
         },
         "artifacts": {
             "out_jsonl": str(out_dir / "out.jsonl"),

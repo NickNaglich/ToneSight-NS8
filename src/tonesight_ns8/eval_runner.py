@@ -79,6 +79,14 @@ def _file_hash(path: Path) -> str:
     return digest[:12]
 
 
+def _defaults_spec_version(path: Path) -> str:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return ""
+    return str(payload.get("spec_version", ""))
+
+
 def _load_calibration(calibration_path: str | None) -> dict[str, tuple[int, int, int]]:
     if not calibration_path:
         return {}
@@ -280,7 +288,9 @@ def run_eval(
     taxonomy = load_taxonomy(taxonomy_path)
     calibration = _load_calibration(calibration_path)
     taxonomy_hash = _file_hash(Path(taxonomy_path))
-    defaults_hash = _file_hash(_resolve_defaults_path())
+    defaults_path = _resolve_defaults_path()
+    defaults_hash = _file_hash(defaults_path)
+    defaults_spec_version = _defaults_spec_version(defaults_path)
 
     d_hash = _dataset_hash(gpath)
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
@@ -375,6 +385,9 @@ def run_eval(
         "dataset_hash": d_hash,
         "taxonomy_hash": taxonomy_hash,
         "defaults_hash": defaults_hash,
+        "defaults_spec_version": defaults_spec_version,
+        "mapping_id": "ns8",
+        "mapping_version": "1.0",
         "row_count": total,
         "config": {
             "threshold_l1": threshold_l1,
@@ -382,6 +395,9 @@ def run_eval(
             "calibration_path": calibration_path,
             "capture_gpu": capture_gpu,
             "mlflow_tracking_uri": mlflow_tracking_uri,
+            "mapping_id": "ns8",
+            "mapping_version": "1.0",
+            "defaults_spec_version": defaults_spec_version,
         },
         "artifacts": {
             "out_jsonl": str(out_dir / "out.jsonl"),

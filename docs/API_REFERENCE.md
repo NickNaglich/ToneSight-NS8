@@ -308,13 +308,18 @@ Optional artifact write (`write_artifact=True`):
 - `runs/<runB>/comparisons/<runA>/compare_summary.json`
 - `runs/<runB>/comparisons/<runA>/compare_report.html`
 
-### `run_gate(run_a: str, run_b: str, *, min_pass_rate_delta: float = -0.02, max_avg_l1_delta: float = 0.2, max_p95_l1_delta: float = 0.2, top_n: int = 10) -> dict`
+### `run_gate(run_a: str, run_b: str, *, profile: str | None = None, gate_profiles_path: str = "config/gate_profiles.json", min_pass_rate_delta: float | None = None, max_avg_l1_delta: float | None = None, max_p95_l1_delta: float | None = None, top_n: int = 10, require_dataset_match: bool = True) -> dict`
 
 Runs deterministic CI gate checks over compare deltas.
 
 Compatibility checks:
-- `dataset_hash` must match across run receipts
-- `spec_version` must match across run receipts
+- `spec_version`
+- `mapping_id`
+- `mapping_version`
+- `taxonomy_identity` (`taxonomy_hash` with path fallback)
+- `calibration_identity`
+- `defaults_schema_version`
+- optional `dataset_hash` check (`require_dataset_match`)
 
 Decision semantics:
 - `decision = "passed"` -> `exit_code = 0`
@@ -325,6 +330,11 @@ Threshold checks:
 - fail if `delta_pass_rate < min_pass_rate_delta`
 - fail if `delta_avg_l1 > max_avg_l1_delta`
 - fail if `delta_p95_l1 > max_p95_l1_delta`
+
+Gate profiles:
+- profile config lives at `config/gate_profiles.json`
+- select with `profile="<name>"`
+- explicit threshold args override selected profile values
 
 ### `run_triage(run_b: str, *, run_a: str | None = None, top_n: int = 50, score: str = "compliance_l1", output_format: str = "jsonl", out_path: str | None = None) -> dict`
 
