@@ -70,6 +70,24 @@ Window policy:
   - empty session: `k=0`, drifts are `0.0` (`drift_anchor=null`)
   - short sessions: `k=min(requested_k, count_segments)`; overlap is deterministic
 
+### Cross-speaker arousal coupling
+
+Session-level interaction metric built from speaker arousal series:
+- `coupling_score` (weighted Pearson correlation over valid speaker-pair alignments)
+- `count_pairs` (total aligned points used in valid pair correlations)
+- `alignment` metadata:
+  - `policy`: `speaker_pair_index_alignment`
+  - `speaker_count`
+  - `speaker_pair_count`
+  - per-pair details (`speaker_a`, `speaker_b`, `aligned_count`, `coupling_score`)
+  - `insufficient_data`
+
+Alignment policy:
+- sort session segments deterministically
+- build per-speaker arousal series in that stable order
+- for each speaker pair, align by index truncation to `min(len(a), len(b))`
+- require at least 2 aligned points with non-zero variance per speaker for a valid correlation
+
 ### Arousal spike detection
 
 Default threshold:
@@ -140,6 +158,16 @@ Session summary (shape):
     "count_transitions": 5.0
   },
   "tone_stability_index": 0.6,
+  "arousal_coupling": {
+    "coupling_score": 1.0,
+    "count_pairs": 3.0,
+    "alignment": {
+      "policy": "speaker_pair_index_alignment",
+      "speaker_count": 2.0,
+      "speaker_pair_count": 1.0,
+      "insufficient_data": false
+    }
+  },
   "spike_segments": ["seg_02", "seg_06"]
 }
 ```

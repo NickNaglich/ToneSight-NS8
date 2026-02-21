@@ -60,6 +60,12 @@ def test_summarize_session_spikes_and_totals():
     assert session.drift_anchor == 1.5
     assert session.arousal_momentum == {"mean_momentum": 1.0, "positive_momentum_ratio": 0.6, "count_transitions": 5.0}
     assert session.tone_stability_index == 0.457143
+    assert session.arousal_coupling["coupling_score"] == 1.0
+    assert session.arousal_coupling["count_pairs"] == 3.0
+    assert session.arousal_coupling["alignment"]["policy"] == "speaker_pair_index_alignment"
+    assert session.arousal_coupling["alignment"]["speaker_count"] == 2.0
+    assert session.arousal_coupling["alignment"]["speaker_pair_count"] == 1.0
+    assert session.arousal_coupling["alignment"]["insufficient_data"] is False
     assert session.spike_segments == ["seg_02", "seg_06"]
 
     assert len(session.distributions["V"]) == 8
@@ -100,6 +106,9 @@ def test_derived_metrics_empty_and_single_segment_inputs():
     assert session.drift_anchor == 0.0
     assert session.spike_rate == 0.0
     assert session.spike_density == 0.0
+    assert session.arousal_coupling["coupling_score"] is None
+    assert session.arousal_coupling["count_pairs"] == 0.0
+    assert session.arousal_coupling["alignment"]["insufficient_data"] is True
 
     empty_session = summarize_session("session_empty", [])
     assert empty_session.arousal_momentum == {"mean_momentum": 0.0, "positive_momentum_ratio": 0.0, "count_transitions": 0.0}
@@ -111,6 +120,9 @@ def test_derived_metrics_empty_and_single_segment_inputs():
     assert empty_session.drift_anchor is None
     assert empty_session.spike_rate == 0.0
     assert empty_session.spike_density == 0.0
+    assert empty_session.arousal_coupling["coupling_score"] is None
+    assert empty_session.arousal_coupling["count_pairs"] == 0.0
+    assert empty_session.arousal_coupling["alignment"]["insufficient_data"] is True
 
 
 def test_derived_metrics_stable_float_precision_rounding():
@@ -148,3 +160,21 @@ def test_session_drift_window_policy_and_unordered_determinism():
     session_ordered = summarize_session("session_001", ordered, drift_window_k=2)
     session_shuffled = summarize_session("session_001", shuffled, drift_window_k=2)
     assert session_ordered == session_shuffled
+
+
+def test_cross_speaker_coupling_sparse_misaligned_and_insufficient_data():
+    sparse = [
+        SegmentRecord("a1", "spk_a", 0.0, 1.0, 4, 2, 4),
+        SegmentRecord("a2", "spk_a", 1.0, 2.0, 4, 5, 4),
+        SegmentRecord("a3", "spk_a", 2.0, 3.0, 4, 3, 4),
+        SegmentRecord("b1", "spk_b", 1.5, 2.5, 4, 7, 4),
+    ]
+    session = summarize_session("session_sparse", sparse)
+    coupling = session.arousal_coupling
+    assert coupling["coupling_score"] is None
+    assert coupling["count_pairs"] == 0.0
+    assert coupling["alignment"]["insufficient_data"] is True
+    assert coupling["alignment"]["speaker_pair_count"] == 1.0
+    pair = coupling["alignment"]["pair_details"][0]
+    assert pair["aligned_count"] == 1.0
+    assert pair["coupling_score"] is None

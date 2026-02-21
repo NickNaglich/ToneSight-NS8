@@ -141,6 +141,65 @@ def _session_drift(segments: list[SegmentRecord], drift_window_k: int) -> tuple[
     )
 
 
+def _pearson(values_x: list[float], values_y: list[float]) -> float | None:
+    n = len(values_x)
+    if n < 2 or n != len(values_y):
+        return None
+    mean_x = sum(values_x) / n
+    mean_y = sum(values_y) / n
+    num = sum((x - mean_x) * (y - mean_y) for x, y in zip(values_x, values_y))
+    den_x = sum((x - mean_x) ** 2 for x in values_x)
+    den_y = sum((y - mean_y) ** 2 for y in values_y)
+    if den_x <= 0.0 or den_y <= 0.0:
+        return None
+    return num / ((den_x * den_y) ** 0.5)
+
+
+def _arousal_coupling(segments: list[SegmentRecord]) -> dict[str, object]:
+    ordered = _stable_sorted(segments)
+    by_speaker: dict[str, list[float]] = defaultdict(list)
+    for seg in ordered:
+        by_speaker[seg.speaker_id].append(float(seg.A))
+    speaker_ids = sorted(by_speaker.keys())
+
+    pair_details: list[dict[str, object]] = []
+    weighted_sum = 0.0
+    weighted_count = 0
+    for i in range(len(speaker_ids)):
+        for j in range(i + 1, len(speaker_ids)):
+            a_id = speaker_ids[i]
+            b_id = speaker_ids[j]
+            series_a = by_speaker[a_id]
+            series_b = by_speaker[b_id]
+            aligned_count = min(len(series_a), len(series_b))
+            aligned_a = series_a[:aligned_count]
+            aligned_b = series_b[:aligned_count]
+            corr = _pearson(aligned_a, aligned_b)
+            entry: dict[str, object] = {
+                "speaker_a": a_id,
+                "speaker_b": b_id,
+                "aligned_count": float(aligned_count),
+                "coupling_score": _round_metric(corr) if corr is not None else None,
+            }
+            pair_details.append(entry)
+            if corr is not None:
+                weighted_sum += corr * aligned_count
+                weighted_count += aligned_count
+
+    score = _round_metric(weighted_sum / weighted_count) if weighted_count > 0 else None
+    return {
+        "coupling_score": score,
+        "count_pairs": float(weighted_count),
+        "alignment": {
+            "policy": "speaker_pair_index_alignment",
+            "speaker_count": float(len(speaker_ids)),
+            "speaker_pair_count": float(len(pair_details)),
+            "pair_details": pair_details,
+            "insufficient_data": weighted_count == 0,
+        },
+    }
+
+
 def summarize_speaker(segments: list[SegmentRecord]) -> dict[str, SpeakerSummary]:
     """Summarize segment analytics by speaker_id with deterministic ordering."""
     for segment in segments:
@@ -202,5 +261,6 @@ def summarize_session(
         spike_density=spike_density,
         arousal_momentum=_arousal_momentum(ordered),
         tone_stability_index=_tone_stability_index(ordered),
+        arousal_coupling=_arousal_coupling(ordered),
         spike_segments=spike_segments,
     )

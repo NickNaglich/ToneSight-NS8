@@ -224,6 +224,10 @@ Output:
   - `tone_stability_index`
   - drift metrics: `drift_v`, `drift_a`, `drift_d`, optional `drift_anchor`
   - resolved `drift_window_k` used for the calculation
+  - cross-speaker `arousal_coupling` payload:
+    - `coupling_score`
+    - `count_pairs`
+    - `alignment` metadata with deterministic policy and pair details
 
 Determinism guarantees:
 - stable sort before aggregation

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 
 @dataclass(frozen=True)
@@ -54,6 +54,7 @@ class SessionSummary:
     spike_density: float
     arousal_momentum: dict[str, float]
     tone_stability_index: float
+    arousal_coupling: dict[str, Any]
     spike_segments: list[str]
 
 
