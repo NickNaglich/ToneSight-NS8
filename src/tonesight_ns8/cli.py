@@ -14,7 +14,9 @@ from .mapping import get_mapping, list_mappings
 from . import (
     SegmentRecord,
     run_bundle,
+    run_canary,
     run_gate,
+    run_incident,
     run_compare,
     run_eval_compare,
     run_eval,
@@ -206,6 +208,39 @@ def _cmd_trend(args: argparse.Namespace) -> dict:
     )
 
 
+def _cmd_canary(args: argparse.Namespace) -> dict:
+    return run_canary(
+        args.capture,
+        baseline_out_root=args.baseline_out_root,
+        candidate_out_root=args.candidate_out_root,
+        baseline_taxonomy_path=args.baseline_taxonomy,
+        candidate_taxonomy_path=args.candidate_taxonomy,
+        baseline_threshold_l1=args.baseline_threshold_l1,
+        candidate_threshold_l1=args.candidate_threshold_l1,
+        shadow_strict=args.shadow_strict,
+        redact=not args.disable_redaction,
+        top_n=args.top_n,
+        profile=args.profile,
+        gate_profiles_path=args.gate_profiles,
+        min_pass_rate_delta=args.min_pass_rate_delta,
+        max_avg_l1_delta=args.max_avg_l1_delta,
+        max_p95_l1_delta=args.max_p95_l1_delta,
+        allow_dataset_mismatch=args.allow_dataset_mismatch,
+    )
+
+
+def _cmd_incident(args: argparse.Namespace) -> dict:
+    return run_incident(
+        args.run_a,
+        args.run_b,
+        top_n=args.top_n,
+        triage_score=args.triage_score,
+        triage_format=args.triage_format,
+        include_source_paths=args.include_source_paths,
+        report_path=args.report,
+    )
+
+
 def _cmd_live_capture(args: argparse.Namespace) -> dict:
     return run_live_capture(
         args.events,
@@ -347,6 +382,35 @@ def build_parser() -> argparse.ArgumentParser:
     trend_cmd.add_argument("--group-by", help="Optional row metadata field for per-run grouping summaries.")
     trend_cmd.add_argument("--out", help="Optional explicit trend summary output path.")
     trend_cmd.set_defaults(func=_cmd_trend)
+
+    canary_cmd = sub.add_parser("canary", help="Replay one capture through baseline/candidate paths and gate compare deltas.")
+    canary_cmd.add_argument("--capture", required=True, help="Capture directory or events.raw.jsonl path.")
+    canary_cmd.add_argument("--baseline-out-root", default="runs/canary/baseline")
+    canary_cmd.add_argument("--candidate-out-root", default="runs/canary/candidate")
+    canary_cmd.add_argument("--baseline-taxonomy", default=EVAL_DEFAULTS["taxonomy_path"])
+    canary_cmd.add_argument("--candidate-taxonomy", default=EVAL_DEFAULTS["taxonomy_path"])
+    canary_cmd.add_argument("--baseline-threshold-l1", type=_non_negative_int, default=EVAL_DEFAULTS["threshold_l1"])
+    canary_cmd.add_argument("--candidate-threshold-l1", type=_non_negative_int, default=EVAL_DEFAULTS["threshold_l1"])
+    canary_cmd.add_argument("--shadow-strict", choices=("fail", "drop", "quarantine"), default="quarantine")
+    canary_cmd.add_argument("--disable-redaction", action="store_true")
+    canary_cmd.add_argument("--profile", help="Optional gate profile name from gate profiles config.")
+    canary_cmd.add_argument("--gate-profiles", default="config/gate_profiles.json")
+    canary_cmd.add_argument("--min-pass-rate-delta", type=float, default=None)
+    canary_cmd.add_argument("--max-avg-l1-delta", type=float, default=None)
+    canary_cmd.add_argument("--max-p95-l1-delta", type=float, default=None)
+    canary_cmd.add_argument("--allow-dataset-mismatch", action="store_true")
+    canary_cmd.add_argument("--top-n", type=_non_negative_int, default=10)
+    canary_cmd.set_defaults(func=_cmd_canary)
+
+    incident_cmd = sub.add_parser("incident", help="Generate deterministic compare/triage/bundle incident package.")
+    incident_cmd.add_argument("--run-a", required=True, help="Baseline run directory path.")
+    incident_cmd.add_argument("--run-b", required=True, help="Candidate/current run directory path.")
+    incident_cmd.add_argument("--top-n", type=_non_negative_int, default=50)
+    incident_cmd.add_argument("--triage-score", default="delta_compliance_l1")
+    incident_cmd.add_argument("--triage-format", choices=("jsonl", "csv"), default="jsonl")
+    incident_cmd.add_argument("--include-source-paths", action="store_true")
+    incident_cmd.add_argument("--report", help="Optional explicit markdown report path.")
+    incident_cmd.set_defaults(func=_cmd_incident)
 
     live_capture_cmd = sub.add_parser("live-capture", help="Validate and persist deterministic live capture artifacts.")
     live_capture_cmd.add_argument("--events", required=True, help="Path to LiveEvent JSONL input.")

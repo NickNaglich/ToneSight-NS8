@@ -30,8 +30,10 @@ Stable public imports are the names exported by `tonesight_ns8.__all__`:
 - `run_compare`
 - `run_eval_compare`
 - `run_gate`
+- `run_canary`
 - `run_triage`
 - `run_bundle`
+- `run_incident`
 - `run_trend`
  - `run_live_capture`
  - `run_live_replay`
@@ -176,6 +178,8 @@ CLI support:
 - `live-capture --events <path>`
 - `live-replay --capture <capture_dir_or_events_jsonl>`
 - `live-verify --capture <capture_dir_or_events_jsonl>`
+- `canary --capture <capture_dir_or_events_jsonl>`
+- `incident --run-a <run_dir> --run-b <run_dir>`
 
 Conformance harness:
 - `tests/mapping_conformance.py` provides reusable assertions for adapter determinism, route shape, anchor range, and invalid-input rejection.
@@ -336,6 +340,17 @@ Gate profiles:
 - select with `profile="<name>"`
 - explicit threshold args override selected profile values
 
+### `run_canary(capture: str, *, baseline_out_root: str = "runs/canary/baseline", candidate_out_root: str = "runs/canary/candidate", baseline_taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", candidate_taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", baseline_threshold_l1: int = 3, candidate_threshold_l1: int = 3, shadow_strict: str = "quarantine", redact: bool = True, top_n: int = 10, profile: str | None = None, gate_profiles_path: str = "config/gate_profiles.json", min_pass_rate_delta: float | None = None, max_avg_l1_delta: float | None = None, max_p95_l1_delta: float | None = None, allow_dataset_mismatch: bool = False) -> dict`
+
+Runs baseline/candidate replay over the same capture and returns a gate decision bundle.
+
+Returns:
+- baseline replay result
+- candidate replay result
+- `compare_summary` (from gate/compare)
+- `gate_result` (full gate payload)
+- `exit_code` passthrough from gate result
+
 ### `run_triage(run_b: str, *, run_a: str | None = None, top_n: int = 50, score: str = "compliance_l1", output_format: str = "jsonl", out_path: str | None = None) -> dict`
 
 Creates deterministic triage exports from one run or a run pair.
@@ -375,6 +390,16 @@ Determinism notes:
 External-safe defaults:
 - `include_source_paths=False` omits host filesystem paths from manifest entries
 - set `include_source_paths=True` only for internal/debug bundles
+
+### `run_incident(run_a: str, run_b: str, *, top_n: int = 50, triage_score: str = "delta_compliance_l1", triage_format: str = "jsonl", include_source_paths: bool = False, report_path: str | None = None) -> dict`
+
+Generates deterministic incident response artifacts for a baseline/candidate run pair.
+
+Included outputs:
+- compare summary/report paths
+- triage export path
+- forensics bundle path
+- markdown incident template path
 
 ### `run_trend(out_root: str, *, group_by: str | None = None, out_path: str | None = None) -> dict`
 

@@ -8,10 +8,12 @@ from .api import (
 )
 from .analytics import summarize_session, summarize_speaker
 from .bundle_runner import run_bundle
+from .canary_runner import run_canary
 from .compare_runner import run_compare
 from .eval_compare_runner import run_eval_compare
 from .eval_runner import run_eval
 from .gate_runner import run_gate
+from .incident_runner import run_incident
 from .live_identity import canonical_live_event, stable_event_hash
 from .live_runner import run_live_capture, run_live_replay, run_live_verify
 from .live_shadow_policy import apply_shadow_policy
@@ -48,8 +50,10 @@ __all__ = [
     "run_compare",
     "run_eval_compare",
     "run_gate",
+    "run_canary",
     "run_triage",
     "run_bundle",
+    "run_incident",
     "run_trend",
     "canonical_live_event",
     "stable_event_hash",

@@ -353,6 +353,8 @@ python -m tonesight_ns8.cli trend --out-root runs --group-by source
 python -m tonesight_ns8.cli live-capture --events tests/fixtures/live_capture.small.jsonl --out-root runs
 python -m tonesight_ns8.cli live-replay --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
 python -m tonesight_ns8.cli live-verify --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
+python -m tonesight_ns8.cli canary --capture runs/captures/<capture_id> --baseline-out-root runs/canary/baseline --candidate-out-root runs/canary/candidate --profile support_chat
+python -m tonesight_ns8.cli incident --run-a runs/<baseline> --run-b runs/<candidate> --top-n 50
 python -m tonesight_ns8.cli purge --out-root runs --older-than-days 30
 python -m tonesight_ns8.cli purge --out-root runs --older-than-days 30 --apply
 ```
@@ -390,6 +392,15 @@ Live replay artifacts:
 - `runs/<run_live_id>/receipt.json`
 - `runs/<run_live_id>/quarantine.jsonl` (when `--shadow-strict quarantine` and invalid events exist)
 - `redaction_summary` in replay `eval_summary.json` and `receipt.json`
+
+Canary/incident artifacts:
+- canary payload includes baseline/candidate replay metadata, `compare_summary`, and `gate_result`
+- incident writes:
+  - `runs/<runB>/comparisons/<runA>/compare_summary.json`
+  - `runs/<runB>/comparisons/<runA>/compare_report.html`
+  - `runs/<runB>/comparisons/<runA>/triage_<score>.<jsonl|csv>`
+  - `runs/<runB>/bundles/forensics_bundle__vs__<runA>.zip`
+  - `runs/<runB>/incidents/<runA>/incident_report.md`
 
 ## 30-Second Local Demo
 

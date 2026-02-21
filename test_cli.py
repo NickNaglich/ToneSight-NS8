@@ -278,6 +278,87 @@ def test_cli_live_verify(capsys):
     assert verify_payload["mismatched_artifacts"] == []
 
 
+def test_cli_canary(capsys):
+    root = _temp_dir("tmp_canary_cli")
+    rc = main(
+        [
+            "canary",
+            "--capture",
+            "tests/fixtures/live_capture.small.jsonl",
+            "--baseline-out-root",
+            str(root / "baseline"),
+            "--candidate-out-root",
+            str(root / "candidate"),
+            "--baseline-taxonomy",
+            "taxonomy/tone_taxonomy.v1.json",
+            "--candidate-taxonomy",
+            "taxonomy/tone_taxonomy.v1.json",
+            "--top-n",
+            "5",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == payload["gate_result"]["exit_code"]
+    assert payload["capture"]["same_capture_id"] is True
+    assert "compare_summary" in payload
+    assert "gate_result" in payload
+
+
+def test_cli_incident(capsys):
+    out_root = _temp_dir("tmp_incident_cli")
+    rc_a = main(
+        [
+            "eval",
+            "--goldset",
+            "data/goldset.jsonl",
+            "--out-root",
+            str(out_root),
+            "--taxonomy",
+            "taxonomy/tone_taxonomy.v1.json",
+            "--threshold-l1",
+            "3",
+        ]
+    )
+    payload_a = json.loads(capsys.readouterr().out)
+    assert rc_a == 0
+    run_a = out_root / payload_a["run_id"]
+
+    rc_b = main(
+        [
+            "eval",
+            "--goldset",
+            "data/goldset.jsonl",
+            "--out-root",
+            str(out_root),
+            "--taxonomy",
+            "taxonomy/tone_taxonomy.v1.json",
+            "--threshold-l1",
+            "2",
+        ]
+    )
+    payload_b = json.loads(capsys.readouterr().out)
+    assert rc_b == 0
+    run_b = out_root / payload_b["run_id"]
+
+    rc_incident = main(
+        [
+            "incident",
+            "--run-a",
+            str(run_a),
+            "--run-b",
+            str(run_b),
+            "--top-n",
+            "20",
+        ]
+    )
+    incident_payload = json.loads(capsys.readouterr().out)
+    assert rc_incident == 0
+    assert Path(incident_payload["compare_summary_path"]).exists()
+    assert Path(incident_payload["triage_output_path"]).exists()
+    assert Path(incident_payload["bundle_path"]).exists()
+    assert Path(incident_payload["incident_report_path"]).exists()
+
+
 def test_cli_purge_dry_run_and_apply(capsys):
     out_root = _temp_dir("tmp_purge_cli")
     old_run = out_root / "run_old"
