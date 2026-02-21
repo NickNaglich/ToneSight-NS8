@@ -226,6 +226,9 @@ Core analytics produce deterministic JSON-serializable summaries:
 
 No plotting is included in core. Visualization is downstream.
 
+Derived metrics contract reference:
+- `docs/DERIVED_METRICS.md`
+
 ## API Reference
 
 Detailed API is documented in:

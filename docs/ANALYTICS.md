@@ -2,6 +2,9 @@
 
 ToneSight NS8 analytics are deterministic, dependency-light summaries over segments.
 
+Normative contract:
+- `docs/DERIVED_METRICS.md` (formulas, ordering/rounding, edge-case semantics)
+
 ## Inputs
 
 - Segment records with `speaker_id`, time bounds, VAD bins, and optional NS8 anchor.

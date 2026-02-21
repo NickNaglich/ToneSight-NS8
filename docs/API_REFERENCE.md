@@ -187,6 +187,9 @@ Conformance harness:
 
 ## Analytics Functions
 
+Derived metrics contract:
+- normative formulas/semantics are defined in `docs/DERIVED_METRICS.md`
+
 ### `summarize_speaker(segments: list[SegmentRecord]) -> dict[str, SpeakerSummary]`
 
 Computes deterministic speaker-level summaries from segment records.
