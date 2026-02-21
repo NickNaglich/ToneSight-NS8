@@ -216,8 +216,11 @@ ToneSight NS8 operates on segments that may be attributed to a speaker and group
 Core analytics produce deterministic JSON-serializable summaries:
 - speaker centroid (mean V/A/D bins)
 - speaker volatility (mean absolute change in arousal across consecutive speaker segments)
+- arousal momentum (`mean_momentum`, `positive_momentum_ratio`)
+- tone stability index (bounded `0..1` from normalized volatility)
 - session tone profile (aggregate centroid + distributions)
 - arousal spike detection (configurable threshold; default `7`)
+- spike density (backward-compatible alias of spike rate)
 - distributions/histograms for `V`, `A`, `D`, and NS8 anchor `A`
 
 No plotting is included in core. Visualization is downstream.

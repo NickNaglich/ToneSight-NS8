@@ -6,6 +6,8 @@ from collections import defaultdict
 
 from .schema import SegmentRecord, SessionSummary, SpeakerSummary
 
+_METRIC_PRECISION = 6
+
 
 def _validate_bin(name: str, value: int) -> None:
     if not isinstance(value, int):
@@ -57,12 +59,42 @@ def _centroid(segments: list[SegmentRecord]) -> tuple[float, float, float]:
     )
 
 
+def _round_metric(value: float) -> float:
+    return round(float(value), _METRIC_PRECISION)
+
+
 def _arousal_volatility(segments: list[SegmentRecord]) -> float:
     if len(segments) < 2:
         return 0.0
     ordered = _stable_sorted(segments)
     deltas = [abs(ordered[i].A - ordered[i - 1].A) for i in range(1, len(ordered))]
-    return sum(deltas) / len(deltas)
+    return _round_metric(sum(deltas) / len(deltas))
+
+
+def _arousal_momentum(segments: list[SegmentRecord]) -> dict[str, float]:
+    ordered = _stable_sorted(segments)
+    if len(ordered) < 2:
+        return {
+            "mean_momentum": 0.0,
+            "positive_momentum_ratio": 0.0,
+            "count_transitions": 0.0,
+        }
+    deltas = [float(ordered[i].A - ordered[i - 1].A) for i in range(1, len(ordered))]
+    positives = sum(1 for delta in deltas if delta > 0)
+    return {
+        "mean_momentum": _round_metric(sum(deltas) / len(deltas)),
+        "positive_momentum_ratio": _round_metric(positives / len(deltas)),
+        "count_transitions": float(len(deltas)),
+    }
+
+
+def _tone_stability_index(segments: list[SegmentRecord]) -> float:
+    # Bounded deterministic index derived from normalized arousal volatility.
+    # Max per-step arousal delta in NS8 bins is 7 (from 1..8 range).
+    volatility = _arousal_volatility(segments)
+    normalized = volatility / 7.0
+    bounded = max(0.0, min(1.0, 1.0 - normalized))
+    return _round_metric(bounded)
 
 
 def summarize_speaker(segments: list[SegmentRecord]) -> dict[str, SpeakerSummary]:
@@ -82,6 +114,8 @@ def summarize_speaker(segments: list[SegmentRecord]) -> dict[str, SpeakerSummary
             count_segments=len(speaker_segments),
             vad_centroid=_centroid(speaker_segments),
             volatility=_arousal_volatility(speaker_segments),
+            arousal_momentum=_arousal_momentum(speaker_segments),
+            tone_stability_index=_tone_stability_index(speaker_segments),
             distributions=_make_distributions(speaker_segments),
         )
         result[speaker_id] = summary
@@ -103,6 +137,7 @@ def summarize_session(
     count = len(ordered)
     spike_count = len(spike_segments)
     spike_rate = (spike_count / count) if count > 0 else 0.0
+    spike_density = spike_rate
 
     return SessionSummary(
         session_id=session_id,
@@ -111,6 +146,8 @@ def summarize_session(
         distributions=_make_distributions(ordered),
         spike_count=spike_count,
         spike_rate=spike_rate,
+        spike_density=spike_density,
+        arousal_momentum=_arousal_momentum(ordered),
+        tone_stability_index=_tone_stability_index(ordered),
         spike_segments=spike_segments,
     )
-

@@ -21,6 +21,26 @@ For each speaker:
 - Compute mean absolute change in arousal between consecutive segments:
 - `volatility = mean(|A_i - A_(i-1)|)`.
 
+### Arousal momentum
+
+For each speaker/session:
+- sort segments by deterministic order
+- compute signed arousal deltas `A_(i+1) - A_i`
+- expose:
+  - `mean_momentum`
+  - `positive_momentum_ratio`
+  - `count_transitions`
+
+### Tone stability index
+
+Bounded deterministic index derived from normalized arousal volatility:
+
+- `tone_stability_index = clamp(1 - (volatility / 7), 0, 1)`
+
+Notes:
+- `7` is the maximum possible per-step arousal delta in NS8 bins (`1..8`)
+- values closer to `1` indicate more stable tone
+
 ### Distributions
 
 Histograms (length 8 each):
@@ -43,6 +63,7 @@ Default threshold:
 Outputs:
 - `spike_count`
 - `spike_rate = spike_count / count_segments`
+- `spike_density` (alias of `spike_rate`, preserved for backward compatibility)
 - `spike_segments` (ordered list of segment IDs meeting threshold)
 
 ## Determinism guarantees
@@ -50,6 +71,7 @@ Outputs:
 - Segment ordering is normalized before metric computation.
 - Results are stable regardless of input order.
 - Invalid bins are rejected.
+- Derived metric floats are rounded to fixed precision for stable JSON output.
 
 ## Output examples
 
@@ -61,6 +83,12 @@ Speaker summary (shape):
   "count_segments": 3,
   "vad_centroid": [6.3333, 3.0, 3.6667],
   "volatility": 1.5,
+  "arousal_momentum": {
+    "mean_momentum": 0.5,
+    "positive_momentum_ratio": 0.5,
+    "count_transitions": 2.0
+  },
+  "tone_stability_index": 0.785714,
   "distributions": {
     "V": [0, 0, 0, 0, 0, 2, 1, 0],
     "A": [0, 1, 1, 1, 0, 0, 0, 0],
@@ -85,6 +113,13 @@ Session summary (shape):
   },
   "spike_count": 2,
   "spike_rate": 0.3333,
+  "spike_density": 0.3333,
+  "arousal_momentum": {
+    "mean_momentum": 1.0,
+    "positive_momentum_ratio": 0.6,
+    "count_transitions": 5.0
+  },
+  "tone_stability_index": 0.6,
   "spike_segments": ["seg_02", "seg_06"]
 }
 ```

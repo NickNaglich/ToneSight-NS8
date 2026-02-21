@@ -25,11 +25,15 @@ def test_summarize_speaker_centroid_volatility_and_histograms():
     assert a.vad_centroid == (19 / 3, 3.0, 11 / 3)
     # arousal volatility by time: |2-3| and |4-2| -> (1 + 2)/2 = 1.5
     assert a.volatility == 1.5
+    assert a.arousal_momentum == {"mean_momentum": 0.5, "positive_momentum_ratio": 0.5, "count_transitions": 2.0}
+    assert a.tone_stability_index == 0.785714
 
     # spk_b VAD means: V=(4+5+3)/3, A=(7+6+8)/3, D=(5+5+6)/3
     assert b.vad_centroid == (4.0, 7.0, 16 / 3)
     # arousal volatility: |6-7| and |8-6| -> (1 + 2)/2 = 1.5
     assert b.volatility == 1.5
+    assert b.arousal_momentum == {"mean_momentum": 0.5, "positive_momentum_ratio": 0.5, "count_transitions": 2.0}
+    assert b.tone_stability_index == 0.785714
 
     for summary in (a, b):
         assert len(summary.distributions["V"]) == 8
@@ -48,6 +52,9 @@ def test_summarize_session_spikes_and_totals():
     assert session.vad_centroid == (31 / 6, 5.0, 27 / 6)
     assert session.spike_count == 2
     assert session.spike_rate == 2 / 6
+    assert session.spike_density == session.spike_rate
+    assert session.arousal_momentum == {"mean_momentum": 1.0, "positive_momentum_ratio": 0.6, "count_transitions": 5.0}
+    assert session.tone_stability_index == 0.457143
     assert session.spike_segments == ["seg_02", "seg_06"]
 
     assert len(session.distributions["V"]) == 8
@@ -72,3 +79,34 @@ def test_deterministic_results_under_input_shuffle():
     speaker_b = summarize_speaker(shuffled)
     assert speaker_a == speaker_b
 
+
+def test_derived_metrics_empty_and_single_segment_inputs():
+    single = [SegmentRecord("seg_01", "spk_a", 0.0, 1.0, 5, 6, 4, ns8_A=3)]
+    speaker = summarize_speaker(single)["spk_a"]
+    session = summarize_session("session_single", single)
+    assert speaker.arousal_momentum == {"mean_momentum": 0.0, "positive_momentum_ratio": 0.0, "count_transitions": 0.0}
+    assert speaker.tone_stability_index == 1.0
+    assert session.arousal_momentum == {"mean_momentum": 0.0, "positive_momentum_ratio": 0.0, "count_transitions": 0.0}
+    assert session.tone_stability_index == 1.0
+    assert session.spike_rate == 0.0
+    assert session.spike_density == 0.0
+
+    empty_session = summarize_session("session_empty", [])
+    assert empty_session.arousal_momentum == {"mean_momentum": 0.0, "positive_momentum_ratio": 0.0, "count_transitions": 0.0}
+    assert empty_session.tone_stability_index == 1.0
+    assert empty_session.spike_rate == 0.0
+    assert empty_session.spike_density == 0.0
+
+
+def test_derived_metrics_stable_float_precision_rounding():
+    # A deltas: +1, +1, +2 -> mean=1.333333..., positive ratio=1.0
+    rows = [
+        SegmentRecord("s1", "spk_x", 0.0, 1.0, 4, 2, 4, ns8_A=1),
+        SegmentRecord("s2", "spk_x", 1.0, 2.0, 4, 3, 4, ns8_A=1),
+        SegmentRecord("s3", "spk_x", 2.0, 3.0, 4, 4, 4, ns8_A=1),
+        SegmentRecord("s4", "spk_x", 3.0, 4.0, 4, 6, 4, ns8_A=1),
+    ]
+    speaker = summarize_speaker(rows)["spk_x"]
+    assert speaker.arousal_momentum["mean_momentum"] == 1.333333
+    assert speaker.arousal_momentum["positive_momentum_ratio"] == 1.0
+    assert speaker.tone_stability_index == 0.809524

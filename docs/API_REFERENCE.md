@@ -196,6 +196,10 @@ Inputs:
 
 Output:
 - dictionary keyed by `speaker_id`, each value a `SpeakerSummary`
+- includes:
+  - `volatility`
+  - `arousal_momentum` (`mean_momentum`, `positive_momentum_ratio`, `count_transitions`)
+  - `tone_stability_index` (bounded `0..1`)
 
 Determinism guarantees:
 - stable sort by segment time/identity before aggregation
@@ -212,6 +216,11 @@ Inputs:
 
 Output:
 - `SessionSummary` with centroid, distributions, and spike stats
+- includes:
+  - `spike_rate` (backward-compatible)
+  - `spike_density` (alias of `spike_rate`)
+  - `arousal_momentum`
+  - `tone_stability_index`
 
 Determinism guarantees:
 - stable sort before aggregation

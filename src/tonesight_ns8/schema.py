@@ -33,6 +33,8 @@ class SpeakerSummary:
     count_segments: int
     vad_centroid: tuple[float, float, float]
     volatility: float
+    arousal_momentum: dict[str, float]
+    tone_stability_index: float
     distributions: dict[str, list[int]]
 
 
@@ -44,6 +46,9 @@ class SessionSummary:
     distributions: dict[str, list[int]]
     spike_count: int
     spike_rate: float
+    spike_density: float
+    arousal_momentum: dict[str, float]
+    tone_stability_index: float
     spike_segments: list[str]
 
 
