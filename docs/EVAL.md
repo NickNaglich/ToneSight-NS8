@@ -185,6 +185,24 @@ Behavior:
 - computes deltas vs previous compatible run for `pass_rate`, `avg_l1`, `p95_l1`
 - optional grouping by row metadata field (`source`, `agent`, `prompt_id`, etc.) with per-group `count`, `avg_l1`, `fail_rate`
 
+## Run Index Command (Phase 21)
+
+Build deterministic run metadata index with one JSONL row per discovered run:
+
+```bash
+python -m tonesight_ns8.cli index-runs --out-root runs
+python -m tonesight_ns8.cli index-runs --out-root runs --out runs/index.jsonl
+```
+
+Behavior:
+- discovers run directories containing `receipt.json`, `eval_summary.json`, and `out.jsonl`
+- deterministic ordering by `run_id`
+- stable schema with:
+  - run IDs and version/hash metadata
+  - profile/source labels (`profile_label`, `source_label`, `source_labels`)
+  - artifact pointers (`out_jsonl`, `eval_summary_json`, `report_html`, `receipt_json`)
+- idempotent output for unchanged run sets
+
 ## Live Shadow Harness (Phase 17)
 
 Deterministic capture/replay/verify flow for live-shaped events:

@@ -359,6 +359,31 @@ def test_cli_incident(capsys):
     assert Path(incident_payload["incident_report_path"]).exists()
 
 
+def test_cli_index_runs(capsys):
+    out_root = _temp_dir("tmp_index_cli")
+    rc_eval = main(
+        [
+            "eval",
+            "--goldset",
+            "data/goldset.jsonl",
+            "--out-root",
+            str(out_root),
+            "--taxonomy",
+            "taxonomy/tone_taxonomy.v1.json",
+            "--threshold-l1",
+            "3",
+        ]
+    )
+    _ = json.loads(capsys.readouterr().out)
+    assert rc_eval == 0
+
+    rc_index = main(["index-runs", "--out-root", str(out_root)])
+    payload = json.loads(capsys.readouterr().out)
+    assert rc_index == 0
+    assert payload["run_count"] >= 1
+    assert Path(payload["index_path"]).exists()
+
+
 def test_cli_purge_dry_run_and_apply(capsys):
     out_root = _temp_dir("tmp_purge_cli")
     old_run = out_root / "run_old"

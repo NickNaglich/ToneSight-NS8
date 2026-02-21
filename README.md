@@ -350,6 +350,7 @@ python -m tonesight_ns8.cli bundle --run-a runs/<baseline> --run-b runs/<candida
 python -m tonesight_ns8.cli bundle --run-b runs/<candidate> --include-source-paths
 python -m tonesight_ns8.cli trend --out-root runs
 python -m tonesight_ns8.cli trend --out-root runs --group-by source
+python -m tonesight_ns8.cli index-runs --out-root runs
 python -m tonesight_ns8.cli live-capture --events tests/fixtures/live_capture.small.jsonl --out-root runs
 python -m tonesight_ns8.cli live-replay --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
 python -m tonesight_ns8.cli live-verify --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
@@ -401,6 +402,9 @@ Canary/incident artifacts:
   - `runs/<runB>/comparisons/<runA>/triage_<score>.<jsonl|csv>`
   - `runs/<runB>/bundles/forensics_bundle__vs__<runA>.zip`
   - `runs/<runB>/incidents/<runA>/incident_report.md`
+
+Run index artifact:
+- `runs/index.jsonl` (`index-runs`) with one deterministic row per discovered run
 
 ## 30-Second Local Demo
 

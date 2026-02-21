@@ -23,6 +23,7 @@ from . import (
     run_live_capture,
     run_live_replay,
     run_live_verify,
+    run_index,
     run_retention_purge,
     run_trend,
     run_triage,
@@ -280,6 +281,13 @@ def _cmd_purge(args: argparse.Namespace) -> dict:
     )
 
 
+def _cmd_index_runs(args: argparse.Namespace) -> dict:
+    return run_index(
+        args.out_root,
+        out_path=args.out,
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="tonesight-ns8",
@@ -442,6 +450,11 @@ def build_parser() -> argparse.ArgumentParser:
     purge_cmd.add_argument("--include-bundles", action="store_true", help="Allow purging run directories containing bundles.")
     purge_cmd.add_argument("--include-captures", action="store_true", help="Allow purging capture directories under out-root/captures.")
     purge_cmd.set_defaults(func=_cmd_purge)
+
+    index_cmd = sub.add_parser("index-runs", help="Build deterministic index.jsonl for discovered run artifacts.")
+    index_cmd.add_argument("--out-root", default=EVAL_DEFAULTS["out_root"])
+    index_cmd.add_argument("--out", help="Optional explicit index output path.")
+    index_cmd.set_defaults(func=_cmd_index_runs)
 
     return parser
 

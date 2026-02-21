@@ -35,6 +35,7 @@ Stable public imports are the names exported by `tonesight_ns8.__all__`:
 - `run_bundle`
 - `run_incident`
 - `run_trend`
+- `run_index`
  - `run_live_capture`
  - `run_live_replay`
  - `run_live_verify`
@@ -474,6 +475,24 @@ Behavior:
 Grouping (optional):
 - `group_by` aggregates per-run stats from row metadata fields (for example `source`, `agent`, `prompt_id`)
 - group metrics include `count`, `avg_l1`, and `fail_rate`
+
+### `run_index(out_root: str, *, out_path: str | None = None) -> dict`
+
+Builds deterministic run metadata index with one JSON line per discovered run.
+
+Discovery rules:
+- includes directories containing:
+  - `receipt.json`
+  - `eval_summary.json`
+  - `out.jsonl`
+
+Output:
+- default path: `<out_root>/index.jsonl`
+- rows are sorted by `run_id`
+- each row includes:
+  - run IDs and hash/version metadata
+  - `profile_label`, `source_label`, and row-derived `source_labels`
+  - artifact pointers (`out_jsonl`, `eval_summary_json`, `report_html`, `receipt_json`)
 
 ### `tonesight_from_label(label: str, family: str, r: int, c: int, k: int, taxonomy_path: str) -> dict`
 
