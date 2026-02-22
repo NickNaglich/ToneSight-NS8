@@ -463,6 +463,7 @@ Benchmark artifacts (`benchmark --suite core`):
 - `runs/benchmarks/core/drift_injection.json`
 - `runs/benchmarks/core/model_swap_robustness.json`
 - `runs/benchmarks/core/baselines.json`
+- `runs/benchmarks/core/transition_coherence.json`
 - `runs/benchmarks/core/report.json`
 
 Performance smoke policy:

@@ -36,7 +36,7 @@ def test_cli_benchmark_core_writes_expected_artifacts(capsys):
 
     report_path = Path(payload["artifacts"]["report"])
     assert report_path.exists()
-    for key in ("noise_tolerance", "drift_injection", "model_swap_robustness", "baselines"):
+    for key in ("noise_tolerance", "drift_injection", "model_swap_robustness", "baselines", "transition_coherence"):
         artifact_path = Path(payload["artifacts"][key])
         assert artifact_path.exists()
 
@@ -47,7 +47,13 @@ def test_cli_benchmark_core_writes_expected_artifacts(capsys):
         "drift_injection",
         "model_swap_robustness",
         "baselines",
+        "transition_coherence",
     }
+
+    coherence = report_file_payload["results"]["transition_coherence"]
+    assert "base" in coherence
+    assert "scenarios" in coherence
+    assert set(coherence["base"]) == {"ns8", "equal_width", "quantile"}
 
 
 def test_cli_benchmark_core_is_repeatable(capsys):
@@ -84,4 +90,3 @@ def test_cli_benchmark_core_is_repeatable(capsys):
 
     assert first_payload["artifacts"] == second_payload["artifacts"]
     assert first_report_bytes == second_report_bytes
-

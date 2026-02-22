@@ -30,6 +30,7 @@ Generated artifacts:
 - `runs/benchmarks/core/drift_injection.json`
 - `runs/benchmarks/core/model_swap_robustness.json`
 - `runs/benchmarks/core/baselines.json`
+- `runs/benchmarks/core/transition_coherence.json`
 
 ## Claim -> Artifact Mapping
 
@@ -63,6 +64,15 @@ Generated artifacts:
   - `<method>.entropy_bits`
   - `distance_between_baselines.jsd_equal_vs_quantile`
   - `distance_between_baselines.psi_equal_vs_quantile`
+
+5. Transition locality/coherence over ordered sequences
+- Source: `runs/benchmarks/core/transition_coherence.json`
+- Primary fields:
+  - `base.<method>.mean_step_distance`
+  - `base.<method>.local_step_ratio`
+  - `base.<method>.coherence_score`
+  - `scenarios.*.<method>.delta_vs_base.mean_step_distance_delta`
+  - `scenarios.*.<method>.delta_vs_base.coherence_score_delta`
 
 ## Reading Guidance
 

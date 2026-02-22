@@ -102,6 +102,14 @@ def _circle_distance_8(a: int, b: int) -> float:
     return float(min(delta, 8 - delta))
 
 
+def _p95(values: list[float]) -> float:
+    if not values:
+        return 0.0
+    sorted_vals = sorted(values)
+    idx = int(round(0.95 * (len(sorted_vals) - 1)))
+    return float(sorted_vals[idx])
+
+
 def _load_target_vad(goldset_path: str) -> list[tuple[int, int, int]]:
     rows = _read_jsonl(Path(goldset_path))
     out: list[tuple[int, int, int]] = []
@@ -123,6 +131,61 @@ def _scalar_states(vads: list[tuple[int, int, int]]) -> tuple[list[float], list[
 
 def _ns8_states(vads: list[tuple[int, int, int]]) -> list[int]:
     return [compute_A("TLF", v, a, d, 8) for v, a, d in vads]
+
+
+def _state_methods(vads: list[tuple[int, int, int]], *, quantile_thresholds: list[float] | None = None) -> dict[str, list[int]]:
+    scalars = [_to_scalar(_to_u(v), _to_u(a), _to_u(d)) for v, a, d in vads]
+    thresholds = quantile_thresholds if quantile_thresholds is not None else _quantile_thresholds(scalars, bins=8)
+    return {
+        "ns8": _ns8_states(vads),
+        "equal_width": [_to_bin_1_to_8(value) for value in scalars],
+        "quantile": [_quantile_bin(value, thresholds) for value in scalars],
+    }
+
+
+def _transition_metrics(states: list[int]) -> dict[str, float]:
+    if len(states) < 2:
+        return {
+            "count_transitions": 0.0,
+            "mean_step_distance": 0.0,
+            "p95_step_distance": 0.0,
+            "max_step_distance": 0.0,
+            "local_step_ratio": 0.0,
+            "jump_rate_ge_2": 0.0,
+            "coherence_score": 1.0,
+        }
+
+    distances = [_circle_distance_8(states[i - 1], states[i]) for i in range(1, len(states))]
+    count = float(len(distances))
+    local_count = sum(1 for d in distances if d <= 1.0)
+    jump_count = sum(1 for d in distances if d >= 2.0)
+    mean_step = sum(distances) / count
+    # Ring distance max on 8-state circle is 4; lower average implies stronger locality.
+    coherence_score = 1.0 - min(1.0, (mean_step / 4.0))
+    return {
+        "count_transitions": count,
+        "mean_step_distance": mean_step,
+        "p95_step_distance": _p95(distances),
+        "max_step_distance": max(distances),
+        "local_step_ratio": local_count / count,
+        "jump_rate_ge_2": jump_count / count,
+        "coherence_score": coherence_score,
+    }
+
+
+def _drifted_vads(base_vads: list[tuple[int, int, int]], mode: str) -> list[tuple[int, int, int]]:
+    out: list[tuple[int, int, int]] = []
+    for i, (v, a, d) in enumerate(base_vads):
+        u_v, u_a, u_d = _to_u(v), _to_u(a), _to_u(d)
+        if mode == "valence_shift_plus_0.1":
+            u_v = _clamp01(u_v + 0.1)
+        elif mode == "arousal_variance_x1.3":
+            u_a = _clamp01(((u_a - 0.5) * 1.3) + 0.5)
+        elif mode == "periodic_arousal_spikes":
+            if i % 10 == 0:
+                u_a = _clamp01(u_a + 0.25)
+        out.append((_to_bin_1_to_8(u_v), _to_bin_1_to_8(u_a), _to_bin_1_to_8(u_d)))
+    return out
 
 
 def _flip_metrics(base: list[int], perturbed: list[int]) -> dict[str, float]:
@@ -178,39 +241,17 @@ def run_drift_injection_benchmark(goldset_path: str) -> dict[str, Any]:
     base_vads = _load_target_vad(goldset_path)
     base_scalars, _, _ = _scalar_states(base_vads)
     quantile_thresholds = _quantile_thresholds(base_scalars, bins=8)
-    base_ns8 = _ns8_states(base_vads)
-    base_equal = [_to_bin_1_to_8(value) for value in base_scalars]
-    base_quantile = [_quantile_bin(value, quantile_thresholds) for value in base_scalars]
-
-    def _drifted(mode: str) -> list[tuple[int, int, int]]:
-        out: list[tuple[int, int, int]] = []
-        for i, (v, a, d) in enumerate(base_vads):
-            u_v, u_a, u_d = _to_u(v), _to_u(a), _to_u(d)
-            if mode == "valence_shift_plus_0.1":
-                u_v = _clamp01(u_v + 0.1)
-            elif mode == "arousal_variance_x1.3":
-                u_a = _clamp01(((u_a - 0.5) * 1.3) + 0.5)
-            elif mode == "periodic_arousal_spikes":
-                if i % 10 == 0:
-                    u_a = _clamp01(u_a + 0.25)
-            out.append((_to_bin_1_to_8(u_v), _to_bin_1_to_8(u_a), _to_bin_1_to_8(u_d)))
-        return out
-
+    base_states = _state_methods(base_vads, quantile_thresholds=quantile_thresholds)
     scenarios = ("valence_shift_plus_0.1", "arousal_variance_x1.3", "periodic_arousal_spikes")
     out: dict[str, Any] = {"sample_count": len(base_vads), "scenarios": {}}
     base_dists = {
-        "ns8": _histogram(base_ns8),
-        "equal_width": _histogram(base_equal),
-        "quantile": _histogram(base_quantile),
+        "ns8": _histogram(base_states["ns8"]),
+        "equal_width": _histogram(base_states["equal_width"]),
+        "quantile": _histogram(base_states["quantile"]),
     }
     for scenario in scenarios:
-        drift_vads = _drifted(scenario)
-        drift_scalars = [_to_scalar(_to_u(v), _to_u(a), _to_u(d)) for v, a, d in drift_vads]
-        drift_states = {
-            "ns8": _ns8_states(drift_vads),
-            "equal_width": [_to_bin_1_to_8(value) for value in drift_scalars],
-            "quantile": [_quantile_bin(value, quantile_thresholds) for value in drift_scalars],
-        }
+        drift_vads = _drifted_vads(base_vads, scenario)
+        drift_states = _state_methods(drift_vads, quantile_thresholds=quantile_thresholds)
         out["scenarios"][scenario] = {}
         for key in ("ns8", "equal_width", "quantile"):
             base_hist = base_dists[key]
@@ -319,6 +360,37 @@ def run_baselines_benchmark(goldset_path: str) -> dict[str, Any]:
     }
 
 
+def run_transition_coherence_benchmark(goldset_path: str) -> dict[str, Any]:
+    base_vads = _load_target_vad(goldset_path)
+    base_scalars, _, _ = _scalar_states(base_vads)
+    quantile_thresholds = _quantile_thresholds(base_scalars, bins=8)
+    base_states = _state_methods(base_vads, quantile_thresholds=quantile_thresholds)
+    base_metrics = {key: _transition_metrics(states) for key, states in base_states.items()}
+
+    scenarios = ("valence_shift_plus_0.1", "arousal_variance_x1.3", "periodic_arousal_spikes")
+    out: dict[str, Any] = {
+        "sample_count": len(base_vads),
+        "base": base_metrics,
+        "scenarios": {},
+    }
+    for scenario in scenarios:
+        drift_vads = _drifted_vads(base_vads, scenario)
+        drift_states = _state_methods(drift_vads, quantile_thresholds=quantile_thresholds)
+        out["scenarios"][scenario] = {}
+        for key in ("ns8", "equal_width", "quantile"):
+            metrics = _transition_metrics(drift_states[key])
+            baseline = base_metrics[key]
+            out["scenarios"][scenario][key] = {
+                "metrics": metrics,
+                "delta_vs_base": {
+                    "mean_step_distance_delta": metrics["mean_step_distance"] - baseline["mean_step_distance"],
+                    "local_step_ratio_delta": metrics["local_step_ratio"] - baseline["local_step_ratio"],
+                    "coherence_score_delta": metrics["coherence_score"] - baseline["coherence_score"],
+                },
+            }
+    return out
+
+
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -341,18 +413,21 @@ def run_benchmark_suite(
     drift = run_drift_injection_benchmark(goldset_path)
     model_swap = run_model_swap_robustness_benchmark(goldset_path)
     baselines = run_baselines_benchmark(goldset_path)
+    transition_coherence = run_transition_coherence_benchmark(goldset_path)
 
     artifacts = {
         "noise_tolerance": str(base_dir / "noise_tolerance.json"),
         "drift_injection": str(base_dir / "drift_injection.json"),
         "model_swap_robustness": str(base_dir / "model_swap_robustness.json"),
         "baselines": str(base_dir / "baselines.json"),
+        "transition_coherence": str(base_dir / "transition_coherence.json"),
         "report": str(base_dir / "report.json"),
     }
     _write_json(Path(artifacts["noise_tolerance"]), noise)
     _write_json(Path(artifacts["drift_injection"]), drift)
     _write_json(Path(artifacts["model_swap_robustness"]), model_swap)
     _write_json(Path(artifacts["baselines"]), baselines)
+    _write_json(Path(artifacts["transition_coherence"]), transition_coherence)
 
     report = {
         "spec_version": "1.0",
@@ -366,8 +441,8 @@ def run_benchmark_suite(
             "drift_injection": drift,
             "model_swap_robustness": model_swap,
             "baselines": baselines,
+            "transition_coherence": transition_coherence,
         },
     }
     _write_json(Path(artifacts["report"]), report)
     return report
-
