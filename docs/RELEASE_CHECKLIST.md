@@ -40,6 +40,7 @@ python -m tonesight_ns8.cli bundle --run-b runs/<run_id>
 - CLI entrypoint is installed and operational
 - eval smoke command returns a JSON payload with `run_id` and writes run artifacts
 - bundle command creates deterministic zip with `manifest.json`
+- determinism matrix job is green across configured OS targets in `.github/workflows/ci.yml`
 
 ## Release metadata checks
 
@@ -92,6 +93,7 @@ python -m tonesight_ns8.cli eval
 
 - [ ] all commands above pass on local clean workspace
 - [ ] GitHub Actions checks are green on release candidate commit
+- [ ] `determinism-matrix` job is green for all configured OS/Python entries
 - [ ] release notes summarize deterministic-impact vs docs-only changes
 - [ ] version/tag chosen (`v0.1.x` or equivalent) and pushed
 

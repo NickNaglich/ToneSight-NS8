@@ -582,6 +582,16 @@ python -m pytest -q
 python tools/validate_goldset.py data/goldset.jsonl
 ```
 
+Cross-environment determinism validation:
+- CI includes a dedicated `determinism-matrix` job in `.github/workflows/ci.yml`
+- current matrix targets:
+  - `ubuntu-latest` + Python `3.11`
+  - `windows-latest` + Python `3.11`
+- matrix checks run:
+  - `python -m pytest -q`
+  - `python tools/regen_vectors.py`
+  - `git diff --exit-code`
+
 ## Path B Monitoring (Opt-in)
 
 This repository includes optional, opt-in observability components that are not required for core deterministic functionality:
