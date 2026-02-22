@@ -13,6 +13,20 @@ This repository does not provide:
 - machine-checked theorem proving (for example Coq/Isabelle/TLA+ model checking)
 - psychological ground-truth claims about affect states
 
+## Conformance vs Empirical Evidence
+
+Conformance (guaranteed by contract/tests):
+- behavior fixed by `docs/SPEC_NS8.md`
+- vectors + invariants + strict validation must pass
+
+Empirical evidence (benchmark outputs, not guarantees):
+- operational comparisons vs baseline discretizations
+- noise/drift/model-swap behavior measurements
+
+Evidence entrypoint:
+- `python -m tonesight_ns8.cli benchmark --suite core`
+- see `docs/WHY_NS8.md` and artifacts under `runs/benchmarks/core/`
+
 ## Contract Model
 
 Authoritative model:
@@ -57,6 +71,11 @@ Evidence:
 - `tests/test_strict_validation.py` (strict type/domain rejection)
 - wrapper/registry conformance tests (`tests/test_mapping_registry.py`, `tests/test_mapping_conformance.py`)
 
+Topology compare note:
+- `compare --distance topology` is an analysis-layer option, not a change to NS8 core formulas.
+- It derives deterministic distance from NS8 anchors over run artifacts and is validated by:
+  - `tests/test_compare_topology_distance.py`
+
 ## Traceability Matrix
 
 | Requirement | Artifact/Implementation | Verification |
@@ -80,4 +99,3 @@ Minimum acceptance gate:
 2. pass invariants suite
 3. pass strict-validation suite
 4. preserve `spec_version` governance rules in `docs/SPEC_NS8.md`
-

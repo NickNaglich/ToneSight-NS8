@@ -14,6 +14,7 @@ from .mapping import get_mapping, list_mappings
 from . import (
     SegmentRecord,
     run_bundle,
+    run_benchmark_suite,
     run_canary,
     run_gate,
     run_incident,
@@ -147,6 +148,7 @@ def _cmd_compare(args: argparse.Namespace) -> dict:
         args.run_a,
         args.run_b,
         top_n=args.top_n,
+        distance_mode=args.distance,
         write_artifact=args.write,
     )
 
@@ -288,6 +290,14 @@ def _cmd_index_runs(args: argparse.Namespace) -> dict:
     )
 
 
+def _cmd_benchmark(args: argparse.Namespace) -> dict:
+    return run_benchmark_suite(
+        suite=args.suite,
+        out_root=args.out_root,
+        goldset_path=args.goldset,
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="tonesight-ns8",
@@ -336,6 +346,7 @@ def build_parser() -> argparse.ArgumentParser:
     compare_cmd.add_argument("run_a")
     compare_cmd.add_argument("run_b")
     compare_cmd.add_argument("--top-n", type=_non_negative_int, default=10)
+    compare_cmd.add_argument("--distance", choices=("l1", "topology"), default="l1")
     compare_cmd.add_argument("--write", action="store_true")
     compare_cmd.set_defaults(func=_cmd_compare)
 
@@ -455,6 +466,15 @@ def build_parser() -> argparse.ArgumentParser:
     index_cmd.add_argument("--out-root", default=EVAL_DEFAULTS["out_root"])
     index_cmd.add_argument("--out", help="Optional explicit index output path.")
     index_cmd.set_defaults(func=_cmd_index_runs)
+
+    benchmark_cmd = sub.add_parser(
+        "benchmark",
+        help="Run deterministic benchmark evidence suite and write JSON artifacts.",
+    )
+    benchmark_cmd.add_argument("--suite", choices=("core",), default="core")
+    benchmark_cmd.add_argument("--out-root", default=EVAL_DEFAULTS["out_root"])
+    benchmark_cmd.add_argument("--goldset", default=ARTIFACT_DEFAULTS["goldset_path"])
+    benchmark_cmd.set_defaults(func=_cmd_benchmark)
 
     return parser
 

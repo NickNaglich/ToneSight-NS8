@@ -77,3 +77,8 @@ Common reason codes:
 - `calibration_identity_mismatch`
 - `defaults_schema_version_mismatch`
 - `dataset_hash_mismatch`
+
+## Policy Reference
+
+Canonical identity stability and migration rules are defined in:
+- `docs/CANONICAL_ID_POLICY.md`

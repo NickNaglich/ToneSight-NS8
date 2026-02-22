@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .ns8 import compute_A
 
 def _read_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -95,6 +96,38 @@ def _component_delta(row: dict[str, Any], key: str) -> float | None:
     return float(value)
 
 
+def _anchor_ring_distance(a: int, b: int) -> float:
+    delta = abs(int(a) - int(b))
+    return float(min(delta, 8 - delta))
+
+
+def _anchor_from_vad(vad: Any) -> int | None:
+    if not isinstance(vad, dict):
+        return None
+    try:
+        v = int(vad["V"])
+        a = int(vad["A"])
+        d = int(vad["D"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if not (1 <= v <= 8 and 1 <= a <= 8 and 1 <= d <= 8):
+        return None
+    return int(compute_A("TLF", v, a, d, 8))
+
+
+def _row_distance(row: dict[str, Any], mode: str) -> float:
+    if mode == "l1":
+        return float(row.get("compliance_l1", 0.0))
+    if mode != "topology":
+        raise ValueError(f"Unsupported distance mode: {mode}")
+
+    pred_anchor = _anchor_from_vad(row.get("pred_vad"))
+    target_anchor = _anchor_from_vad(row.get("target_vad"))
+    if pred_anchor is not None and target_anchor is not None:
+        return _anchor_ring_distance(pred_anchor, target_anchor)
+    return float(row.get("compliance_l1", 0.0))
+
+
 def _render_compare_report_html(compare_summary: dict[str, Any]) -> str:
     run_a = compare_summary["run_a"]
     run_b = compare_summary["run_b"]
@@ -102,6 +135,7 @@ def _render_compare_report_html(compare_summary: dict[str, Any]) -> str:
     coverage = compare_summary["regression_coverage"]
     regressions = compare_summary["top_regressions"]
     per_label = compare_summary["per_label_delta"]
+    distance_mode = compare_summary.get("distance_mode", "l1")
     title = f"ToneSight Compare Report: {run_a.get('run_id')} -> {run_b.get('run_id')}"
     rows_html = "".join(
         (
@@ -150,6 +184,7 @@ def _render_compare_report_html(compare_summary: dict[str, Any]) -> str:
         '<div class="panel">\n'
         f"<div><strong>run_a</strong>: {html.escape(str(run_a.get('path')))}</div>\n"
         f"<div><strong>run_b</strong>: {html.escape(str(run_b.get('path')))}</div>\n"
+        f"<div><strong>distance_mode</strong>: {html.escape(str(distance_mode))}</div>\n"
         "</div>\n"
         '<div class="panel">\n'
         '<h2>Delta KPIs</h2>\n'
@@ -183,6 +218,7 @@ def run_compare(
     run_b: str,
     *,
     top_n: int = 10,
+    distance_mode: str = "l1",
     write_artifact: bool = False,
 ) -> dict[str, Any]:
     """Compare two eval runs deterministically."""
@@ -204,23 +240,31 @@ def run_compare(
     for row_id in ids_common:
         a_row = by_id_a[row_id]
         b_row = by_id_b[row_id]
-        delta = float(b_row.get("compliance_l1", 0.0)) - float(a_row.get("compliance_l1", 0.0))
-        if delta <= 0:
+        l1_a = float(a_row.get("compliance_l1", 0.0))
+        l1_b = float(b_row.get("compliance_l1", 0.0))
+        distance_a = _row_distance(a_row, distance_mode)
+        distance_b = _row_distance(b_row, distance_mode)
+        delta_l1 = l1_b - l1_a
+        delta_distance = distance_b - distance_a
+        if delta_distance <= 0:
             continue
         regressions.append(
             {
                 "id": row_id,
                 "label": b_row.get("label"),
-                "l1_a": float(a_row.get("compliance_l1", 0.0)),
-                "l1_b": float(b_row.get("compliance_l1", 0.0)),
-                "delta_l1": delta,
+                "l1_a": l1_a,
+                "l1_b": l1_b,
+                "delta_l1": delta_l1,
+                "distance_a": distance_a,
+                "distance_b": distance_b,
+                "delta_distance": delta_distance,
                 "delta_v": _safe_delta(_component_delta(a_row, "delta_v"), _component_delta(b_row, "delta_v")),
                 "delta_a": _safe_delta(_component_delta(a_row, "delta_a"), _component_delta(b_row, "delta_a")),
                 "delta_d": _safe_delta(_component_delta(a_row, "delta_d"), _component_delta(b_row, "delta_d")),
             }
         )
 
-    regressions.sort(key=lambda row: (-row["delta_l1"], str(row["id"])))
+    regressions.sort(key=lambda row: (-row["delta_distance"], str(row["id"])))
     regression_count_total = len(regressions)
     regressions = regressions[: max(0, int(top_n))]
 
@@ -240,6 +284,7 @@ def run_compare(
 
     compare_summary: dict[str, Any] = {
         "spec_version": "1.0",
+        "distance_mode": distance_mode,
         "run_a": {
             "path": str(run_a_path),
             "run_id": summary_a.get("run_id"),

@@ -25,6 +25,12 @@ This repository currently focuses on:
 - vector-verified behavior
 - taxonomy validation
 
+Quick links:
+- quickstart: `README.md` (30-second demo + CLI usage below)
+- benchmark command: `python -m tonesight_ns8.cli benchmark --suite core`
+- evidence narrative: `docs/WHY_NS8.md`
+- conformance contract: `docs/NS8_CONTRACT_ASSURANCE.md`
+
 ## Why This Exists
 
 Most systems can measure latency and correctness, but have weak controls for deterministic tone conformance and regression tracking.
@@ -67,6 +73,21 @@ Expected:
 - writes `runs/<run_id>/eval_summary.json`
 - writes `runs/<run_id>/report.html`
 - writes `runs/<run_id>/receipt.json`
+
+## 5-Minute Path
+
+```bash
+python -m pip install -e .
+python -m tonesight_ns8.cli eval
+python -m tonesight_ns8.cli compare runs/<baseline_run> runs/<candidate_run> --top-n 10 --write
+python -m tonesight_ns8.cli benchmark --suite core
+```
+
+Deterministic demo script:
+
+```bash
+python examples/ns8_drift_demo.py --out-root runs/demo
+```
 
 ## Hello Tone Example
 
@@ -315,10 +336,12 @@ Normative defaults config contract:
 
 Release readiness checklist:
 - `docs/RELEASE_CHECKLIST.md`
+- `docs/CANONICAL_ID_POLICY.md`
 - `docs/LIVE_EVENT_SCHEMA.md`
 - `docs/IDENTITY_AND_HASHING.md`
 - `docs/PRIVACY_REDACTION.md`
 - `docs/RETENTION_POLICY.md`
+- `docs/WHY_NS8.md`
 
 ## CLI Usage
 
@@ -366,6 +389,7 @@ python -m tonesight_ns8.cli eval --goldset data/goldset.jsonl --out-root runs --
 python -m tonesight_ns8.cli eval-compare
 python -m tonesight_ns8.cli eval-compare --goldset data/goldset.jsonl --out-root runs --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --top-n 10
 python -m tonesight_ns8.cli compare runs/<runA> runs/<runB> --top-n 10 --write
+python -m tonesight_ns8.cli compare runs/<runA> runs/<runB> --distance topology --top-n 10 --write
 python -m tonesight_ns8.cli gate --run-a runs/<baseline> --run-b runs/<candidate>
 python -m tonesight_ns8.cli gate --run-a runs/<baseline> --run-b runs/<candidate> --profile support_chat
 python -m tonesight_ns8.cli gate --run-a runs/<baseline> --run-b runs/<candidate> --allow-dataset-mismatch
@@ -377,6 +401,8 @@ python -m tonesight_ns8.cli bundle --run-b runs/<candidate> --include-source-pat
 python -m tonesight_ns8.cli trend --out-root runs
 python -m tonesight_ns8.cli trend --out-root runs --group-by source
 python -m tonesight_ns8.cli index-runs --out-root runs
+python -m tonesight_ns8.cli benchmark --suite core
+python -m tonesight_ns8.cli benchmark --suite core --out-root runs --goldset data/goldset.jsonl
 python -m tonesight_ns8.cli live-capture --events tests/fixtures/live_capture.small.jsonl --out-root runs
 python -m tonesight_ns8.cli live-replay --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
 python -m tonesight_ns8.cli live-verify --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
@@ -431,6 +457,13 @@ Canary/incident artifacts:
 
 Run index artifact:
 - `runs/index.jsonl` (`index-runs`) with one deterministic row per discovered run
+
+Benchmark artifacts (`benchmark --suite core`):
+- `runs/benchmarks/core/noise_tolerance.json`
+- `runs/benchmarks/core/drift_injection.json`
+- `runs/benchmarks/core/model_swap_robustness.json`
+- `runs/benchmarks/core/baselines.json`
+- `runs/benchmarks/core/report.json`
 
 ## 30-Second Local Demo
 
@@ -614,19 +647,29 @@ curl -X POST http://localhost:8080/eval/run \
 |-- test_tone_taxonomy.py
 |-- docs/
 |   |-- API_REFERENCE.md
+|   |-- CANONICAL_ID_POLICY.md
 |   |-- DEFAULTS_SCHEMA.md
+|   |-- DERIVED_METRICS.md
 |   |-- EVAL.md
 |   |-- MONITORING.md
 |   |-- NS8_CONTRACT_ASSURANCE.md
 |   |-- RELEASE_CHECKLIST.md
 |   |-- RECEIPT_SCHEMA.md
 |   |-- SPEC_NS8.md
-|   `-- SEGMENT_INTERFACE.md
+|   |-- SEGMENT_INTERFACE.md
+|   `-- WHY_NS8.md
 |-- config/
 |   |-- defaults.json
 |   `-- vad_quantization.v1.json
+|-- benchmarks/
+|   |-- baselines.py
+|   |-- drift_injection.py
+|   |-- model_swap_robustness.py
+|   |-- noise_tolerance.py
+|   `-- README.md
 |-- tools/
 |   `-- regen_vectors.py
+|-- Makefile
 |-- PROJECT_BRIEF.md
 `-- tests/
 ```
@@ -636,7 +679,8 @@ Note: The current layout uses a reference implementation (`ns8_ref.py`).
 
 ## Versioning and Stability
 
-- Library versioning follows semantic versioning when packaging is introduced.
+- Library/package versioning follows semantic versioning and is currently pre-1.0 (`0.1.x` series).
+- Current package version target: `0.1.8`.
 - NS8 spec version is tracked separately in `docs/SPEC_NS8.md`.
 - The NS8 specification is stable within a major version.
 
@@ -672,7 +716,7 @@ print(ns8_A("TLF", 1, 1, 1))
 ## Licensing Boundary
 
 ToneSight NS8 is open and currently licensed under MIT.
-NS8 in this repository is the in-scope reference mapping for the toolkit and is currently covered by MIT in this v1 release.
+NS8 in this repository is the in-scope reference mapping for the toolkit and is currently covered by MIT in this pre-1.0 release line.
 ToneSight NS8 is released under the MIT License.
 For commercial licensing, enterprise support, or OEM inquiries, please contact: Nicholas@CollaborativeCurators.com
 

@@ -35,6 +35,7 @@ Stable public imports are the names exported by `tonesight_ns8.__all__`:
 - `run_bundle`
 - `run_incident`
 - `run_trend`
+- `run_benchmark_suite`
 - `run_index`
  - `run_live_capture`
  - `run_live_replay`
@@ -58,6 +59,10 @@ Internal/non-stable modules (no backward-compatibility guarantee in v1):
 Policy:
 - Prefer importing stable functions from package root (`import tonesight_ns8 as ts`).
 - Treat module-level helper functions as implementation details unless explicitly listed as stable.
+
+Canonical telemetry identity policy:
+- `docs/CANONICAL_ID_POLICY.md`
+- live compare/gate compatibility details: `docs/LIVE_COMPATIBILITY.md`
 
 ## Exceptions
 
@@ -143,7 +148,7 @@ Package wrapper over oracle anchor computation with strict validation.
 
 Package wrapper for canonical seed route resolution.
 
-## Mapping Interface (v1.2 scaffold)
+## Mapping Interface (Pre-1.0 Scaffold)
 
 ToneSight now exposes a deterministic mapping registry so NS8 is a default adapter, not a hardcoded-only path.
 
@@ -308,7 +313,7 @@ CLI trace metadata (`python -m tonesight_ns8.cli eval` and `eval-compare`):
 - keys: `spec_version`, `dataset_hash`, `taxonomy_hash`, `defaults_hash`
 - output remains JSON and backward-compatible (existing fields retained)
 
-### `run_compare(run_a: str, run_b: str, *, top_n: int = 10, write_artifact: bool = False) -> dict`
+### `run_compare(run_a: str, run_b: str, *, top_n: int = 10, distance_mode: str = "l1", write_artifact: bool = False) -> dict`
 
 Compares two deterministic eval runs and computes regression deltas.
 
@@ -321,12 +326,18 @@ Computed outputs:
 - delta `pass_rate`
 - delta `avg_l1`
 - delta `p95_l1`
+- `distance_mode` (`l1` or `topology`)
 - deterministic trend labels (`improved`, `regressed`, `unchanged`) for each core delta metric
 - per-label delta summary (when label present)
 - row coverage (`count_common_ids`, `count_only_in_a`, `count_only_in_b`)
 - regression coverage (`regression_count_total`, requested/returned `top_n`, truncation flag)
 - top regressions by L1 increase (stable sort by delta desc, then `id`)
 - top regression entries include `delta_v`, `delta_a`, `delta_d` when available
+- top regression entries include `distance_a`, `distance_b`, `delta_distance`
+
+Distance modes:
+- `l1` (default): per-row distance is `compliance_l1`
+- `topology`: per-row distance is NS8 anchor ring distance between `pred_vad` and `target_vad`; falls back to `compliance_l1` when anchor inputs are missing
 
 Optional artifact write (`write_artifact=True`):
 - `runs/<runB>/comparisons/<runA>/compare_summary.json`
@@ -512,6 +523,21 @@ Output:
   - run IDs and hash/version metadata
   - `profile_label`, `source_label`, and row-derived `source_labels`
   - artifact pointers (`out_jsonl`, `eval_summary_json`, `report_html`, `receipt_json`)
+
+### `run_benchmark_suite(*, suite: str = "core", out_root: str = "runs", goldset_path: str = "data/goldset.jsonl") -> dict`
+
+Runs deterministic benchmark evidence suite and writes JSON artifacts under:
+- `<out_root>/benchmarks/core/noise_tolerance.json`
+- `<out_root>/benchmarks/core/drift_injection.json`
+- `<out_root>/benchmarks/core/model_swap_robustness.json`
+- `<out_root>/benchmarks/core/baselines.json`
+- `<out_root>/benchmarks/core/report.json`
+
+Current supported suite:
+- `core`
+
+CLI:
+- `python -m tonesight_ns8.cli benchmark --suite core`
 
 ### `tonesight_from_label(label: str, family: str, r: int, c: int, k: int, taxonomy_path: str) -> dict`
 

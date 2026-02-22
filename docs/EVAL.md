@@ -2,6 +2,11 @@
 
 This document describes the implemented deterministic eval workflow.
 
+Conformance vs evidence:
+- eval/compare/gate artifacts in this document are conformance telemetry.
+- benchmark artifacts (`benchmark --suite core`) are empirical evidence outputs.
+- use `docs/WHY_NS8.md` for claim-to-artifact mapping.
+
 ## Goldset Contract
 
 File:
@@ -52,6 +57,13 @@ python -m tonesight_ns8.cli eval-compare
 python -m tonesight_ns8.cli eval-compare --goldset data/goldset.jsonl --out-root runs --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --top-n 10
 ```
 
+CLI benchmark suite:
+
+```bash
+python -m tonesight_ns8.cli benchmark --suite core
+python -m tonesight_ns8.cli benchmark --suite core --out-root runs --goldset data/goldset.jsonl
+```
+
 Optional observability API trigger:
 
 ```http
@@ -79,6 +91,13 @@ Always written:
 Optional (when `capture_gpu=true`):
 - `runs/<run_id>/gpu_before.json`
 - `runs/<run_id>/gpu_after.json`
+
+Benchmark artifacts (`benchmark --suite core`):
+- `runs/benchmarks/core/noise_tolerance.json`
+- `runs/benchmarks/core/drift_injection.json`
+- `runs/benchmarks/core/model_swap_robustness.json`
+- `runs/benchmarks/core/baselines.json`
+- `runs/benchmarks/core/report.json`
 
 ## `eval_summary.json` Fields
 
@@ -121,6 +140,17 @@ Each scored row includes deterministic explainability values:
 Optional compare artifact (`--write`):
 - `runs/<runB>/comparisons/<runA>/compare_summary.json`
 - `runs/<runB>/comparisons/<runA>/compare_report.html`
+
+Distance mode:
+- default `--distance l1` uses `compliance_l1` delta ranking
+- optional `--distance topology` uses NS8 anchor ring distance between `pred_vad` and `target_vad` (fallback to `compliance_l1` when anchor inputs are missing)
+- compare output includes `distance_mode` and per-regression `distance_a`, `distance_b`, `delta_distance`
+
+CLI example:
+
+```bash
+python -m tonesight_ns8.cli compare runs/<runA> runs/<runB> --distance topology --top-n 10 --write
+```
 
 Report presentation preset:
 - open `runs/<run_id>/report.html?mode=present` for deterministic camera/control defaults suited for screenshots/demos

@@ -1,4 +1,4 @@
-# Derived Metrics Contract (v1.7)
+# Derived Metrics Contract (0.1.7+)
 
 This document defines the normative deterministic contract for derived analytics metrics.
 

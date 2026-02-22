@@ -1,4 +1,4 @@
-"""ToneSight NS8 package surface (incremental v1)."""
+"""ToneSight NS8 package surface (incremental pre-1.0)."""
 
 from .api import (
     attach_tonesight_to_segment,
@@ -8,6 +8,7 @@ from .api import (
 )
 from .analytics import summarize_session, summarize_speaker
 from .bundle_runner import run_bundle
+from .benchmark_runner import run_benchmark_suite
 from .canary_runner import run_canary
 from .compare_runner import run_compare
 from .eval_compare_runner import run_eval_compare
@@ -54,6 +55,7 @@ __all__ = [
     "run_canary",
     "run_triage",
     "run_bundle",
+    "run_benchmark_suite",
     "run_incident",
     "run_trend",
     "canonical_live_event",

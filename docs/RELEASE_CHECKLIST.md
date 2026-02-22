@@ -1,6 +1,6 @@
-# Release Checklist (v1)
+# Release Checklist (Pre-1.0)
 
-Use this checklist before tagging or publishing a `v1` release candidate.
+Use this checklist before tagging or publishing a pre-1.0 release candidate.
 
 ## Validation commands
 
@@ -48,7 +48,7 @@ python -m tonesight_ns8.cli bundle --run-b runs/<run_id>
 - `docs/SPEC_NS8.md`/vectors/tests/docs are synchronized for any behavior changes
 - project change log is updated with release-facing changes (path depends on repo policy)
 
-## v1.1 Milestone Checklist (Concrete)
+## 0.1 Milestone Checklist (Concrete)
 
 Scope: usability and operability polish while preserving deterministic NS8 core behavior.
 
@@ -74,7 +74,7 @@ Scope: usability and operability polish while preserving deterministic NS8 core 
   - [ ] keep optional observability tests green when dependencies are installed
   - [ ] verify fresh-clone editable install + eval smoke command
 
-### v1.1 validation commands
+### 0.1 validation commands
 
 ```bash
 python tools/validate_defaults.py
@@ -88,12 +88,12 @@ python -m tonesight_ns8.cli --help
 python -m tonesight_ns8.cli eval
 ```
 
-### v1.1 release gate
+### 0.1 release gate
 
 - [ ] all commands above pass on local clean workspace
 - [ ] GitHub Actions checks are green on release candidate commit
 - [ ] release notes summarize deterministic-impact vs docs-only changes
-- [ ] version/tag chosen (`v1.1.0` or equivalent) and pushed
+- [ ] version/tag chosen (`v0.1.x` or equivalent) and pushed
 
 ## CHANGE_LOG Entry Format (Required)
 

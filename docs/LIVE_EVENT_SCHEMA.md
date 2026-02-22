@@ -1,6 +1,6 @@
 # Live Event Schema (Shadow Mode)
 
-This document defines the canonical `LiveEvent` envelope for v1.5 shadow-mode ingestion.
+This document defines the canonical `LiveEvent` envelope for 0.1.5 shadow-mode ingestion.
 
 Authoritative artifact:
 - `schemas/live_event.schema.json`
@@ -67,4 +67,3 @@ Success output:
 ```json
 {"valid": true, "path": "tests/fixtures/live_event.valid.jsonl"}
 ```
-

@@ -1,0 +1,35 @@
+name: Benchmarks
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  benchmark-core:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Run deterministic benchmark suite
+        run: |
+          python -m tonesight_ns8.cli benchmark --suite core --out-root runs
+          test -f runs/benchmarks/core/report.json
+
+      - name: Upload benchmark artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-core
+          path: runs/benchmarks/core/
+
