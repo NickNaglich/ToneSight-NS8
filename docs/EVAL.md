@@ -99,6 +99,11 @@ Benchmark artifacts (`benchmark --suite core`):
 - `runs/benchmarks/core/baselines.json`
 - `runs/benchmarks/core/report.json`
 
+Performance smoke policy:
+- deterministic eval smoke is covered by `tests/test_eval_performance_smoke.py`
+- conservative runtime threshold: eval on `data/goldset.jsonl` should complete in `< 30s`
+- benchmark workflow remains non-blocking initially (`.github/workflows/benchmarks.yml`)
+
 ## `eval_summary.json` Fields
 
 - `run_id`

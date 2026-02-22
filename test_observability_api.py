@@ -78,3 +78,36 @@ def test_observability_api_eval_run_path_allowlist_enforced():
         json={"goldset_path": "/tmp/not-allowed.jsonl"},
     )
     assert resp.status_code == 400
+
+
+def test_observability_api_eval_run_requires_auth():
+    pytest.importorskip("fastapi")
+    pytest.importorskip("prometheus_client")
+    import os
+    from fastapi.testclient import TestClient
+    from tonesight_ns8.observability_api import app
+
+    os.environ["TONESIGHT_API_TOKEN"] = "test-token"
+    client = TestClient(app)
+    unauth = client.post("/eval/run", json={"goldset_path": "data/goldset.jsonl"})
+    assert unauth.status_code == 401
+
+
+def test_observability_api_rate_limit_returns_429():
+    pytest.importorskip("fastapi")
+    pytest.importorskip("prometheus_client")
+    import os
+    from fastapi.testclient import TestClient
+    import tonesight_ns8.observability_api as observability_api
+
+    os.environ["TONESIGHT_API_TOKEN"] = "test-token"
+    os.environ["TONESIGHT_RATE_LIMIT_PER_MINUTE"] = "1"
+    observability_api._RATE_LIMIT_STATE.clear()
+
+    client = TestClient(observability_api.app)
+    first = client.get("/metrics", headers={"Authorization": "Bearer test-token"})
+    assert first.status_code == 200
+
+    second = client.get("/metrics", headers={"Authorization": "Bearer test-token"})
+    assert second.status_code == 429
+    assert second.json() == {"detail": "rate limit exceeded"}

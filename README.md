@@ -465,6 +465,11 @@ Benchmark artifacts (`benchmark --suite core`):
 - `runs/benchmarks/core/baselines.json`
 - `runs/benchmarks/core/report.json`
 
+Performance smoke policy:
+- deterministic eval smoke test: `tests/test_eval_performance_smoke.py`
+- conservative threshold: eval on `data/goldset.jsonl` completes in `< 30s`
+- benchmark workflow is currently non-blocking: `.github/workflows/benchmarks.yml`
+
 ## 30-Second Local Demo
 
 Run a deterministic eval:
@@ -680,7 +685,7 @@ Note: The current layout uses a reference implementation (`ns8_ref.py`).
 ## Versioning and Stability
 
 - Library/package versioning follows semantic versioning and is currently pre-1.0 (`0.1.x` series).
-- Current package version target: `0.1.8`.
+- Current package version target: `0.1.9`.
 - NS8 spec version is tracked separately in `docs/SPEC_NS8.md`.
 - The NS8 specification is stable within a major version.
 

@@ -293,6 +293,9 @@ Returns:
 - `avg_accuracy_l1` (or `null` when no gold labels are present)
 - `eval_duration_seconds`
 
+Artifact compatibility contract checks:
+- required field/type coverage and additive-field tolerance are enforced in `tests/test_artifact_schema_compatibility.py`
+
 ### `run_eval_compare(goldset_path: str, *, out_root: str = "runs", taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", threshold_l1: int = 3, calibration_path: str | None = None, capture_gpu: bool = False, mlflow_tracking_uri: str | None = None, top_n: int = 10) -> dict`
 
 These defaults are sourced from `config/defaults.json`.

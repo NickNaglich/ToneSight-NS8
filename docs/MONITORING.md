@@ -48,6 +48,10 @@ export GF_SECURITY_ADMIN_PASSWORD="<strong-grafana-password>"
 docker compose up --build
 ```
 
+Security enforcement tests:
+- `test_observability_api.py` asserts auth requirements on `/metrics`, `/eval/last`, and `/eval/run`
+- `test_observability_api.py` asserts path allowlist rejection and deterministic `429` rate-limit responses
+
 ## 2) Prometheus metrics (API)
 
 ### Operational
