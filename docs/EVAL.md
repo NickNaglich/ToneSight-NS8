@@ -152,6 +152,15 @@ Distance mode:
 - optional `--distance topology` uses NS8 anchor ring distance between `pred_vad` and `target_vad` (fallback to `compliance_l1` when anchor inputs are missing)
 - compare output includes `distance_mode` and per-regression `distance_a`, `distance_b`, `delta_distance`
 
+Compare error contract:
+- compare fails with deterministic actionable errors for:
+  - missing required files: `missing_required_file:<name>`
+  - malformed JSON artifacts: `malformed_json:<name>:line=<n>:col=<m>`
+  - malformed JSONL rows: `malformed_jsonl:<name>:line=<n>:col=<m>`
+  - incompatible receipts: `incompatible_receipts:<field>:<a>!=<b>`
+- CLI wraps runner failures as deterministic error payloads:
+  - `{"error":{"type":"CompareInputError","message":"..."}}` with exit code `2`
+
 CLI example:
 
 ```bash
@@ -285,6 +294,11 @@ Safety defaults:
 - Run metadata (`run_id`, timestamps, artifact paths) is expected to vary per run.
 - GPU snapshots are best-effort and should not fail eval on non-GPU systems.
 - For live replay, run IDs are deterministic for fixed capture + config, and `live-verify` asserts artifact hash stability.
+- Eval replay reproducibility comparison policy:
+  - stable targets: `out.jsonl` byte/hash equality and `eval_summary.json` equality excluding variable fields
+  - allowed variable fields:
+    - `eval_summary.json`: `run_id`, `eval_duration_seconds`
+    - `receipt.json`: `run_id`, `created_at_utc`, `runtime.started_at_utc`, `runtime.completed_at_utc`, `runtime.eval_duration_seconds`, artifact paths under `artifacts.*`
 
 Validation command:
 - `python tools/validate_goldset.py data/goldset.jsonl`

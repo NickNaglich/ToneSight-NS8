@@ -3,6 +3,7 @@ import shutil
 from pathlib import Path
 from uuid import uuid4
 
+import tonesight_ns8.eval_runner as eval_runner_module
 from tonesight_ns8.eval_runner import run_eval
 from tonesight_ns8.gate_runner import run_gate
 
@@ -141,3 +142,31 @@ def test_artifact_contract_legacy_receipt_shape_is_compatible():
     payload = run_gate(str(run_a), str(run_b), require_dataset_match=True)
     assert payload["decision"] == "passed"
     assert payload["incompatibilities"] == []
+
+
+def test_receipt_code_revision_present_when_available(monkeypatch):
+    monkeypatch.setattr(eval_runner_module, "get_code_revision", lambda: "deadbeefcafe")
+    out_root = _temp_dir("tmp_artifact_code_revision_present")
+    result = run_eval(
+        "data/goldset.jsonl",
+        out_root=str(out_root),
+        taxonomy_path="taxonomy/tone_taxonomy.v1.json",
+        threshold_l1=3,
+    )
+    out_dir = Path(result["out_dir"])
+    receipt = json.loads((out_dir / "receipt.json").read_text(encoding="utf-8"))
+    assert receipt["code_revision"] == "deadbeefcafe"
+
+
+def test_receipt_code_revision_omitted_when_unavailable(monkeypatch):
+    monkeypatch.setattr(eval_runner_module, "get_code_revision", lambda: None)
+    out_root = _temp_dir("tmp_artifact_code_revision_absent")
+    result = run_eval(
+        "data/goldset.jsonl",
+        out_root=str(out_root),
+        taxonomy_path="taxonomy/tone_taxonomy.v1.json",
+        threshold_l1=3,
+    )
+    out_dir = Path(result["out_dir"])
+    receipt = json.loads((out_dir / "receipt.json").read_text(encoding="utf-8"))
+    assert "code_revision" not in receipt

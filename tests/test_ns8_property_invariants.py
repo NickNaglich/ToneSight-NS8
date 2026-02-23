@@ -4,23 +4,23 @@ from tonesight_ns8 import compute_A, resolve_to_seed
 from tonesight_ns8.errors import InvalidInput
 
 FAMILIES = ("TLF", "TRF", "BLF", "BRF", "TRB", "TLB", "BLB", "BRB")
-SAMPLE_VALUES = (1, 2, 4, 8)
+DOMAIN_VALUES = range(1, 9)
 
 
 def test_property_a_stays_in_domain_for_valid_inputs():
     for family in FAMILIES:
-        for r in SAMPLE_VALUES:
-            for c in SAMPLE_VALUES:
-                for k in SAMPLE_VALUES:
+        for r in DOMAIN_VALUES:
+            for c in DOMAIN_VALUES:
+                for k in DOMAIN_VALUES:
                     a = compute_A(family, r, c, k, 8)
                     assert 1 <= a <= 8
 
 
 def test_property_route_stays_in_seed_and_range_for_valid_inputs():
     for family in FAMILIES:
-        for r in SAMPLE_VALUES:
-            for c in SAMPLE_VALUES:
-                for k in SAMPLE_VALUES:
+        for r in DOMAIN_VALUES:
+            for c in DOMAIN_VALUES:
+                for k in DOMAIN_VALUES:
                     seed_family, r_prime, c_prime, k_out = resolve_to_seed(family, r, c, k, 8)
                     assert seed_family in {"TLF", "TRB"}
                     assert 1 <= r_prime <= 8

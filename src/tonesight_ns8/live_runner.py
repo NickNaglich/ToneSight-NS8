@@ -11,6 +11,7 @@ from .defaults import EVAL_DEFAULTS, _resolve_defaults_path
 from .eval_runner import _render_eval_report_html
 from .live_identity import canonical_live_event, stable_event_hash
 from .live_event_validation import validate_live_event_file
+from .provenance import get_code_revision
 from .live_shadow_policy import apply_shadow_policy
 from .redaction import redact_live_event
 from .taxonomy import UnknownToneLabel, get_vad, load_taxonomy
@@ -270,6 +271,9 @@ def run_live_replay(
             "receipt_json": str(out_dir / "receipt.json"),
         },
     }
+    code_revision = get_code_revision()
+    if code_revision is not None:
+        receipt["code_revision"] = code_revision
     if policy["quarantine_path"]:
         receipt["artifacts"]["quarantine_jsonl"] = policy["quarantine_path"]
     receipt["redaction_summary"] = redaction_summary

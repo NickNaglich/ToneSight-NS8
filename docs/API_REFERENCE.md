@@ -278,6 +278,7 @@ Returns:
 - optional GPU snapshots (`capture_gpu=True`)
 - optional MLflow logging (`mlflow_tracking_uri`)
 - receipt includes reproducibility hashes: `taxonomy_hash`, `defaults_hash`
+- receipt may include additive provenance field `code_revision` (short git SHA) when available
 
 `out.jsonl` per-row explainability fields:
 - `delta_v`, `delta_a`, `delta_d` (absolute per-dimension target deltas)
@@ -316,7 +317,7 @@ CLI trace metadata (`python -m tonesight_ns8.cli eval` and `eval-compare`):
 - keys: `spec_version`, `dataset_hash`, `taxonomy_hash`, `defaults_hash`
 - output remains JSON and backward-compatible (existing fields retained)
 
-### `run_compare(run_a: str, run_b: str, *, top_n: int = 10, distance_mode: str = "l1", write_artifact: bool = False) -> dict`
+### `run_compare(run_a: str, run_b: str, *, top_n: int = 10, distance_mode: str = "l1", write_artifact: bool = False, require_dataset_match: bool = True) -> dict`
 
 Compares two deterministic eval runs and computes regression deltas.
 
@@ -341,6 +342,11 @@ Computed outputs:
 Distance modes:
 - `l1` (default): per-row distance is `compliance_l1`
 - `topology`: per-row distance is NS8 anchor ring distance between `pred_vad` and `target_vad`; falls back to `compliance_l1` when anchor inputs are missing
+
+Compatibility behavior:
+- always requires matching `spec_version`
+- requires matching `dataset_hash` when `require_dataset_match=True` (default)
+- allows dataset hash mismatch when `require_dataset_match=False` (used by gate flows that explicitly disable dataset matching)
 
 Optional artifact write (`write_artifact=True`):
 - `runs/<runB>/comparisons/<runA>/compare_summary.json`
@@ -473,6 +479,7 @@ Writes:
 Returns:
 - run metadata, summary, receipt, and shadow policy result
 - includes deterministic `redaction_summary` in summary/receipt when redaction is enabled
+- receipt may include additive provenance field `code_revision` (short git SHA) when available
 
 ### `run_live_verify(capture: str, *, out_root: str = "runs", taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", threshold_l1: int = 3, shadow_strict: str = "quarantine", redact: bool = True) -> dict`
 

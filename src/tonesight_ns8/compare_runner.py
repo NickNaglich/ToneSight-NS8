@@ -9,18 +9,55 @@ from typing import Any
 
 from .ns8 import compute_A
 
+class CompareInputError(ValueError):
+    """Deterministic, actionable compare-input error."""
+
+
 def _read_json(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text(encoding="utf-8"))
+    if not path.exists():
+        raise CompareInputError(f"missing_required_file:{path.name}")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise CompareInputError(f"malformed_json:{path.name}:line={exc.lineno}:col={exc.colno}") from exc
+    if not isinstance(payload, dict):
+        raise CompareInputError(f"invalid_json_object:{path.name}")
+    return payload
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        raise CompareInputError(f"missing_required_file:{path.name}")
     rows: list[dict[str, Any]] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for i, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
         line = line.strip()
         if not line:
             continue
-        rows.append(json.loads(line))
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise CompareInputError(f"malformed_jsonl:{path.name}:line={i}:col={exc.colno}") from exc
+        if not isinstance(row, dict):
+            raise CompareInputError(f"invalid_jsonl_row_object:{path.name}:line={i}")
+        rows.append(row)
     return rows
+
+
+def _validate_receipt_compatibility(
+    receipt_a: dict[str, Any],
+    receipt_b: dict[str, Any],
+    *,
+    require_dataset_match: bool = True,
+) -> None:
+    spec_a = str(receipt_a.get("spec_version", ""))
+    spec_b = str(receipt_b.get("spec_version", ""))
+    if spec_a != spec_b:
+        raise CompareInputError(f"incompatible_receipts:spec_version:{spec_a}!={spec_b}")
+
+    dataset_a = str(receipt_a.get("dataset_hash", ""))
+    dataset_b = str(receipt_b.get("dataset_hash", ""))
+    if require_dataset_match and dataset_a and dataset_b and dataset_a != dataset_b:
+        raise CompareInputError(f"incompatible_receipts:dataset_hash:{dataset_a}!={dataset_b}")
 
 
 def _index_rows(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -220,6 +257,7 @@ def run_compare(
     top_n: int = 10,
     distance_mode: str = "l1",
     write_artifact: bool = False,
+    require_dataset_match: bool = True,
 ) -> dict[str, Any]:
     """Compare two eval runs deterministically."""
     run_a_path = Path(run_a)
@@ -231,6 +269,7 @@ def run_compare(
     receipt_b = _read_json(run_b_path / "receipt.json")
     out_a = _read_jsonl(run_a_path / "out.jsonl")
     out_b = _read_jsonl(run_b_path / "out.jsonl")
+    _validate_receipt_compatibility(receipt_a, receipt_b, require_dataset_match=require_dataset_match)
 
     by_id_a = _index_rows(out_a)
     by_id_b = _index_rows(out_b)

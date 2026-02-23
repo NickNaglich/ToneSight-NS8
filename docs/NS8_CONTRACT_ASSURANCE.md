@@ -58,6 +58,7 @@ Symmetry invariants validated by tests:
 
 Evidence:
 - `tests/test_invariants.py`
+- `tests/test_ns8_property_invariants.py` (exhaustive full-domain checks across `family x r x c x k`, `N=8`)
 
 ## Determinism Statement
 
@@ -69,6 +70,7 @@ For fixed `(family, r, c, k, N=8)` in-domain inputs, `ns8_A` is deterministic an
 Evidence:
 - `test_ns8_vectors.py` (normative vector cases)
 - `tests/test_strict_validation.py` (strict type/domain rejection)
+- `tests/test_ns8_property_invariants.py` (output domain and canonical-route bounds over full valid domain)
 - wrapper/registry conformance tests (`tests/test_mapping_registry.py`, `tests/test_mapping_conformance.py`)
 
 Topology compare note:

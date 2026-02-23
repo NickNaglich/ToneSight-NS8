@@ -3,6 +3,7 @@ import shutil
 from pathlib import Path
 from uuid import uuid4
 
+import tonesight_ns8.live_runner as live_runner_module
 from tonesight_ns8.live_runner import run_live_capture, run_live_replay, run_live_verify
 
 
@@ -121,3 +122,28 @@ def test_live_replay_applies_redaction_and_receipt_summary():
     assert out_rows[0]["text"] == "Email me at [EMAIL] or call [PHONE]"
     assert replay["summary"]["redaction_summary"] == {"EMAIL": 1, "PHONE": 1, "SSN": 0}
     assert replay["receipt"]["redaction_summary"] == {"EMAIL": 1, "PHONE": 1, "SSN": 0}
+
+
+def test_live_replay_receipt_code_revision_optional_semantics(monkeypatch):
+    out_root = _temp_dir("tmp_live_code_revision")
+    capture = run_live_capture("tests/fixtures/live_capture.small.jsonl", out_root=str(out_root))
+
+    monkeypatch.setattr(live_runner_module, "get_code_revision", lambda: "cafebabefeed")
+    replay_with = run_live_replay(
+        capture["capture_dir"],
+        out_root=str(out_root),
+        taxonomy_path="taxonomy/tone_taxonomy.v1.json",
+        threshold_l1=3,
+        shadow_strict="quarantine",
+    )
+    assert replay_with["receipt"]["code_revision"] == "cafebabefeed"
+
+    monkeypatch.setattr(live_runner_module, "get_code_revision", lambda: None)
+    replay_without = run_live_replay(
+        capture["capture_dir"],
+        out_root=str(out_root),
+        taxonomy_path="taxonomy/tone_taxonomy.v1.json",
+        threshold_l1=3,
+        shadow_strict="quarantine",
+    )
+    assert "code_revision" not in replay_without["receipt"]

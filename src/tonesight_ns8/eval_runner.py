@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from .defaults import EVAL_DEFAULTS, _resolve_defaults_path
+from .provenance import get_code_revision
 from .taxonomy import get_vad, load_taxonomy
 
 
@@ -414,6 +415,9 @@ def run_eval(
             "platform": platform.platform(),
         },
     }
+    code_revision = get_code_revision()
+    if code_revision is not None:
+        receipt["code_revision"] = code_revision
     if gpu_before is not None:
         receipt["artifacts"]["gpu_before_json"] = str(out_dir / "gpu_before.json")
 

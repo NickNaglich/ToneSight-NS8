@@ -209,7 +209,13 @@ def run_gate(
         base_payload["exit_code"] = 3
         return base_payload
 
-    compare = run_compare(str(run_a_path), str(run_b_path), top_n=top_n, write_artifact=False)["compare_summary"]
+    compare = run_compare(
+        str(run_a_path),
+        str(run_b_path),
+        top_n=top_n,
+        write_artifact=False,
+        require_dataset_match=require_dataset_match,
+    )["compare_summary"]
     metrics = compare["metrics"]
     delta_pass_rate = float(metrics.get("delta_pass_rate") or 0.0)
     delta_avg_l1 = float(metrics.get("delta_avg_l1") or 0.0)

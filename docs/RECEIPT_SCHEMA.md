@@ -44,3 +44,4 @@ Status:
 - `spec_version` must match `docs/SPEC_NS8.md`.
 - `A` must be in `1..8`.
 - Unknown optional fields are allowed only if they do not alter deterministic behavior.
+- Operational eval/live receipts may include additive provenance fields (for example `code_revision`) when available; absence remains backward-compatible.
