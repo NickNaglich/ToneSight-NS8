@@ -16,6 +16,9 @@ from .live_shadow_policy import apply_shadow_policy
 from .redaction import redact_live_event
 from .taxonomy import UnknownToneLabel, get_vad, load_taxonomy
 
+RECEIPT_SCHEMA_VERSION = "1.0"
+SUMMARY_SCHEMA_VERSION = "1.0"
+
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
@@ -217,6 +220,7 @@ def run_live_replay(
 
     total = len(scored)
     summary = {
+        "summary_schema_version": SUMMARY_SCHEMA_VERSION,
         "run_id": run_id,
         "capture_id": capture_id,
         "capture_hash": capture_hash[:12],
@@ -242,6 +246,7 @@ def run_live_replay(
     }
 
     receipt = {
+        "receipt_schema_version": RECEIPT_SCHEMA_VERSION,
         "spec_version": "1.0",
         "run_id": run_id,
         "capture_path": str(events_path),

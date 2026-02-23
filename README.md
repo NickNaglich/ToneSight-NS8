@@ -406,6 +406,10 @@ python -m tonesight_ns8.cli bundle --run-b runs/<candidate> --include-source-pat
 python -m tonesight_ns8.cli trend --out-root runs
 python -m tonesight_ns8.cli trend --out-root runs --group-by source
 python -m tonesight_ns8.cli index-runs --out-root runs
+python -m tonesight_ns8.cli report --run-b runs/<candidate>
+python -m tonesight_ns8.cli report --run-a runs/<baseline> --run-b runs/<candidate> --top-n 10
+python -m tonesight_ns8.cli data-lint --dataset data/goldset.jsonl
+python -m tonesight_ns8.cli release-check --goldset data/goldset.jsonl --taxonomy taxonomy/tone_taxonomy.v1.json
 python -m tonesight_ns8.cli benchmark --suite core
 python -m tonesight_ns8.cli benchmark --suite core --out-root runs --goldset data/goldset.jsonl
 python -m tonesight_ns8.cli live-capture --events tests/fixtures/live_capture.small.jsonl --out-root runs
@@ -431,6 +435,10 @@ Gate command (`gate`) exit codes:
 - `0`: gate passed
 - `2`: regression threshold violated
 - `3`: incompatible runs (`dataset_hash`/`spec_version` mismatch)
+
+Release-check command (`release-check`) exit codes:
+- `0`: all required pre-release checks passed
+- `2`: one or more required checks failed
 
 Gate profiles:
 - configured in `config/gate_profiles.json`

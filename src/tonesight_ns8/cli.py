@@ -19,6 +19,7 @@ from . import (
     run_gate,
     run_incident,
     run_compare,
+    run_data_lint,
     run_eval_compare,
     run_eval,
     run_live_capture,
@@ -26,6 +27,8 @@ from . import (
     run_live_verify,
     run_index,
     run_retention_purge,
+    run_report,
+    run_release_check,
     run_trend,
     run_triage,
     summarize_session,
@@ -290,6 +293,37 @@ def _cmd_index_runs(args: argparse.Namespace) -> dict:
     )
 
 
+def _cmd_report(args: argparse.Namespace) -> dict:
+    return run_report(
+        args.run_b,
+        run_a=args.run_a,
+        out_path=args.out,
+        top_n=args.top_n,
+        profile=args.profile,
+        gate_profiles_path=args.gate_profiles,
+        min_pass_rate_delta=args.min_pass_rate_delta,
+        max_avg_l1_delta=args.max_avg_l1_delta,
+        max_p95_l1_delta=args.max_p95_l1_delta,
+        require_dataset_match=not args.allow_dataset_mismatch,
+    )
+
+
+def _cmd_data_lint(args: argparse.Namespace) -> dict:
+    return run_data_lint(
+        args.dataset,
+        out_path=args.out,
+    )
+
+
+def _cmd_release_check(args: argparse.Namespace) -> dict:
+    return run_release_check(
+        goldset_path=args.goldset,
+        taxonomy_path=args.taxonomy,
+        gate_profiles_path=args.gate_profiles,
+        out_path=args.out,
+    )
+
+
 def _cmd_benchmark(args: argparse.Namespace) -> dict:
     return run_benchmark_suite(
         suite=args.suite,
@@ -466,6 +500,34 @@ def build_parser() -> argparse.ArgumentParser:
     index_cmd.add_argument("--out-root", default=EVAL_DEFAULTS["out_root"])
     index_cmd.add_argument("--out", help="Optional explicit index output path.")
     index_cmd.set_defaults(func=_cmd_index_runs)
+
+    report_cmd = sub.add_parser("report", help="Create deterministic static report from existing run artifacts.")
+    report_cmd.add_argument("--run-b", required=True, help="Candidate/current run directory path.")
+    report_cmd.add_argument("--run-a", help="Optional baseline run directory path for compare and gate highlights.")
+    report_cmd.add_argument("--top-n", type=_non_negative_int, default=10)
+    report_cmd.add_argument("--profile", help="Optional gate profile name from gate profiles config.")
+    report_cmd.add_argument("--gate-profiles", default="config/gate_profiles.json")
+    report_cmd.add_argument("--min-pass-rate-delta", type=float, default=None)
+    report_cmd.add_argument("--max-avg-l1-delta", type=float, default=None)
+    report_cmd.add_argument("--max-p95-l1-delta", type=float, default=None)
+    report_cmd.add_argument("--allow-dataset-mismatch", action="store_true")
+    report_cmd.add_argument("--out", help="Optional explicit report output path (.json).")
+    report_cmd.set_defaults(func=_cmd_report)
+
+    data_lint_cmd = sub.add_parser("data-lint", help="Run deterministic dataset quality lint checks over JSONL.")
+    data_lint_cmd.add_argument("--dataset", default=ARTIFACT_DEFAULTS["goldset_path"])
+    data_lint_cmd.add_argument("--out", help="Optional explicit lint summary output path (.json).")
+    data_lint_cmd.set_defaults(func=_cmd_data_lint)
+
+    release_check_cmd = sub.add_parser(
+        "release-check",
+        help="Run deterministic pre-release orchestration checks and emit JSON decision payload.",
+    )
+    release_check_cmd.add_argument("--goldset", default=ARTIFACT_DEFAULTS["goldset_path"])
+    release_check_cmd.add_argument("--taxonomy", default=EVAL_DEFAULTS["taxonomy_path"])
+    release_check_cmd.add_argument("--gate-profiles", default="config/gate_profiles.json")
+    release_check_cmd.add_argument("--out", help="Optional explicit release-check output path (.json).")
+    release_check_cmd.set_defaults(func=_cmd_release_check)
 
     benchmark_cmd = sub.add_parser(
         "benchmark",

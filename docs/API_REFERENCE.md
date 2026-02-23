@@ -35,6 +35,9 @@ Stable public imports are the names exported by `tonesight_ns8.__all__`:
 - `run_bundle`
 - `run_incident`
 - `run_trend`
+- `run_report`
+- `run_data_lint`
+- `run_release_check`
 - `run_benchmark_suite`
 - `run_index`
  - `run_live_capture`
@@ -186,6 +189,9 @@ CLI support:
 - `live-verify --capture <capture_dir_or_events_jsonl>`
 - `canary --capture <capture_dir_or_events_jsonl>`
 - `incident --run-a <run_dir> --run-b <run_dir>`
+- `report --run-b <run_dir> [--run-a <run_dir>]`
+- `data-lint --dataset <jsonl_path>`
+- `release-check --goldset <jsonl_path> --taxonomy <taxonomy_path>`
 
 Conformance harness:
 - `tests/mapping_conformance.py` provides reusable assertions for adapter determinism, route shape, anchor range, and invalid-input rejection.
@@ -278,6 +284,7 @@ Returns:
 - optional GPU snapshots (`capture_gpu=True`)
 - optional MLflow logging (`mlflow_tracking_uri`)
 - receipt includes reproducibility hashes: `taxonomy_hash`, `defaults_hash`
+- receipt includes additive artifact schema field `receipt_schema_version`
 - receipt may include additive provenance field `code_revision` (short git SHA) when available
 
 `out.jsonl` per-row explainability fields:
@@ -286,6 +293,7 @@ Returns:
 - `threshold_margin` (`threshold_l1 - compliance_l1`)
 
 `eval_summary.json` key fields:
+- `summary_schema_version`
 - `dataset_hash`
 - `count_rows`, `threshold_l1`
 - `pass_count`, `fail_count`, `pass_rate`, `fail_rate`
@@ -446,6 +454,62 @@ Included outputs:
 - forensics bundle path
 - markdown incident template path
 
+### `run_report(run_b: str, *, run_a: str | None = None, out_path: str | None = None, top_n: int = 10, profile: str | None = None, gate_profiles_path: str = "config/gate_profiles.json", min_pass_rate_delta: float | None = None, max_avg_l1_delta: float | None = None, max_p95_l1_delta: float | None = None, require_dataset_match: bool = True) -> dict`
+
+Builds a deterministic static JSON report from existing run artifacts.
+
+Inputs:
+- `run_b`: required candidate/current run directory
+- `run_a`: optional baseline run directory for compare/gate highlights
+
+Output:
+- writes report JSON under `<run_b>/reports/` by default
+- includes:
+  - run-B KPI snapshot (`count_rows`, `pass_rate`, `avg_l1`, `p95_l1`)
+  - reproducibility metadata from receipt (`spec_version`, hashes, mapping IDs, code revision when present)
+  - compare highlights (`metrics`, regression coverage, top regressions) when `run_a` is provided
+  - gate summary (`decision`, thresholds, violations, incompatibilities, exit code) when `run_a` is provided
+
+Determinism guarantees:
+- consumes existing artifacts only
+- uses stable ordering and canonical JSON (`sort_keys=True`)
+- repeated runs with unchanged inputs produce byte-stable report files
+
+### `run_data_lint(dataset_path: str, *, out_path: str | None = None) -> dict`
+
+Runs deterministic structural/data-quality lint checks over a JSONL dataset.
+
+Checks include:
+- malformed JSON rows
+- missing/duplicate IDs
+- invalid VAD bins (`target_vad` required; `gold_vad` when present)
+- invalid tags shape/items
+
+Output:
+- machine-readable summary with:
+  - `passed`
+  - `row_count_total`, `row_count_valid`
+  - `violation_count`, `violations_by_code`
+  - ordered `violations` list (`line`, `code`, `message`)
+  - `exit_code` (`0` clean, `2` violations)
+- optional summary artifact write via `out_path`
+
+### `run_release_check(*, goldset_path: str = "data/goldset.jsonl", taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", gate_profiles_path: str = "config/gate_profiles.json", out_path: str | None = None) -> dict`
+
+Runs deterministic pre-release gate orchestration and returns a machine-readable decision payload.
+
+Required checks (deterministic order):
+- `dataset_lint`
+- `taxonomy_load`
+- `gate_profiles_config`
+- `nosec_policy`
+
+Output:
+- per-check pass/fail status with details
+- top-level `decision`, `failed_checks`, and CI-ready `exit_code`
+- `exit_code = 0` when all checks pass
+- `exit_code = 2` when one or more checks fail
+
 ### `run_trend(out_root: str, *, group_by: str | None = None, out_path: str | None = None) -> dict`
 
 Aggregates deterministic run-over-run trend summaries from historical run artifacts.
@@ -483,6 +547,8 @@ Writes:
 
 Returns:
 - run metadata, summary, receipt, and shadow policy result
+- summary includes additive artifact schema field `summary_schema_version`
+- receipt includes additive artifact schema field `receipt_schema_version`
 - includes deterministic `redaction_summary` in summary/receipt when redaction is enabled
 - receipt may include additive provenance field `code_revision` (short git SHA) when available
 

@@ -384,6 +384,93 @@ def test_cli_index_runs(capsys):
     assert Path(payload["index_path"]).exists()
 
 
+def test_cli_report(capsys):
+    out_root = _temp_dir("tmp_report_cli")
+    rc_a = main(
+        [
+            "eval",
+            "--goldset",
+            "data/goldset.jsonl",
+            "--out-root",
+            str(out_root),
+            "--taxonomy",
+            "taxonomy/tone_taxonomy.v1.json",
+            "--threshold-l1",
+            "3",
+        ]
+    )
+    payload_a = json.loads(capsys.readouterr().out)
+    assert rc_a == 0
+    run_a = out_root / payload_a["run_id"]
+
+    rc_b = main(
+        [
+            "eval",
+            "--goldset",
+            "data/goldset.jsonl",
+            "--out-root",
+            str(out_root),
+            "--taxonomy",
+            "taxonomy/tone_taxonomy.v1.json",
+            "--threshold-l1",
+            "2",
+        ]
+    )
+    payload_b = json.loads(capsys.readouterr().out)
+    assert rc_b == 0
+    run_b = out_root / payload_b["run_id"]
+
+    rc_report = main(["report", "--run-a", str(run_a), "--run-b", str(run_b), "--top-n", "5"])
+    report_payload = json.loads(capsys.readouterr().out)
+    assert rc_report == 0
+    assert Path(report_payload["report_path"]).exists()
+    assert report_payload["report"]["compare_highlights"]["available"] is True
+    assert report_payload["report"]["gate_summary"]["available"] is True
+
+
+def test_cli_data_lint(capsys):
+    rc_clean = main(["data-lint", "--dataset", "data/goldset.jsonl"])
+    clean_payload = json.loads(capsys.readouterr().out)
+    assert rc_clean == 0
+    assert clean_payload["passed"] is True
+    assert clean_payload["violation_count"] == 0
+
+    root = _temp_dir("tmp_cli_data_lint_bad")
+    bad_path = root / "bad.jsonl"
+    bad_path.write_text(
+        "\n".join(
+            [
+                '{"id":"dup_1","target_vad":{"V":9,"A":3,"D":3},"tags":["ok"]}',
+                '{"id":"dup_1","target_vad":{"V":7,"A":3,"D":3},"tags":["ok"]}',
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    rc_bad = main(["data-lint", "--dataset", str(bad_path)])
+    bad_payload = json.loads(capsys.readouterr().out)
+    assert rc_bad == 2
+    assert bad_payload["passed"] is False
+    assert bad_payload["violation_count"] >= 2
+
+
+def test_cli_release_check(capsys):
+    rc = main(["release-check", "--goldset", "data/goldset.jsonl", "--taxonomy", "taxonomy/tone_taxonomy.v1.json"])
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert payload["decision"] == "passed"
+    assert payload["failed_checks"] == []
+
+    root = _temp_dir("tmp_cli_release_check_bad")
+    bad_path = root / "bad.jsonl"
+    bad_path.write_text('{"id":"dup","target_vad":{"V":9,"A":3,"D":3},"tags":["ok"]}\n', encoding="utf-8")
+    rc_bad = main(["release-check", "--goldset", str(bad_path), "--taxonomy", "taxonomy/tone_taxonomy.v1.json"])
+    bad_payload = json.loads(capsys.readouterr().out)
+    assert rc_bad == 2
+    assert bad_payload["decision"] == "failed"
+    assert "dataset_lint" in bad_payload["failed_checks"]
+
+
 def test_cli_purge_dry_run_and_apply(capsys):
     out_root = _temp_dir("tmp_purge_cli")
     old_run = out_root / "run_old"

@@ -18,6 +18,9 @@ from .defaults import EVAL_DEFAULTS, _resolve_defaults_path
 from .provenance import get_code_revision
 from .taxonomy import get_vad, load_taxonomy
 
+RECEIPT_SCHEMA_VERSION = "1.0"
+SUMMARY_SCHEMA_VERSION = "1.0"
+
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
@@ -361,6 +364,7 @@ def run_eval(
     eval_duration_seconds = time.perf_counter() - started_perf
     completed_utc = datetime.now(timezone.utc)
     summary = {
+        "summary_schema_version": SUMMARY_SCHEMA_VERSION,
         "run_id": run_id,
         "dataset_hash": d_hash,
         "count_rows": total,
@@ -380,6 +384,7 @@ def run_eval(
     }
 
     receipt = {
+        "receipt_schema_version": RECEIPT_SCHEMA_VERSION,
         "spec_version": "1.0",
         "run_id": run_id,
         "dataset_path": str(gpath),

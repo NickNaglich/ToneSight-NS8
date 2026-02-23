@@ -57,6 +57,27 @@ python -m tonesight_ns8.cli eval-compare
 python -m tonesight_ns8.cli eval-compare --goldset data/goldset.jsonl --out-root runs --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --top-n 10
 ```
 
+CLI static report:
+
+```bash
+python -m tonesight_ns8.cli report --run-b runs/<candidate>
+python -m tonesight_ns8.cli report --run-a runs/<baseline> --run-b runs/<candidate> --top-n 10
+```
+
+CLI dataset lint:
+
+```bash
+python -m tonesight_ns8.cli data-lint --dataset data/goldset.jsonl
+python -m tonesight_ns8.cli data-lint --dataset data/goldset.jsonl --out runs/lint/goldset_lint.json
+```
+
+CLI release-check orchestration:
+
+```bash
+python -m tonesight_ns8.cli release-check --goldset data/goldset.jsonl --taxonomy taxonomy/tone_taxonomy.v1.json
+python -m tonesight_ns8.cli release-check --out runs/release/release_check.json
+```
+
 CLI benchmark suite:
 
 ```bash
@@ -221,6 +242,60 @@ Behavior:
 - deterministic ranking by `--score` (default `compliance_l1`), then `id`
 - exports `jsonl` or `csv`
 - rationale fields include `delta_v`, `delta_a`, `delta_d`, `threshold_margin`, `label`, `tags`
+
+## Static Report Command (Phase 5)
+
+Create deterministic static JSON report artifacts from existing run outputs:
+
+```bash
+python -m tonesight_ns8.cli report --run-b runs/<candidate>
+python -m tonesight_ns8.cli report --run-a runs/<baseline> --run-b runs/<candidate> --profile support_chat --top-n 10
+```
+
+Behavior:
+- consumes existing artifacts only (`receipt.json`, `eval_summary.json`, optional compare/gate from `run_a`)
+- includes reproducibility metadata from receipt (`spec_version`, hashes, mapping metadata)
+- includes compare highlights and gate summary when `--run-a` is provided
+- writes deterministic report JSON under `runs/<run_b>/reports/` by default
+- repeated runs over unchanged inputs produce byte-stable output (`sort_keys=True` JSON)
+
+## Dataset Lint Command (Phase 6)
+
+Run deterministic JSONL quality checks before eval:
+
+```bash
+python -m tonesight_ns8.cli data-lint --dataset data/goldset.jsonl
+```
+
+Checks:
+- malformed JSON rows
+- missing or duplicate IDs
+- invalid `target_vad`/`gold_vad` bins (must be `V/A/D` ints in `1..8`)
+- invalid tags list/items
+
+Output contract:
+- machine-readable summary with deterministic violation ordering
+- includes `violations_by_code`, full ordered `violations` list, and `exit_code`
+- exit semantics: `0` when clean, `2` when violations exist
+
+## Release-Check Command (Phase 7)
+
+Run one deterministic command to evaluate pre-release readiness:
+
+```bash
+python -m tonesight_ns8.cli release-check --goldset data/goldset.jsonl --taxonomy taxonomy/tone_taxonomy.v1.json
+```
+
+Checks (fixed order):
+- `dataset_lint`
+- `taxonomy_load`
+- `gate_profiles_config`
+- `nosec_policy`
+
+Output contract:
+- machine-readable JSON with per-check statuses and details
+- top-level `decision`, `failed_checks`, and `exit_code`
+- exit semantics: `0` pass, `2` fail (CI-friendly)
 
 ## Trend Command (Run History)
 

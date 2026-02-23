@@ -11,6 +11,7 @@ python tools/validate_defaults.py
 python tools/validate_defaults.py tests/fixtures/defaults.invalid.json && exit 1 || true
 python tools/check_nosec_policy.py
 python -m bandit -r src
+python -m tonesight_ns8.cli release-check --goldset data/goldset.jsonl --taxonomy taxonomy/tone_taxonomy.v1.json
 python -m pytest -q
 python tools/regen_vectors.py
 git diff --exit-code
@@ -37,6 +38,7 @@ python -m tonesight_ns8.cli bundle --run-b runs/<run_id>
 - defaults validator fails for `tests/fixtures/defaults.invalid.json`
 - nosec policy checker passes (or reports actionable violations)
 - Bandit security scan reports no findings for `src/`
+- release-check orchestration command returns `decision=passed` (`exit_code=0`)
 - full test suite passes
 - warnings are triaged/documented; no unexpected warnings are introduced
 - vector regeneration produces no diff

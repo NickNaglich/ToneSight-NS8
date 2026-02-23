@@ -41,6 +41,7 @@ def test_artifact_contract_required_fields_and_types():
     first_row = json.loads((out_dir / "out.jsonl").read_text(encoding="utf-8").splitlines()[0])
 
     for field in (
+        "receipt_schema_version",
         "spec_version",
         "run_id",
         "dataset_hash",
@@ -53,6 +54,8 @@ def test_artifact_contract_required_fields_and_types():
         assert isinstance(receipt[field], str)
         assert receipt[field] != ""
 
+    assert isinstance(summary["summary_schema_version"], str)
+    assert summary["summary_schema_version"] != ""
     assert isinstance(summary["count_rows"], int)
     assert isinstance(summary["pass_rate"], float)
     assert isinstance(summary["avg_l1"], float)

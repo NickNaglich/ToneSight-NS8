@@ -35,6 +35,10 @@ def test_live_capture_and_replay_create_standard_artifacts():
     assert (run_dir / "eval_summary.json").exists()
     assert (run_dir / "report.html").exists()
     assert (run_dir / "receipt.json").exists()
+    assert isinstance(replay["summary"]["summary_schema_version"], str)
+    assert replay["summary"]["summary_schema_version"] != ""
+    assert isinstance(replay["receipt"]["receipt_schema_version"], str)
+    assert replay["receipt"]["receipt_schema_version"] != ""
     assert replay["summary"]["count_rows"] == 2
     assert replay["summary"]["invalid_count"] == 0
 

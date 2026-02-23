@@ -11,6 +11,7 @@ from .bundle_runner import run_bundle
 from .benchmark_runner import run_benchmark_suite
 from .canary_runner import run_canary
 from .compare_runner import run_compare
+from .data_lint_runner import run_data_lint
 from .eval_compare_runner import run_eval_compare
 from .eval_runner import run_eval
 from .gate_runner import run_gate
@@ -27,6 +28,8 @@ from .mapping import (
 )
 from .ns8 import compute_A, resolve_to_seed, validate_inputs
 from .redaction import redact_live_event, redact_text
+from .report_runner import run_report
+from .release_check_runner import run_release_check
 from .retention import run_retention_purge
 from .run_index import run_index
 from .schema import Route, SegmentRecord, SessionSummary, SpeakerSummary, ToneReceipt
@@ -50,6 +53,7 @@ __all__ = [
     "summarize_session",
     "run_eval",
     "run_compare",
+    "run_data_lint",
     "run_eval_compare",
     "run_gate",
     "run_canary",
@@ -64,6 +68,8 @@ __all__ = [
     "run_live_capture",
     "run_live_replay",
     "run_live_verify",
+    "run_report",
+    "run_release_check",
     "run_index",
     "redact_text",
     "redact_live_event",
