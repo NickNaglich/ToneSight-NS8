@@ -266,8 +266,12 @@ gitleaks detect --source . --redact
 
 # Dependencies / SAST
 pip-audit
-bandit -r src
+python tools/check_nosec_policy.py
+python -m bandit -r src
 ```
+
+CI note:
+- `.github/workflows/ci.yml` includes a required `security-bandit` job running `python -m bandit -r src`.
 
 ## API Reference
 
@@ -336,6 +340,7 @@ Normative defaults config contract:
 
 Release readiness checklist:
 - `docs/RELEASE_CHECKLIST.md`
+- `docs/SECURITY_POLICY.md`
 - `docs/CANONICAL_ID_POLICY.md`
 - `docs/LIVE_EVENT_SCHEMA.md`
 - `docs/IDENTITY_AND_HASHING.md`

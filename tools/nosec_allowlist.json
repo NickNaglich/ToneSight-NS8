@@ -1,0 +1,32 @@
+{
+  "entries": [
+    {
+      "path": "src/tonesight_ns8/eval_runner.py",
+      "line": "import subprocess  # nosec B404"
+    },
+    {
+      "path": "src/tonesight_ns8/eval_runner.py",
+      "line": "proc = subprocess.run(cmd, check=True, capture_output=True, text=True)  # nosec B603"
+    },
+    {
+      "path": "src/tonesight_ns8/eval_runner.py",
+      "line": "\"<!doctype html>\\n\"  # nosec B608"
+    },
+    {
+      "path": "src/tonesight_ns8/live_runner.py",
+      "line": "\"pass\": True,  # nosec B105"
+    },
+    {
+      "path": "src/tonesight_ns8/provenance.py",
+      "line": "import subprocess  # nosec B404"
+    },
+    {
+      "path": "src/tonesight_ns8/provenance.py",
+      "line": "proc = subprocess.run(  # nosec B603"
+    },
+    {
+      "path": "src/tonesight_ns8/trend_runner.py",
+      "line": "\"delta_pass_rate_vs_prev\": None,  # nosec B105"
+    }
+  ]
+}

@@ -9,6 +9,8 @@ Run from repository root:
 ```bash
 python tools/validate_defaults.py
 python tools/validate_defaults.py tests/fixtures/defaults.invalid.json && exit 1 || true
+python tools/check_nosec_policy.py
+python -m bandit -r src
 python -m pytest -q
 python tools/regen_vectors.py
 git diff --exit-code
@@ -33,6 +35,8 @@ python -m tonesight_ns8.cli bundle --run-b runs/<run_id>
 
 - defaults validator passes for `config/defaults.json`
 - defaults validator fails for `tests/fixtures/defaults.invalid.json`
+- nosec policy checker passes (or reports actionable violations)
+- Bandit security scan reports no findings for `src/`
 - full test suite passes
 - warnings are triaged/documented; no unexpected warnings are introduced
 - vector regeneration produces no diff
@@ -41,6 +45,7 @@ python -m tonesight_ns8.cli bundle --run-b runs/<run_id>
 - eval smoke command returns a JSON payload with `run_id` and writes run artifacts
 - bundle command creates deterministic zip with `manifest.json`
 - determinism matrix job is green across configured OS targets in `.github/workflows/ci.yml`
+- required `security-bandit` job is green in `.github/workflows/ci.yml`
 
 ## Release metadata checks
 
