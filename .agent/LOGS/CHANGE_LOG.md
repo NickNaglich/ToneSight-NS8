@@ -184,7 +184,7 @@ Reason: Close the remaining governance decision by explicitly adopting Option A 
 Validation: python -m pytest -q (33 passed)
 
 
-[2026-02-14T19:05:22Z] Implement Path B monitoring stack in requested order (workflow activation, Docker services, FastAPI metrics endpoint, Prometheus/Grafana setup, docs runbook, smoke tests)
+[2026-02-14T19:05:22Z] Implement Path B monitoring stack (workflow + services + observability docs + smoke tests)
 Files: .agent/TO-DO/PHASED_WORKFLOW.md, docker-compose.yml, docker/api.Dockerfile, requirements-observability.txt, src/tonesight_ns8/observability_api.py, monitoring/prometheus/prometheus.yml, monitoring/grafana/provisioning/datasources/datasource.yml, monitoring/grafana/provisioning/dashboards/dashboards.yml, monitoring/grafana/dashboards/tonesight-overview.json, pyproject.toml, README.md, MONITORING.md, test_observability_api.py
 Reason: Add an opt-in v1.2 observability platform without changing NS8 core behavior, including containerized monitoring services, HTTP metrics instrumentation, dashboard provisioning, and baseline validation coverage.
 Validation: python -m pytest -q (34 passed, 1 skipped); docker compose config -q
