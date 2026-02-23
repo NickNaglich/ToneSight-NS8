@@ -412,6 +412,7 @@ python -m tonesight_ns8.cli data-lint --dataset data/goldset.jsonl
 python -m tonesight_ns8.cli release-check --goldset data/goldset.jsonl --taxonomy taxonomy/tone_taxonomy.v1.json
 python -m tonesight_ns8.cli benchmark --suite core
 python -m tonesight_ns8.cli benchmark --suite core --out-root runs --goldset data/goldset.jsonl
+python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs --goldset data/goldset.jsonl
 python -m tonesight_ns8.cli live-capture --events tests/fixtures/live_capture.small.jsonl --out-root runs
 python -m tonesight_ns8.cli live-replay --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
 python -m tonesight_ns8.cli live-verify --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
@@ -478,6 +479,10 @@ Benchmark artifacts (`benchmark --suite core`):
 - `runs/benchmarks/core/baselines.json`
 - `runs/benchmarks/core/transition_coherence.json`
 - `runs/benchmarks/core/report.json`
+
+Killer benchmark artifacts (`benchmark --suite killer_stability`):
+- `runs/benchmarks/killer_stability/evidence.json`
+- includes deterministic `C1/C2/C3/C4` condition distances and `separation_ratio_c12_over_c13` per method
 
 Performance smoke policy:
 - deterministic eval smoke test: `tests/test_eval_performance_smoke.py`

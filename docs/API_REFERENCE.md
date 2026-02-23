@@ -607,18 +607,25 @@ Output:
 
 ### `run_benchmark_suite(*, suite: str = "core", out_root: str = "runs", goldset_path: str = "data/goldset.jsonl") -> dict`
 
-Runs deterministic benchmark evidence suite and writes JSON artifacts under:
+Runs deterministic benchmark evidence suite and writes JSON artifacts.
+
+Suite `core` artifacts:
 - `<out_root>/benchmarks/core/noise_tolerance.json`
 - `<out_root>/benchmarks/core/drift_injection.json`
 - `<out_root>/benchmarks/core/model_swap_robustness.json`
 - `<out_root>/benchmarks/core/baselines.json`
 - `<out_root>/benchmarks/core/report.json`
 
+Suite `killer_stability` artifacts:
+- `<out_root>/benchmarks/killer_stability/evidence.json`
+
 Current supported suite:
 - `core`
+- `killer_stability`
 
 CLI:
 - `python -m tonesight_ns8.cli benchmark --suite core`
+- `python -m tonesight_ns8.cli benchmark --suite killer_stability`
 
 ### `tonesight_from_label(label: str, family: str, r: int, c: int, k: int, taxonomy_path: str) -> dict`
 

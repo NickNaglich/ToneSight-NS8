@@ -12,6 +12,7 @@ python tools/validate_defaults.py tests/fixtures/defaults.invalid.json && exit 1
 python tools/check_nosec_policy.py
 python -m bandit -r src
 python -m tonesight_ns8.cli release-check --goldset data/goldset.jsonl --taxonomy taxonomy/tone_taxonomy.v1.json
+python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs --goldset data/goldset.jsonl
 python -m pytest -q
 python tools/regen_vectors.py
 git diff --exit-code
@@ -39,6 +40,8 @@ python -m tonesight_ns8.cli bundle --run-b runs/<run_id>
 - nosec policy checker passes (or reports actionable violations)
 - Bandit security scan reports no findings for `src/`
 - release-check orchestration command returns `decision=passed` (`exit_code=0`)
+- killer benchmark evidence artifact is generated at `runs/benchmarks/killer_stability/evidence.json`
+- v0.2.1 release review includes false/true drift separation ratio comparison across ToneSight and baselines
 - full test suite passes
 - warnings are triaged/documented; no unexpected warnings are introduced
 - vector regeneration produces no diff

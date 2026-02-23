@@ -13,8 +13,12 @@ Empirical evidence claims (benchmark-level):
 - stability under small perturbations
 - drift visibility under controlled injections
 - model-swap robustness comparison vs simple baselines
+- false-drift vs true-drift separation under a fixed 2x2 protocol (`C1..C4`)
 
 This repository does not claim psychological ground truth accuracy.
+
+Killer benchmark protocol (v0.2.1):
+- `docs/BENCHMARK_KILLER_STABILITY.md`
 
 ## How To Reproduce Evidence
 
@@ -73,6 +77,14 @@ Generated artifacts:
   - `base.<method>.coherence_score`
   - `scenarios.*.<method>.delta_vs_base.mean_step_distance_delta`
   - `scenarios.*.<method>.delta_vs_base.coherence_score_delta`
+
+6. Killer stability separation (v0.2.1 protocol)
+- Source: `runs/benchmarks/killer_stability/evidence.json`
+- Primary fields:
+  - `distances.<method>.d_c1_c2`
+  - `distances.<method>.d_c1_c3`
+  - `distances.<method>.d_c2_c4`
+  - `separation_ratios.<method>`
 
 ## Reading Guidance
 

@@ -6,6 +6,7 @@ Conformance vs evidence:
 - eval/compare/gate artifacts in this document are conformance telemetry.
 - benchmark artifacts (`benchmark --suite core`) are empirical evidence outputs.
 - use `docs/WHY_NS8.md` for claim-to-artifact mapping.
+- v0.2.1 killer protocol reference: `docs/BENCHMARK_KILLER_STABILITY.md`.
 
 ## Goldset Contract
 
@@ -83,6 +84,7 @@ CLI benchmark suite:
 ```bash
 python -m tonesight_ns8.cli benchmark --suite core
 python -m tonesight_ns8.cli benchmark --suite core --out-root runs --goldset data/goldset.jsonl
+python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs --goldset data/goldset.jsonl
 ```
 
 Optional observability API trigger:
@@ -121,10 +123,20 @@ Benchmark artifacts (`benchmark --suite core`):
 - `runs/benchmarks/core/transition_coherence.json`
 - `runs/benchmarks/core/report.json`
 
+Killer benchmark artifacts (`benchmark --suite killer_stability`):
+- `runs/benchmarks/killer_stability/evidence.json`
+
 Performance smoke policy:
 - deterministic eval smoke is covered by `tests/test_eval_performance_smoke.py`
 - conservative runtime threshold: eval on `data/goldset.jsonl` should complete in `< 30s`
 - benchmark workflow remains non-blocking initially (`.github/workflows/benchmarks.yml`)
+
+Killer benchmark interpretation:
+- false drift distance: `d_c1_c2`
+- true drift distance: `d_c1_c3`
+- robustness drift distance: `d_c2_c4`
+- headline metric: `separation_ratio_c12_over_c13` (lower is better)
+- compare ToneSight against baselines under the same condition matrix and config
 
 ## `eval_summary.json` Fields
 

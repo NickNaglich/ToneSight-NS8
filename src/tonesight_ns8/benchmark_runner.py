@@ -7,6 +7,7 @@ import math
 from pathlib import Path
 from typing import Any
 
+from .benchmark_killer_stability import run_killer_stability_benchmark
 from .ns8 import compute_A
 
 
@@ -403,6 +404,8 @@ def run_benchmark_suite(
     goldset_path: str = "data/goldset.jsonl",
 ) -> dict[str, Any]:
     """Run deterministic benchmark suite and write JSON artifacts."""
+    if suite == "killer_stability":
+        return run_killer_stability_benchmark(goldset_path=goldset_path, out_root=out_root)
     if suite != "core":
         raise ValueError(f"Unknown benchmark suite: {suite}")
 

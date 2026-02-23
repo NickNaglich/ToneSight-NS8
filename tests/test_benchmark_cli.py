@@ -90,3 +90,27 @@ def test_cli_benchmark_core_is_repeatable(capsys):
 
     assert first_payload["artifacts"] == second_payload["artifacts"]
     assert first_report_bytes == second_report_bytes
+
+
+def test_cli_benchmark_killer_stability_writes_evidence(capsys):
+    out_root = _temp_dir("tmp_killer_stability_cli")
+    rc = main(
+        [
+            "benchmark",
+            "--suite",
+            "killer_stability",
+            "--out-root",
+            str(out_root),
+            "--goldset",
+            "data/goldset.jsonl",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert payload["suite"] == "killer_stability"
+    evidence_path = Path(payload["artifacts"]["evidence"])
+    assert evidence_path.exists()
+    evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+    assert set(evidence["conditions"]) == {"C1", "C2", "C3", "C4"}
+    assert "tonesight" in evidence["separation_ratios"]
+    assert "quantile" in evidence["separation_ratios"]

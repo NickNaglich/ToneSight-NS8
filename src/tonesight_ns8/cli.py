@@ -533,7 +533,7 @@ def build_parser() -> argparse.ArgumentParser:
         "benchmark",
         help="Run deterministic benchmark evidence suite and write JSON artifacts.",
     )
-    benchmark_cmd.add_argument("--suite", choices=("core",), default="core")
+    benchmark_cmd.add_argument("--suite", choices=("core", "killer_stability"), default="core")
     benchmark_cmd.add_argument("--out-root", default=EVAL_DEFAULTS["out_root"])
     benchmark_cmd.add_argument("--goldset", default=ARTIFACT_DEFAULTS["goldset_path"])
     benchmark_cmd.set_defaults(func=_cmd_benchmark)
