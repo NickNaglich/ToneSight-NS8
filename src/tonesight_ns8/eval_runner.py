@@ -118,7 +118,7 @@ def _gpu_snapshot() -> dict[str, Any]:
         return {"available": False, "reason": str(exc)}
 
 
-def _maybe_log_mlflow(
+def log_eval_to_mlflow(
     *,
     tracking_uri: str | None,
     result: dict[str, Any],
@@ -133,21 +133,23 @@ def _maybe_log_mlflow(
         import mlflow  # type: ignore
     except Exception as exc:  # pragma: no cover
         return {"enabled": False, "reason": f"mlflow import failed: {exc}"}
-
-    mlflow.set_tracking_uri(tracking_uri)
-    with mlflow.start_run() as run:
-        mlflow.log_param("threshold_l1", threshold_l1)
-        mlflow.log_param("taxonomy_path", taxonomy_path)
-        mlflow.log_param("calibration_path", calibration_path or "")
-        summary = result["summary"]
-        mlflow.log_metric("pass_rate", float(summary["pass_rate"]))
-        mlflow.log_metric("avg_l1", float(summary["avg_l1"]))
-        mlflow.log_metric("p95_l1", float(summary["p95_l1"]))
-        mlflow.log_artifact(str(out_dir / "out.jsonl"))
-        mlflow.log_artifact(str(out_dir / "eval_summary.json"))
-        mlflow.log_artifact(str(out_dir / "report.html"))
-        mlflow.log_artifact(str(out_dir / "receipt.json"))
-        return {"enabled": True, "run_id": run.info.run_id}
+    try:
+        mlflow.set_tracking_uri(tracking_uri)
+        with mlflow.start_run() as run:
+            mlflow.log_param("threshold_l1", threshold_l1)
+            mlflow.log_param("taxonomy_path", taxonomy_path)
+            mlflow.log_param("calibration_path", calibration_path or "")
+            summary = result["summary"]
+            mlflow.log_metric("pass_rate", float(summary["pass_rate"]))
+            mlflow.log_metric("avg_l1", float(summary["avg_l1"]))
+            mlflow.log_metric("p95_l1", float(summary["p95_l1"]))
+            mlflow.log_artifact(str(out_dir / "out.jsonl"))
+            mlflow.log_artifact(str(out_dir / "eval_summary.json"))
+            mlflow.log_artifact(str(out_dir / "report.html"))
+            mlflow.log_artifact(str(out_dir / "receipt.json"))
+            return {"enabled": True, "run_id": run.info.run_id}
+    except Exception as exc:  # pragma: no cover
+        return {"enabled": False, "reason": f"mlflow logging failed: {exc}"}
 
 
 def _render_eval_report_html(
@@ -438,7 +440,7 @@ def run_eval(
         (out_dir / "gpu_after.json").write_text(json.dumps(gpu_after, indent=2) + "\n", encoding="utf-8")
         receipt["artifacts"]["gpu_after_json"] = str(out_dir / "gpu_after.json")
 
-    mlflow_info = _maybe_log_mlflow(
+    mlflow_info = log_eval_to_mlflow(
         tracking_uri=mlflow_tracking_uri,
         result={"summary": summary},
         out_dir=out_dir,

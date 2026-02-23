@@ -1,0 +1,12 @@
+{"id":"trace_0001","label":"empathetic","source":"support_chat","target_vad":{"V":7,"A":3,"D":3},"tags":["pseudo_real","support","opening"]}
+{"id":"trace_0002","label":"informative","source":"support_chat","target_vad":{"V":6,"A":4,"D":5},"tags":["pseudo_real","support","clarify"]}
+{"id":"trace_0003","label":"concerned","source":"support_chat","target_vad":{"V":3,"A":6,"D":4},"tags":["pseudo_real","support","issue"]}
+{"id":"trace_0004","label":"reassuring","source":"support_chat","target_vad":{"V":7,"A":3,"D":4},"tags":["pseudo_real","support","deescalate"]}
+{"id":"trace_0005","label":"professional","source":"sales_call","target_vad":{"V":6,"A":4,"D":6},"tags":["pseudo_real","sales","qualification"]}
+{"id":"trace_0006","label":"firm","source":"sales_call","target_vad":{"V":4,"A":6,"D":7},"tags":["pseudo_real","sales","objection"]}
+{"id":"trace_0007","label":"friendly","source":"sales_call","target_vad":{"V":7,"A":4,"D":5},"tags":["pseudo_real","sales","rapport"]}
+{"id":"trace_0008","label":"neutral","source":"sales_call","target_vad":{"V":5,"A":4,"D":5},"tags":["pseudo_real","sales","transition"]}
+{"id":"trace_0009","label":"urgent","source":"incident_bridge","target_vad":{"V":2,"A":8,"D":6},"tags":["pseudo_real","incident","triage"]}
+{"id":"trace_0010","label":"authoritative","source":"incident_bridge","target_vad":{"V":4,"A":5,"D":8},"tags":["pseudo_real","incident","coordination"]}
+{"id":"trace_0011","label":"calm","source":"incident_bridge","target_vad":{"V":6,"A":2,"D":4},"tags":["pseudo_real","incident","resolution"]}
+{"id":"trace_0012","label":"encouraging","source":"incident_bridge","target_vad":{"V":7,"A":5,"D":5},"tags":["pseudo_real","incident","closure"]}

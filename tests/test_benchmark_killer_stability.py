@@ -22,8 +22,10 @@ def test_killer_stability_benchmark_contract_and_fields():
     assert payload["suite"] == "killer_stability"
     evidence_path = Path(payload["artifacts"]["evidence"])
     robustness_path = Path(payload["artifacts"]["robustness_summary"])
+    robustness_html_path = Path(payload["artifacts"]["robustness_report_html"])
     assert evidence_path.exists()
     assert robustness_path.exists()
+    assert robustness_html_path.exists()
 
     evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
     assert evidence["benchmark_schema_version"] == "1.0"
@@ -93,12 +95,36 @@ def test_killer_stability_benchmark_is_repeatable():
     first = run_killer_stability_benchmark(out_root=str(out_root), goldset_path="data/goldset.jsonl")
     first_bytes = Path(first["artifacts"]["evidence"]).read_bytes()
     first_robustness = Path(first["artifacts"]["robustness_summary"]).read_bytes()
+    first_html = Path(first["artifacts"]["robustness_report_html"]).read_bytes()
 
     second = run_killer_stability_benchmark(out_root=str(out_root), goldset_path="data/goldset.jsonl")
     second_bytes = Path(second["artifacts"]["evidence"]).read_bytes()
     second_robustness = Path(second["artifacts"]["robustness_summary"]).read_bytes()
+    second_html = Path(second["artifacts"]["robustness_report_html"]).read_bytes()
 
     assert first["artifacts"]["evidence"] == second["artifacts"]["evidence"]
     assert first_bytes == second_bytes
     assert first["artifacts"]["robustness_summary"] == second["artifacts"]["robustness_summary"]
     assert first_robustness == second_robustness
+    assert first["artifacts"]["robustness_report_html"] == second["artifacts"]["robustness_report_html"]
+    assert first_html == second_html
+
+
+def test_killer_stability_supports_phase_flip_cycle_and_pseudo_real_fixture():
+    out_root = _temp_dir("tmp_killer_stability_phase_flip")
+    payload = run_killer_stability_benchmark(
+        out_root=str(out_root),
+        goldset_path="data/pseudo_real_trace.jsonl",
+        profiles=["default", "phase_flip_cycle"],
+        seeds=[0, 1],
+        primary_drift_strength=0.2,
+        drift_sweep_strengths=[0.1, 0.2],
+    )
+    evidence = json.loads(Path(payload["artifacts"]["evidence"]).read_text(encoding="utf-8"))
+    robustness = evidence["robustness_sweep"]["summary"]
+    assert evidence["dataset_path"].replace("\\", "/").endswith("data/pseudo_real_trace.jsonl")
+    assert "phase_flip_cycle" in evidence["config"]["robustness"]["available_profiles"]
+    assert evidence["config"]["robustness"]["profiles"] == ["default", "phase_flip_cycle"]
+    assert "phase_flip_cycle" in robustness["by_profile"]
+    for method in ("tonesight", "equal_width", "quantile", "raw_jsd_hist16"):
+        assert method in robustness["by_profile"]["phase_flip_cycle"]["ratio_stats_by_method"]

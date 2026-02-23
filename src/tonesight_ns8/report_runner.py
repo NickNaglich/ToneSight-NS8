@@ -11,6 +11,7 @@ from .compare_runner import run_compare
 from .gate_runner import run_gate
 
 REPORT_SCHEMA_VERSION = "1.0"
+TRANSITION_HEATMAP_SCHEMA_VERSION = "1.0"
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -22,6 +23,51 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 def _file_hash(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+
+
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        payload = json.loads(line)
+        if isinstance(payload, dict):
+            rows.append(payload)
+    return rows
+
+
+def _pred_a_bin(row: dict[str, Any]) -> int | None:
+    pred = row.get("pred_vad")
+    if not isinstance(pred, dict):
+        return None
+    value = pred.get("A")
+    if not isinstance(value, int):
+        return None
+    if value < 1 or value > 8:
+        return None
+    return value
+
+
+def _transition_matrix_from_rows(rows: list[dict[str, Any]]) -> tuple[list[list[int]], int]:
+    matrix = [[0 for _ in range(8)] for _ in range(8)]
+    bins = [_pred_a_bin(row) for row in rows]
+    total = 0
+    for idx in range(1, len(bins)):
+        prev_val = bins[idx - 1]
+        curr_val = bins[idx]
+        if prev_val is None or curr_val is None:
+            continue
+        matrix[prev_val - 1][curr_val - 1] += 1
+        total += 1
+    return matrix, total
+
+
+def _matrix_delta(matrix_b: list[list[int]], matrix_a: list[list[int]]) -> list[list[int]]:
+    return [
+        [int(matrix_b[r][c]) - int(matrix_a[r][c]) for c in range(8)]
+        for r in range(8)
+    ]
 
 
 def run_report(
@@ -41,6 +87,8 @@ def run_report(
     run_b_path = Path(run_b)
     summary_b = _read_json(run_b_path / "eval_summary.json")
     receipt_b = _read_json(run_b_path / "receipt.json")
+    rows_b = _read_jsonl(run_b_path / "out.jsonl")
+    matrix_b, transitions_b = _transition_matrix_from_rows(rows_b)
 
     compare_highlights: dict[str, Any] = {
         "available": False,
@@ -61,8 +109,13 @@ def run_report(
     }
 
     run_a_path: Path | None = None
+    rows_a: list[dict[str, Any]] = []
+    matrix_a: list[list[int]] | None = None
+    transitions_a: int | None = None
     if run_a:
         run_a_path = Path(run_a)
+        rows_a = _read_jsonl(run_a_path / "out.jsonl")
+        matrix_a, transitions_a = _transition_matrix_from_rows(rows_a)
         compare_payload = run_compare(
             str(run_a_path),
             str(run_b_path),
@@ -111,6 +164,26 @@ def run_report(
             "exit_code": int(gate_payload.get("exit_code", 0)),
         }
 
+    transition_heatmap_payload: dict[str, Any] = {
+        "transition_heatmap_schema_version": TRANSITION_HEATMAP_SCHEMA_VERSION,
+        "mode": "compare" if run_a_path is not None else "single",
+        "state_definition": "pred_vad.A(row_i) -> pred_vad.A(row_i+1)",
+        "run_b": {
+            "run_id": summary_b.get("run_id"),
+            "row_count": len(rows_b),
+            "transition_count": transitions_b,
+            "matrix_8x8": matrix_b,
+        },
+    }
+    if run_a_path is not None and matrix_a is not None and transitions_a is not None:
+        transition_heatmap_payload["run_a"] = {
+            "run_id": _read_json(run_a_path / "eval_summary.json").get("run_id"),
+            "row_count": len(rows_a),
+            "transition_count": transitions_a,
+            "matrix_8x8": matrix_a,
+        }
+        transition_heatmap_payload["delta_run_b_minus_run_a_8x8"] = _matrix_delta(matrix_b, matrix_a)
+
     report_payload: dict[str, Any] = {
         "spec_version": "1.0",
         "report_schema_version": REPORT_SCHEMA_VERSION,
@@ -144,15 +217,29 @@ def run_report(
     if run_a_path is not None:
         report_payload["artifacts"]["run_a_receipt_json"] = str(run_a_path / "receipt.json")
         report_name = f"report_{run_a_path.name}_to_{run_b_path.name}.json"
+        heatmap_name = f"transition_heatmap_{run_a_path.name}_to_{run_b_path.name}.json"
     else:
         report_name = f"report_{run_b_path.name}.json"
+        heatmap_name = f"transition_heatmap_{run_b_path.name}.json"
 
     target = Path(out_path) if out_path else (run_b_path / "reports" / report_name)
+    heatmap_path = target.parent / heatmap_name
     target.parent.mkdir(parents=True, exist_ok=True)
+    heatmap_path.write_text(json.dumps(transition_heatmap_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    report_payload["transition_heatmap"] = {
+        "available": True,
+        "mode": transition_heatmap_payload["mode"],
+        "schema_version": TRANSITION_HEATMAP_SCHEMA_VERSION,
+        "transition_count_run_b": transitions_b,
+        "transition_count_run_a": transitions_a,
+    }
+    report_payload["artifacts"]["transition_heatmap_json"] = str(heatmap_path)
     target.write_text(json.dumps(report_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     return {
         "report_path": str(target),
+        "transition_heatmap_path": str(heatmap_path),
         "report_hash": _file_hash(target),
+        "transition_heatmap_hash": _file_hash(heatmap_path),
         "report": report_payload,
     }

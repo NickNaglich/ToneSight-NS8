@@ -105,6 +105,37 @@ receipt = tonesight_from_label(
 print(receipt["output"]["A"])
 ```
 
+## Batch Adapters (Phase 1)
+
+Deterministic pipeline helpers for batch inputs:
+
+```python
+from tonesight_ns8 import tonesight_from_llm_labels, tonesight_from_vad_batch
+
+vad_receipts = tonesight_from_vad_batch(
+    [{"V": 7, "A": 3, "D": 3}, {"V": 2, "A": 7, "D": 4}],
+    family="TRF",
+    r=6,
+    c=4,
+    k=3,
+)
+
+label_receipts = tonesight_from_llm_labels(
+    ["empathetic", "reassuring"],
+    family="TRF",
+    r=6,
+    c=4,
+    k=3,
+    taxonomy_path="taxonomy/tone_taxonomy.v1.json",
+)
+```
+
+End-to-end runnable example:
+
+```bash
+python examples/batch_adapters_demo.py
+```
+
 ## Installation
 
 Clone the repository and install in editable mode:
@@ -347,6 +378,7 @@ Release readiness checklist:
 - `docs/PRIVACY_REDACTION.md`
 - `docs/RETENTION_POLICY.md`
 - `docs/WHY_NS8.md`
+- `docs/RECIPES/drift_monitoring.md`
 
 ## CLI Usage
 
@@ -408,12 +440,15 @@ python -m tonesight_ns8.cli trend --out-root runs --group-by source
 python -m tonesight_ns8.cli index-runs --out-root runs
 python -m tonesight_ns8.cli report --run-b runs/<candidate>
 python -m tonesight_ns8.cli report --run-a runs/<baseline> --run-b runs/<candidate> --top-n 10
+python -m tonesight_ns8.cli stream-update --segments-json segments_batch.json --session-id session_ops --state-out runs/stream/session_ops.json
+python -m tonesight_ns8.cli stream-update --segments-json segments_batch_next.json --state-in runs/stream/session_ops.json --state-out runs/stream/session_ops.json
 python -m tonesight_ns8.cli data-lint --dataset data/goldset.jsonl
 python -m tonesight_ns8.cli release-check --goldset data/goldset.jsonl --taxonomy taxonomy/tone_taxonomy.v1.json
 python -m tonesight_ns8.cli benchmark --suite core
 python -m tonesight_ns8.cli benchmark --suite core --out-root runs --goldset data/goldset.jsonl
 python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs --goldset data/goldset.jsonl
 python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs --goldset data/goldset.jsonl --killer-profiles default,oscillation_path,boundary_jitter --killer-seeds 0,1,2,3,4 --killer-primary-strength 0.2 --killer-sweep-strengths 0.05,0.1,0.15,0.2,0.3 --killer-sample-multiplier 2
+python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs --goldset data/pseudo_real_trace.jsonl --killer-profiles default,phase_flip_cycle --killer-seeds 0,1 --killer-sweep-strengths 0.1,0.2
 python -m tonesight_ns8.cli live-capture --events tests/fixtures/live_capture.small.jsonl --out-root runs
 python -m tonesight_ns8.cli live-replay --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
 python -m tonesight_ns8.cli live-verify --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
@@ -432,6 +467,12 @@ Eval artifacts:
 Compare artifact (optional with `--write`):
 - `runs/<runB>/comparisons/<runA>/compare_summary.json`
 - `runs/<runB>/comparisons/<runA>/compare_report.html`
+
+Static report artifacts:
+- `runs/<runB>/reports/report_<runB>.json` (single-run)
+- `runs/<runB>/reports/report_<runA>_to_<runB>.json` (compare)
+- `runs/<runB>/reports/transition_heatmap_<runB>.json` (single-run transitions)
+- `runs/<runB>/reports/transition_heatmap_<runA>_to_<runB>.json` (compare transitions + delta matrix)
 
 Gate command (`gate`) exit codes:
 - `0`: gate passed
@@ -484,6 +525,7 @@ Benchmark artifacts (`benchmark --suite core`):
 Killer benchmark artifacts (`benchmark --suite killer_stability`):
 - `runs/benchmarks/killer_stability/evidence.json`
 - `runs/benchmarks/killer_stability/robustness_summary.json`
+- `runs/benchmarks/killer_stability/robustness_report.html`
 - includes deterministic `C1/C2/C3/C4` condition distances and `separation_ratio_c12_over_c13` per method
 - includes synthetic multi-seed/profile robustness stats:
   - `wins_by_method`
@@ -760,7 +802,7 @@ Note: The current layout uses a reference implementation (`ns8_ref.py`).
 ## Versioning and Stability
 
 - Library/package versioning follows semantic versioning and is currently pre-1.0 (`0.x` series).
-- Current package version target: `0.2.1`.
+- Current package version target: `0.2.2`.
 - NS8 spec version is tracked separately in `docs/SPEC_NS8.md`.
 - The NS8 specification is stable within a major version.
 

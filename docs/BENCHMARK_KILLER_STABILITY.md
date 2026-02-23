@@ -74,6 +74,7 @@ All drift params must be recorded in evidence output.
 Primary artifact path target:
 - `runs/benchmarks/killer_stability/evidence.json`
 - `runs/benchmarks/killer_stability/robustness_summary.json`
+- `runs/benchmarks/killer_stability/robustness_report.html`
 
 Required top-level fields:
 - `spec_version`
@@ -112,6 +113,15 @@ Default robustness profiles:
 
 Additional available profile for independent synthetic stress:
 - `boundary_jitter` (bin-boundary sensitivity stress to separate topology vs occupancy behavior)
+- `phase_flip_cycle` (deterministic phase-block drift direction flips for cyclic regime shifts)
+
+Minimal pseudo-real trace demonstration (public-safe fixture):
+
+```bash
+python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs --goldset data/pseudo_real_trace.jsonl --killer-profiles default,phase_flip_cycle --killer-seeds 0,1 --killer-sweep-strengths 0.1,0.2
+```
+
+This command is for pipeline-shaped sanity evidence, not real-world inference claims.
 
 ## Known Failure Regimes
 

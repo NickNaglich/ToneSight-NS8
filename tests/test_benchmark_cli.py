@@ -110,8 +110,10 @@ def test_cli_benchmark_killer_stability_writes_evidence(capsys):
     assert payload["suite"] == "killer_stability"
     evidence_path = Path(payload["artifacts"]["evidence"])
     robustness_path = Path(payload["artifacts"]["robustness_summary"])
+    robustness_html_path = Path(payload["artifacts"]["robustness_report_html"])
     assert evidence_path.exists()
     assert robustness_path.exists()
+    assert robustness_html_path.exists()
     evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
     assert set(evidence["conditions"]) == {"C1", "C2", "C3", "C4"}
     assert "tonesight" in evidence["separation_ratios"]
@@ -154,3 +156,29 @@ def test_cli_benchmark_killer_stability_accepts_overrides(capsys):
     assert evidence["config"]["drift_sweep_strengths"] == [0.1, 0.2, 0.3]
     assert evidence["config"]["robustness"]["profiles"] == ["default", "boundary_jitter"]
     assert evidence["config"]["robustness"]["seeds"] == [0, 1]
+
+
+def test_cli_benchmark_killer_stability_pseudo_real_trace_demo(capsys):
+    out_root = _temp_dir("tmp_killer_stability_cli_pseudo_real")
+    rc = main(
+        [
+            "benchmark",
+            "--suite",
+            "killer_stability",
+            "--out-root",
+            str(out_root),
+            "--goldset",
+            "data/pseudo_real_trace.jsonl",
+            "--killer-profiles",
+            "default,phase_flip_cycle",
+            "--killer-seeds",
+            "0,1",
+            "--killer-sweep-strengths",
+            "0.1,0.2",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    evidence = json.loads(Path(payload["artifacts"]["evidence"]).read_text(encoding="utf-8"))
+    assert evidence["dataset_path"].replace("\\", "/").endswith("data/pseudo_real_trace.jsonl")
+    assert evidence["config"]["robustness"]["profiles"] == ["default", "phase_flip_cycle"]

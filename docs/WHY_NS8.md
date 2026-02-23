@@ -97,6 +97,24 @@ Generated artifacts:
   - `robustness_sweep.summary.tonesight_loss_tag_counts`
   - `robustness_sweep.summary.by_profile.<profile>.*`
 
+## Scenario Family Evidence Map
+
+Use per-profile robustness blocks to compare ToneSight vs baselines across scenario families.
+
+| Scenario family | Purpose | Compare fields |
+|---|---|---|
+| `default` | baseline mixed drift + model swap | `robustness_sweep.summary.by_profile.default.ratio_stats_by_method.*` |
+| `oscillation_path` | alternating transition-heavy path shifts | `robustness_sweep.summary.by_profile.oscillation_path.ratio_stats_by_method.*` |
+| `temporal_ramp` | gradual time-ordered drift | `robustness_sweep.summary.by_profile.temporal_ramp.ratio_stats_by_method.*` |
+| `subgroup_mixture` | deterministic subgroup drift concentration | `robustness_sweep.summary.by_profile.subgroup_mixture.ratio_stats_by_method.*` |
+| `boundary_jitter` | bin-boundary quantization sensitivity stress | `robustness_sweep.summary.by_profile.boundary_jitter.ratio_stats_by_method.*` |
+| `phase_flip_cycle` | cyclic regime direction flips by phase block | `robustness_sweep.summary.by_profile.phase_flip_cycle.ratio_stats_by_method.*` |
+
+Pseudo-real trace demonstration fixture:
+- `data/pseudo_real_trace.jsonl`
+- command:
+  `python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs --goldset data/pseudo_real_trace.jsonl --killer-profiles default,phase_flip_cycle --killer-seeds 0,1 --killer-sweep-strengths 0.1,0.2`
+
 Current reproducible snapshot (`N=250`, `runs/benchmarks/killer_stability/robustness_summary.json`):
 - ToneSight: wins `10/20`, ratio stats `mean=1.037`, `p50=0.867`, `p90=1.644`, `max=1.789`
 - ToneSight pass-rates: `separation_ratio_lt_1=0.70`, `true_drift_gt_false_drift=0.70`, `both_ratio_and_true_gt_false=0.70`

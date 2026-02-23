@@ -654,3 +654,41 @@ Validation: docs-only (no code-path changes).
 Files: src/tonesight_ns8/benchmark_killer_stability.py, src/tonesight_ns8/benchmark_runner.py, src/tonesight_ns8/cli.py, tests/test_benchmark_killer_stability.py, tests/test_benchmark_cli.py, pyproject.toml, src/tonesight_ns8/observability_api.py, README.md, docs/EVAL.md, docs/API_REFERENCE.md, docs/BENCHMARK_KILLER_STABILITY.md, docs/WHY_NS8.md, docs/RELEASE_CHECKLIST.md, docs/RELEASE_NOTES_0.2.1.md, .agent/LOGS/CHANGE_LOG.md
 Reason: Deliver next implementation batch by exposing killer benchmark profile/seed/strength/sample controls via CLI, adding an independent synthetic `boundary_jitter` profile, emitting per-profile robustness aggregates (`by_profile`), and aligning package/observability/docs release metadata to 0.2.1.
 Validation: python -m pytest -q tests/test_benchmark_killer_stability.py tests/test_benchmark_cli.py (6 passed); python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs --goldset data/goldset.jsonl --killer-profiles default,boundary_jitter --killer-seeds 0,1 --killer-primary-strength 0.25 --killer-sweep-strengths 0.1,0.2,0.3 --killer-sample-multiplier 2.
+[2026-02-23T15:48:44Z] Add exact v0.2.2 issue-ready phased roadmap block for adoption-focused execution
+Files: .agent/TO-DO/PHASED_WORKFLOW.md, .agent/LOGS/CHANGE_LOG.md
+Reason: Convert post-v0.2.1 roadmap guidance into a concrete v0.2.2 phase plan with normalized status labels, suggested issue titles, file-level scope, and acceptance criteria covering adapters, MLflow/visual diagnostics, stream/monitoring artifacts, and diverse evidence expansion.
+Validation: docs/planning update only.
+[2026-02-23T15:57:51Z] Create v0.2.2 phase issues (#50-#53) and map IDs into active workflow
+Files: .agent/TO-DO/PHASED_WORKFLOW.md, .agent/LOGS/CHANGE_LOG.md
+Reason: Open GitHub execution issues for v0.2.2 Phases 1-4 and replace TBD placeholders with concrete issue IDs to keep planning and implementation tracking synchronized.
+Validation: gh issue create/edit with proxy vars cleared inline (issues #50, #51, #52, #53 created); docs/planning mapping update.
+
+[2026-02-23T23:03:21Z] Complete v0.2.2 Phase 1 zero-friction batch adapters with deterministic pipeline example
+Files: src/tonesight_ns8/api.py, src/tonesight_ns8/__init__.py, test_receipts_api.py, examples/batch_adapters_demo.py, README.md, docs/EVAL.md, docs/API_REFERENCE.md, .agent/TO-DO/PHASED_WORKFLOW.md, .agent/LOGS/CHANGE_LOG.md
+Reason: Implement planned Phase 1 adoption adapters (	onesight_from_vad_batch, 	onesight_from_llm_labels), export them publicly, add deterministic ordering/type-validation tests, and document practical pipeline usage while advancing workflow status.
+Validation: python -m pytest -q test_receipts_api.py (6 passed).
+
+[2026-02-23T23:17:47Z] Complete v0.2.2 Phase 2 MLflow helper hardening and deterministic transition heatmap diagnostics
+Files: src/tonesight_ns8/eval_runner.py, src/tonesight_ns8/report_runner.py, src/tonesight_ns8/__init__.py, tests/test_report_runner.py, tests/test_eval_mlflow_helper.py, docs/API_REFERENCE.md, docs/EVAL.md, README.md, .agent/TO-DO/PHASED_WORKFLOW.md, .agent/LOGS/CHANGE_LOG.md
+Reason: Deliver Phase 2 by formalizing a one-call MLflow logging helper with non-fatal failure behavior and adding deterministic report transition heatmap artifacts for both single-run and compare views, with tests and documentation updates for artifact paths and API usage.
+Validation: python -m pytest -q tests/test_report_runner.py tests/test_eval_mlflow_helper.py test_cli.py::test_cli_report (6 passed).
+
+[2026-02-23T23:23:23Z] Complete v0.2.2 Phase 3 stream-mode state updates, robustness HTML artifact, and monitoring recipe
+Files: src/tonesight_ns8/stream_runner.py, src/tonesight_ns8/__init__.py, src/tonesight_ns8/cli.py, src/tonesight_ns8/benchmark_killer_stability.py, tests/test_stream_runner.py, tests/test_benchmark_killer_stability.py, tests/test_benchmark_cli.py, test_cli.py, docs/RECIPES/drift_monitoring.md, docs/API_REFERENCE.md, docs/EVAL.md, docs/BENCHMARK_KILLER_STABILITY.md, README.md, .agent/TO-DO/PHASED_WORKFLOW.md, .agent/LOGS/CHANGE_LOG.md
+Reason: Deliver Phase 3 acceptance scope by adding deterministic incremental stream update/snapshot APIs with CLI wiring, generating obustness_report.html from killer benchmark evidence, and documenting an operator drift-monitoring recipe using compare/gate/report flows.
+Validation: python -m pytest -q tests/test_stream_runner.py tests/test_benchmark_killer_stability.py tests/test_benchmark_cli.py test_cli.py::test_cli_stream_update (9 passed).
+
+[2026-02-23T23:29:05Z] Complete v0.2.2 Phase 4 diverse evidence expansion with phase-flip profile and pseudo-real trace demo
+Files: src/tonesight_ns8/benchmark_killer_stability.py, data/pseudo_real_trace.jsonl, tests/test_benchmark_killer_stability.py, tests/test_benchmark_cli.py, docs/BENCHMARK_KILLER_STABILITY.md, docs/WHY_NS8.md, docs/EVAL.md, docs/API_REFERENCE.md, README.md, .agent/TO-DO/PHASED_WORKFLOW.md, .agent/LOGS/CHANGE_LOG.md
+Reason: Deliver Phase 4 acceptance scope by adding deterministic phase_flip_cycle generator family, adding a minimal public-safe pseudo-real trace fixture with reproducible benchmark command, and publishing cross-family evidence map references in docs for ToneSight vs baseline comparison.
+Validation: python -m pytest -q tests/test_benchmark_killer_stability.py tests/test_benchmark_cli.py (8 passed).
+
+[2026-02-23T23:30:43Z] Close v0.2.2 GitHub execution issues and sync workflow tracker
+Files: .agent/TO-DO/PHASED_WORKFLOW.md, .agent/LOGS/CHANGE_LOG.md
+Reason: Align remote execution tracking with completed local delivery by closing issues #50-#53 and recording the closure state in the active workflow.
+Validation: gh issue close 50; gh issue close 51; gh issue close 52; gh issue close 53 (all closed with proxy env cleared inline).
+
+[2026-02-23T23:32:10Z] Add v0.2.2 release notes and sync package/observability version metadata
+Files: docs/RELEASE_NOTES_0.2.2.md, pyproject.toml, src/tonesight_ns8/observability_api.py, README.md, .agent/LOGS/CHANGE_LOG.md
+Reason: Complete post-phase release hygiene by publishing release notes for delivered v0.2.2 phases and aligning version references to 0.2.2 across package metadata, observability API, and top-level README.
+Validation: python -m pytest -q tests/test_benchmark_cli.py::test_cli_benchmark_killer_stability_pseudo_real_trace_demo tests/test_report_runner.py::test_run_report_single_run_is_deterministic (2 passed).

@@ -38,9 +38,15 @@ def test_run_report_single_run_is_deterministic():
     report_path = Path(report_1["report_path"])
     payload = json.loads(report_path.read_text(encoding="utf-8"))
     assert payload["report_schema_version"] == "1.0"
+    assert payload["transition_heatmap"]["available"] is True
+    assert payload["transition_heatmap"]["mode"] == "single"
     assert payload["compare_highlights"]["available"] is False
     assert payload["gate_summary"]["available"] is False
     assert report_1["report_path"] == report_2["report_path"]
+    assert report_1["transition_heatmap_path"] == report_2["transition_heatmap_path"]
+    assert report_1["transition_heatmap_hash"] == report_2["transition_heatmap_hash"] == _sha256_12(
+        Path(report_1["transition_heatmap_path"])
+    )
     assert report_1["report_hash"] == report_2["report_hash"] == _sha256_12(report_path)
 
 
@@ -70,3 +76,10 @@ def test_run_report_with_compare_and_gate_highlights():
     assert payload["compare_highlights"]["distance_mode"] == "l1"
     assert payload["compare_highlights"]["regression_coverage"]["top_n_requested"] == 5
     assert payload["gate_summary"]["decision"] in {"passed", "regressed", "incompatible"}
+    assert payload["transition_heatmap"]["available"] is True
+    assert payload["transition_heatmap"]["mode"] == "compare"
+    heatmap_payload = json.loads(Path(report["transition_heatmap_path"]).read_text(encoding="utf-8"))
+    assert heatmap_payload["transition_heatmap_schema_version"] == "1.0"
+    assert len(heatmap_payload["run_b"]["matrix_8x8"]) == 8
+    assert all(len(row) == 8 for row in heatmap_payload["run_b"]["matrix_8x8"])
+    assert "delta_run_b_minus_run_a_8x8" in heatmap_payload

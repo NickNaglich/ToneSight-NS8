@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import html
 import json
 import math
 from pathlib import Path
@@ -19,7 +20,100 @@ _AVAILABLE_ROBUSTNESS_PROFILES: tuple[str, ...] = (
     "temporal_ramp",
     "subgroup_mixture",
     "boundary_jitter",
+    "phase_flip_cycle",
 )
+
+
+def _render_robustness_report_html(evidence: dict[str, Any]) -> str:
+    summary = evidence.get("robustness_sweep", {}).get("summary", {})
+    wins = summary.get("wins_by_method", {})
+    stats = summary.get("ratio_stats_by_method", {})
+    pass_rates = summary.get("absolute_criteria_pass_rate", {})
+    profiles = summary.get("by_profile", {})
+    method_rows = sorted(stats.keys())
+    profile_rows = sorted(profiles.keys())
+
+    method_table_rows = []
+    for method in method_rows:
+        method_stats = stats.get(method, {})
+        method_pass = pass_rates.get(method, {})
+        method_wins = int(wins.get(method, 0))
+        method_table_rows.append(
+            "<tr>"
+            f"<td>{html.escape(method)}</td>"
+            f"<td>{method_wins}</td>"
+            f"<td>{float(method_stats.get('mean', 0.0)):.6f}</td>"
+            f"<td>{float(method_stats.get('p50', 0.0)):.6f}</td>"
+            f"<td>{float(method_stats.get('p90', 0.0)):.6f}</td>"
+            f"<td>{float(method_stats.get('max', 0.0)):.6f}</td>"
+            f"<td>{float(method_pass.get('separation_ratio_lt_1', 0.0)):.6f}</td>"
+            f"<td>{float(method_pass.get('true_drift_gt_false_drift', 0.0)):.6f}</td>"
+            f"<td>{float(method_pass.get('both_ratio_and_true_gt_false', 0.0)):.6f}</td>"
+            "</tr>"
+        )
+
+    profile_table_rows = []
+    for profile in profile_rows:
+        profile_summary = profiles.get(profile, {})
+        profile_wins = profile_summary.get("wins_by_method", {})
+        tonesight_wins = int(profile_wins.get("tonesight", 0))
+        equal_width_wins = int(profile_wins.get("equal_width", 0))
+        quantile_wins = int(profile_wins.get("quantile", 0))
+        raw_wins = int(profile_wins.get("raw_jsd_hist16", 0))
+        profile_table_rows.append(
+            "<tr>"
+            f"<td>{html.escape(profile)}</td>"
+            f"<td>{tonesight_wins}</td>"
+            f"<td>{equal_width_wins}</td>"
+            f"<td>{quantile_wins}</td>"
+            f"<td>{raw_wins}</td>"
+            "</tr>"
+        )
+
+    return (
+        "<!doctype html>\n"
+        '<html lang="en">\n'
+        "<head>\n"
+        '<meta charset="utf-8" />\n'
+        "<title>ToneSight Robustness Report</title>\n"
+        "<style>\n"
+        "body{font-family:Segoe UI,Arial,sans-serif;background:#f8fafc;color:#0f172a;margin:20px;}\n"
+        "h1,h2{margin:0 0 12px 0;}\n"
+        ".panel{background:#ffffff;border:1px solid #cbd5e1;border-radius:8px;padding:12px;margin-bottom:14px;}\n"
+        "table{width:100%;border-collapse:collapse;}\n"
+        "th,td{border:1px solid #cbd5e1;padding:6px 8px;text-align:left;font-size:12px;}\n"
+        "th{background:#e2e8f0;}\n"
+        ".muted{color:#475569;font-size:12px;}\n"
+        "code{background:#e2e8f0;padding:1px 3px;border-radius:4px;}\n"
+        "</style>\n"
+        "</head>\n"
+        "<body>\n"
+        "<h1>ToneSight Killer Stability Robustness Report</h1>\n"
+        "<div class=\"muted\">Deterministic summary generated from evidence.json</div>\n"
+        "<div class=\"panel\">"
+        f"<div><strong>spec_version:</strong> {html.escape(str(evidence.get('spec_version', '')))}</div>"
+        f"<div><strong>benchmark_schema_version:</strong> {html.escape(str(evidence.get('benchmark_schema_version', '')))}</div>"
+        f"<div><strong>dataset_hash:</strong> <code>{html.escape(str(evidence.get('dataset_hash', '')))}</code></div>"
+        f"<div><strong>code_revision:</strong> <code>{html.escape(str(evidence.get('code_revision', '')))}</code></div>"
+        "</div>\n"
+        "<div class=\"panel\">"
+        "<h2>Global Method Summary</h2>"
+        "<table><thead><tr>"
+        "<th>method</th><th>wins</th><th>mean</th><th>p50</th><th>p90</th><th>max</th>"
+        "<th>ratio&lt;1 pass</th><th>true&gt;false pass</th><th>combined pass</th>"
+        "</tr></thead><tbody>"
+        + "".join(method_table_rows)
+        + "</tbody></table></div>\n"
+        "<div class=\"panel\">"
+        "<h2>Profile Wins</h2>"
+        "<table><thead><tr>"
+        "<th>profile</th><th>tonesight</th><th>equal_width</th><th>quantile</th><th>raw_jsd_hist16</th>"
+        "</tr></thead><tbody>"
+        + "".join(profile_table_rows)
+        + "</tbody></table></div>\n"
+        "</body>\n"
+        "</html>\n"
+    )
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -260,6 +354,22 @@ def _profile_params(profile: str, seed: int) -> dict[str, Any]:
             "drift": {"global_v": -0.16, "global_a": 0.16, "regime_v": -0.12, "regime_a": 0.12, "spike_a": 0.22, "spike_d": 0.06, "regime_every_n": 4, "spike_every_n": 18, "mode": "boundary_jitter"},
             "seed_jitter": 0.025,
         }
+    if profile == "phase_flip_cycle":
+        return {
+            "upstream_b": {"v_scale": 1.02, "v_bias": 0.01, "a_scale": 0.98, "a_bias": -0.01, "d_scale": 1.01},
+            "drift": {
+                "global_v": -0.12,
+                "global_a": 0.12,
+                "regime_v": -0.18,
+                "regime_a": 0.18,
+                "spike_a": 0.28,
+                "spike_d": 0.10,
+                "regime_every_n": 6,
+                "spike_every_n": 24,
+                "mode": "phase_flip_cycle",
+            },
+            "seed_jitter": 0.03,
+        }
     raise ValueError(f"unknown robustness profile: {profile}")
 
 
@@ -289,6 +399,8 @@ def _tonesight_loss_tags(
         tags.append("ramp_mild_or_late")
     elif profile == "oscillation_path":
         tags.append("transition_signal_weak")
+    elif profile == "phase_flip_cycle":
+        tags.append("phase_flip_competition")
 
     if not tags:
         tags.append("competitive_baseline_overlap")
@@ -360,6 +472,12 @@ def _inject_drift(vads: list[tuple[int, int, int]], *, strength: float, params: 
             direction = -1.0 if ((i + seed) % 2 == 0) else 1.0
             u_v = _clamp01(u_v + (direction * 0.11 * strength))
             u_a = _clamp01(u_a - (direction * 0.09 * strength))
+        elif mode == "phase_flip_cycle":
+            # Flip drift direction by deterministic phase block to emulate regime cycling.
+            phase_block = ((i // 12) + seed) % 2
+            direction = -1.0 if phase_block == 0 else 1.0
+            u_v = _clamp01(u_v + (direction * 0.20 * strength))
+            u_a = _clamp01(u_a - (direction * 0.16 * strength))
 
         # Regime shift on deterministic subset.
         if i % int(drift["regime_every_n"]) == 0:
@@ -781,6 +899,7 @@ def run_killer_stability_benchmark(
     out_dir.mkdir(parents=True, exist_ok=True)
     evidence_path = out_dir / "evidence.json"
     robustness_summary_path = out_dir / "robustness_summary.json"
+    robustness_report_path = out_dir / "robustness_report.html"
     evidence_path.write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     robustness_summary_path.write_text(
         json.dumps(
@@ -797,6 +916,7 @@ def run_killer_stability_benchmark(
         + "\n",
         encoding="utf-8",
     )
+    robustness_report_path.write_text(_render_robustness_report_html(evidence), encoding="utf-8")
 
     return {
         "spec_version": "1.0",
@@ -808,6 +928,7 @@ def run_killer_stability_benchmark(
             "evidence": str(evidence_path),
             "report": str(evidence_path),
             "robustness_summary": str(robustness_summary_path),
+            "robustness_report_html": str(robustness_report_path),
         },
         "results": {"killer_stability": evidence},
     }

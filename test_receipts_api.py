@@ -1,4 +1,13 @@
-from tonesight_ns8 import compute_A, resolve_to_seed, tonesight_from_label, tonesight_from_vad
+import pytest
+
+from tonesight_ns8 import (
+    compute_A,
+    resolve_to_seed,
+    tonesight_from_label,
+    tonesight_from_llm_labels,
+    tonesight_from_vad,
+    tonesight_from_vad_batch,
+)
 
 
 def test_compute_and_route_public_api():
@@ -30,3 +39,40 @@ def test_receipt_from_label():
     )
     assert rec["input"]["label"] == "empathetic"
     assert rec["input"]["vad"] == {"V": 7, "A": 3, "D": 3}
+
+
+def test_receipt_from_vad_batch_shape_order_and_determinism():
+    rows = [
+        {"V": 7, "A": 3, "D": 3},
+        {"V": 2, "A": 7, "D": 4},
+        {"V": 5, "A": 5, "D": 5},
+    ]
+    rec1 = tonesight_from_vad_batch(rows, "TRF", 6, 4, 3)
+    rec2 = tonesight_from_vad_batch(rows, "TRF", 6, 4, 3)
+    assert rec1 == rec2
+    assert len(rec1) == 3
+    assert rec1[0]["input"]["vad"] == rows[0]
+    assert rec1[1]["input"]["vad"] == rows[1]
+    assert rec1[2]["input"]["vad"] == rows[2]
+
+
+def test_receipt_from_llm_labels_shape_order_and_determinism():
+    labels = ["empathetic", "reassuring", "neutral"]
+    rec1 = tonesight_from_llm_labels(labels, "TRF", 6, 4, 3, taxonomy_path="taxonomy/tone_taxonomy.v1.json")
+    rec2 = tonesight_from_llm_labels(labels, "TRF", 6, 4, 3, taxonomy_path="taxonomy/tone_taxonomy.v1.json")
+    assert rec1 == rec2
+    assert len(rec1) == 3
+    assert [r["input"]["label"] for r in rec1] == labels
+
+
+def test_batch_adapter_type_validation():
+    with pytest.raises(ValueError, match="rows must be a list"):
+        tonesight_from_vad_batch("bad", "TRF", 6, 4, 3)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="rows\\[0\\] must define exactly V,A,D"):
+        tonesight_from_vad_batch([{"V": 7, "A": 3}], "TRF", 6, 4, 3)
+    with pytest.raises(ValueError, match="rows\\[0\\] V,A,D must be integers"):
+        tonesight_from_vad_batch([{"V": 7, "A": 3, "D": "x"}], "TRF", 6, 4, 3)  # type: ignore[dict-item]
+    with pytest.raises(ValueError, match="labels must be a list"):
+        tonesight_from_llm_labels("bad", "TRF", 6, 4, 3, taxonomy_path="taxonomy/tone_taxonomy.v1.json")  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="labels\\[0\\] must be a non-empty string"):
+        tonesight_from_llm_labels([""], "TRF", 6, 4, 3, taxonomy_path="taxonomy/tone_taxonomy.v1.json")

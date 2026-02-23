@@ -471,6 +471,59 @@ def test_cli_release_check(capsys):
     assert "dataset_lint" in bad_payload["failed_checks"]
 
 
+def test_cli_stream_update(capsys):
+    out_root = _temp_dir("tmp_stream_cli")
+    segments_path = out_root / "segments.json"
+    state_path = out_root / "stream_state.json"
+    segments_path.write_text(
+        json.dumps(
+            [
+                {
+                    "segment_id": "seg_stream_001",
+                    "speaker_id": "spk_a",
+                    "start_sec": 0.0,
+                    "end_sec": 1.0,
+                    "V": 7,
+                    "A": 3,
+                    "D": 3,
+                    "ns8_A": 2,
+                },
+                {
+                    "segment_id": "seg_stream_002",
+                    "speaker_id": "spk_b",
+                    "start_sec": 1.0,
+                    "end_sec": 2.0,
+                    "V": 3,
+                    "A": 7,
+                    "D": 4,
+                    "ns8_A": 6,
+                },
+            ],
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    rc = main(
+        [
+            "stream-update",
+            "--segments-json",
+            str(segments_path),
+            "--session-id",
+            "sess_cli_stream",
+            "--state-out",
+            str(state_path),
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert payload["session_id"] == "sess_cli_stream"
+    assert payload["batch_count"] == 2
+    assert Path(payload["state_path"]).exists()
+    assert payload["snapshot"]["count_segments"] == 2
+
+
 def test_cli_purge_dry_run_and_apply(capsys):
     out_root = _temp_dir("tmp_purge_cli")
     old_run = out_root / "run_old"

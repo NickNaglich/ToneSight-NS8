@@ -70,6 +70,54 @@ def tonesight_from_vad(
     return _build_receipt(family, r, c, k, vad=(V, A, D), mapping_id=mapping_id)
 
 
+def tonesight_from_vad_batch(
+    rows: list[dict[str, int]],
+    family: str,
+    r: int,
+    c: int,
+    k: int,
+    mapping_id: str = "ns8",
+) -> list[dict]:
+    """Map an ordered batch of VAD rows to deterministic receipts."""
+    if not isinstance(rows, list):
+        raise ValueError("rows must be a list of {'V','A','D'} objects")
+    receipts: list[dict] = []
+    for idx, row in enumerate(rows):
+        if not isinstance(row, dict):
+            raise ValueError(f"rows[{idx}] must be an object")
+        if set(row.keys()) != {"V", "A", "D"}:
+            raise ValueError(f"rows[{idx}] must define exactly V,A,D")
+        v = row["V"]
+        a = row["A"]
+        d = row["D"]
+        if not isinstance(v, int) or not isinstance(a, int) or not isinstance(d, int):
+            raise ValueError(f"rows[{idx}] V,A,D must be integers")
+        receipts.append(tonesight_from_vad(v, a, d, family, r, c, k, mapping_id=mapping_id))
+    return receipts
+
+
+def tonesight_from_llm_labels(
+    labels: list[str],
+    family: str,
+    r: int,
+    c: int,
+    k: int,
+    taxonomy_path: str,
+    mapping_id: str = "ns8",
+) -> list[dict]:
+    """Map an ordered batch of upstream labels to deterministic receipts."""
+    if not isinstance(labels, list):
+        raise ValueError("labels must be a list of strings")
+    taxonomy = load_taxonomy(taxonomy_path)
+    receipts: list[dict] = []
+    for idx, label in enumerate(labels):
+        if not isinstance(label, str) or not label:
+            raise ValueError(f"labels[{idx}] must be a non-empty string")
+        vad = get_vad(label, taxonomy)
+        receipts.append(_build_receipt(family, r, c, k, label=label, vad=vad, mapping_id=mapping_id))
+    return receipts
+
+
 def tonesight_receipt_from_segment(
     segment: SegmentRecord,
     family: str,

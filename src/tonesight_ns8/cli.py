@@ -29,6 +29,7 @@ from . import (
     run_retention_purge,
     run_report,
     run_release_check,
+    run_stream_update,
     run_trend,
     run_triage,
     summarize_session,
@@ -372,6 +373,17 @@ def _cmd_benchmark(args: argparse.Namespace) -> dict:
     )
 
 
+def _cmd_stream_update(args: argparse.Namespace) -> dict:
+    return run_stream_update(
+        session_id=args.session_id,
+        state_path=args.state_in,
+        out_state_path=args.state_out,
+        segments_path=args.segments_json,
+        arousal_spike_threshold=args.spike_threshold,
+        drift_window_k=args.drift_window_k,
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="tonesight-ns8",
@@ -601,6 +613,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Deterministically replicate benchmark fixture rows before scoring.",
     )
     benchmark_cmd.set_defaults(func=_cmd_benchmark)
+
+    stream_cmd = sub.add_parser(
+        "stream-update",
+        help="Append deterministic segment batch into rolling state and emit session snapshot.",
+    )
+    stream_cmd.add_argument("--segments-json", required=True, help="Path to JSON list of SegmentRecord-shaped objects.")
+    stream_cmd.add_argument("--state-in", help="Optional existing stream state JSON path.")
+    stream_cmd.add_argument("--state-out", help="Optional output stream state JSON path.")
+    stream_cmd.add_argument("--session-id", help="Required when --state-in is not provided.")
+    stream_cmd.add_argument("--spike-threshold", type=_int_1_to_8, default=7)
+    stream_cmd.add_argument("--drift-window-k", type=_positive_int, default=2)
+    stream_cmd.set_defaults(func=_cmd_stream_update)
 
     return parser
 

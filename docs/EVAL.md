@@ -65,6 +65,9 @@ python -m tonesight_ns8.cli report --run-b runs/<candidate>
 python -m tonesight_ns8.cli report --run-a runs/<baseline> --run-b runs/<candidate> --top-n 10
 ```
 
+Report diagnostics artifact note:
+- report command also writes a deterministic transition heatmap JSON artifact for single-run and compare views.
+
 CLI dataset lint:
 
 ```bash
@@ -85,6 +88,14 @@ CLI benchmark suite:
 python -m tonesight_ns8.cli benchmark --suite core
 python -m tonesight_ns8.cli benchmark --suite core --out-root runs --goldset data/goldset.jsonl
 python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs --goldset data/goldset.jsonl
+python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs --goldset data/pseudo_real_trace.jsonl --killer-profiles default,phase_flip_cycle --killer-seeds 0,1 --killer-sweep-strengths 0.1,0.2
+```
+
+CLI incremental stream mode:
+
+```bash
+python -m tonesight_ns8.cli stream-update --segments-json segments_batch.json --session-id session_ops --state-out runs/stream/session_ops.json
+python -m tonesight_ns8.cli stream-update --segments-json segments_batch_next.json --state-in runs/stream/session_ops.json --state-out runs/stream/session_ops.json
 ```
 
 Optional killer benchmark controls:
@@ -109,6 +120,36 @@ Content-Type: application/json
 }
 ```
 
+## Pipeline Batch Adapters (v0.2.2 Phase 1)
+
+For upstream batch integration, use deterministic package adapters:
+
+```python
+from tonesight_ns8 import tonesight_from_llm_labels, tonesight_from_vad_batch
+
+vad_receipts = tonesight_from_vad_batch(
+    [{"V": 7, "A": 3, "D": 3}, {"V": 2, "A": 7, "D": 4}],
+    family="TRF",
+    r=6,
+    c=4,
+    k=3,
+)
+
+label_receipts = tonesight_from_llm_labels(
+    ["empathetic", "reassuring"],
+    family="TRF",
+    r=6,
+    c=4,
+    k=3,
+    taxonomy_path="taxonomy/tone_taxonomy.v1.json",
+)
+```
+
+Determinism contract:
+- output ordering follows input ordering exactly
+- each item is a receipt-compatible JSON object
+- repeated calls over unchanged inputs return identical results
+
 ## Eval Artifacts
 
 Always written:
@@ -132,6 +173,7 @@ Benchmark artifacts (`benchmark --suite core`):
 Killer benchmark artifacts (`benchmark --suite killer_stability`):
 - `runs/benchmarks/killer_stability/evidence.json`
 - `runs/benchmarks/killer_stability/robustness_summary.json`
+- `runs/benchmarks/killer_stability/robustness_report.html`
 
 Performance smoke policy:
 - deterministic eval smoke is covered by `tests/test_eval_performance_smoke.py`
@@ -205,6 +247,12 @@ Each scored row includes deterministic explainability values:
 Optional compare artifact (`--write`):
 - `runs/<runB>/comparisons/<runA>/compare_summary.json`
 - `runs/<runB>/comparisons/<runA>/compare_report.html`
+
+Static report artifacts:
+- `runs/<runB>/reports/report_<runB>.json` (single-run)
+- `runs/<runB>/reports/report_<runA>_to_<runB>.json` (compare)
+- `runs/<runB>/reports/transition_heatmap_<runB>.json` (single-run transitions)
+- `runs/<runB>/reports/transition_heatmap_<runA>_to_<runB>.json` (compare transitions + delta matrix)
 
 Distance mode:
 - default `--distance l1` uses `compliance_l1` delta ranking

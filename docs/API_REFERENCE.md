@@ -16,7 +16,9 @@ Stable public imports are the names exported by `tonesight_ns8.__all__`:
 - `resolve_to_seed`
 - `validate_inputs`
 - `tonesight_from_label`
+- `tonesight_from_llm_labels`
 - `tonesight_from_vad`
+- `tonesight_from_vad_batch`
 - `tonesight_receipt_from_segment`
 - `attach_tonesight_to_segment`
 - `Route`
@@ -27,6 +29,7 @@ Stable public imports are the names exported by `tonesight_ns8.__all__`:
 - `summarize_speaker`
 - `summarize_session`
 - `run_eval`
+- `log_eval_to_mlflow`
 - `run_compare`
 - `run_eval_compare`
 - `run_gate`
@@ -35,6 +38,9 @@ Stable public imports are the names exported by `tonesight_ns8.__all__`:
 - `run_bundle`
 - `run_incident`
 - `run_trend`
+- `new_stream_state`
+- `snapshot_stream_state`
+- `run_stream_update`
 - `run_report`
 - `run_data_lint`
 - `run_release_check`
@@ -82,7 +88,9 @@ Primary package functions:
 - `compute_A(...)`
 - `resolve_to_seed(...)`
 - `tonesight_from_label(...)`
+- `tonesight_from_llm_labels(...)`
 - `tonesight_from_vad(...)`
+- `tonesight_from_vad_batch(...)`
 
 ### `ns8_A(family: str, r: int, c: int, k: int, n: int = 8) -> int`
 
@@ -178,6 +186,8 @@ Example adapter:
 Current wrappers support optional `mapping_id`:
 - `tonesight_from_label(..., mapping_id="ns8")`
 - `tonesight_from_vad(..., mapping_id="ns8")`
+- `tonesight_from_llm_labels(..., mapping_id="ns8")`
+- `tonesight_from_vad_batch(..., mapping_id="ns8")`
 - `tonesight_receipt_from_segment(..., mapping_id="ns8")`
 - `attach_tonesight_to_segment(..., mapping_id="ns8")`
 
@@ -286,6 +296,16 @@ Returns:
 - receipt includes reproducibility hashes: `taxonomy_hash`, `defaults_hash`
 - receipt includes additive artifact schema field `receipt_schema_version`
 - receipt may include additive provenance field `code_revision` (short git SHA) when available
+- receipt includes `mlflow` block when MLflow logging is attempted (enabled run ID or non-fatal disabled reason)
+
+### `log_eval_to_mlflow(*, tracking_uri: str | None, result: dict, out_dir: Path, threshold_l1: int, taxonomy_path: str, calibration_path: str | None) -> dict | None`
+
+One-call helper for MLflow metrics/artifact logging from eval outputs.
+
+Behavior:
+- returns `None` when `tracking_uri` is unset/empty (no-op)
+- returns `{"enabled": False, "reason": ...}` on import/runtime failures without raising
+- returns `{"enabled": True, "run_id": ...}` on successful logging
 
 `out.jsonl` per-row explainability fields:
 - `delta_v`, `delta_a`, `delta_d` (absolute per-dimension target deltas)
@@ -464,6 +484,7 @@ Inputs:
 
 Output:
 - writes report JSON under `<run_b>/reports/` by default
+- writes deterministic transition heatmap JSON under `<run_b>/reports/` for single-run and compare views
 - includes:
   - run-B KPI snapshot (`count_rows`, `pass_rate`, `avg_l1`, `p95_l1`)
   - reproducibility metadata from receipt (`spec_version`, hashes, mapping IDs, code revision when present)
@@ -587,6 +608,24 @@ Grouping (optional):
 - `group_by` aggregates per-run stats from row metadata fields (for example `source`, `agent`, `prompt_id`)
 - group metrics include `count`, `avg_l1`, and `fail_rate`
 
+### `new_stream_state(*, session_id: str, arousal_spike_threshold: int = 7, drift_window_k: int = 2) -> dict`
+
+Creates empty deterministic rolling state object for stream updates.
+
+### `snapshot_stream_state(state: dict) -> dict`
+
+Builds deterministic session snapshot from current stream state contents.
+
+### `run_stream_update(*, session_id: str | None = None, state_path: str | None = None, out_state_path: str | None = None, segments: list[SegmentRecord | dict] | None = None, segments_path: str | None = None, arousal_spike_threshold: int = 7, drift_window_k: int = 2) -> dict`
+
+Appends deterministic segment batch to rolling state and returns updated snapshot.
+
+Behavior:
+- initialize state from `session_id` when `state_path` is not provided
+- append batch from `segments` or `segments_path`
+- return updated in-memory `state` and deterministic `snapshot`
+- optionally persist state JSON via `out_state_path` (or overwrite `state_path`)
+
 ### `run_index(out_root: str, *, out_path: str | None = None) -> dict`
 
 Builds deterministic run metadata index with one JSON line per discovered run.
@@ -619,6 +658,7 @@ Suite `core` artifacts:
 Suite `killer_stability` artifacts:
 - `<out_root>/benchmarks/killer_stability/evidence.json`
 - `<out_root>/benchmarks/killer_stability/robustness_summary.json`
+- `<out_root>/benchmarks/killer_stability/robustness_report.html`
 
 Current supported suite:
 - `core`
@@ -627,7 +667,7 @@ Current supported suite:
 CLI:
 - `python -m tonesight_ns8.cli benchmark --suite core`
 - `python -m tonesight_ns8.cli benchmark --suite killer_stability`
-- `python -m tonesight_ns8.cli benchmark --suite killer_stability --killer-profiles default,oscillation_path,boundary_jitter --killer-seeds 0,1,2,3,4 --killer-primary-strength 0.2 --killer-sweep-strengths 0.05,0.1,0.15,0.2,0.3 --killer-sample-multiplier 2`
+- `python -m tonesight_ns8.cli benchmark --suite killer_stability --killer-profiles default,oscillation_path,boundary_jitter,phase_flip_cycle --killer-seeds 0,1,2,3,4 --killer-primary-strength 0.2 --killer-sweep-strengths 0.05,0.1,0.15,0.2,0.3 --killer-sample-multiplier 2`
 
 ### `tonesight_from_label(label: str, family: str, r: int, c: int, k: int, taxonomy_path: str) -> dict`
 
@@ -643,6 +683,21 @@ Behavior:
 - use explicit VAD input
 - compute NS8 anchor
 - return deterministic JSON-serializable receipt
+
+### `tonesight_from_vad_batch(rows: list[dict[str, int]], family: str, r: int, c: int, k: int) -> list[dict]`
+
+Behavior:
+- validates `rows` as an ordered list of `{V,A,D}` integer objects
+- maps each row to a deterministic receipt using shared NS8 routing parameters
+- preserves input order in output receipts
+
+### `tonesight_from_llm_labels(labels: list[str], family: str, r: int, c: int, k: int, taxonomy_path: str) -> list[dict]`
+
+Behavior:
+- validates `labels` as an ordered list of non-empty strings
+- resolves each label through taxonomy VAD mapping
+- maps each resolved row to a deterministic receipt using shared NS8 routing parameters
+- preserves input order in output receipts
 
 ## Behavioral Contract
 
