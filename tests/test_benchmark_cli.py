@@ -109,8 +109,13 @@ def test_cli_benchmark_killer_stability_writes_evidence(capsys):
     assert rc == 0
     assert payload["suite"] == "killer_stability"
     evidence_path = Path(payload["artifacts"]["evidence"])
+    robustness_path = Path(payload["artifacts"]["robustness_summary"])
     assert evidence_path.exists()
+    assert robustness_path.exists()
     evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
     assert set(evidence["conditions"]) == {"C1", "C2", "C3", "C4"}
     assert "tonesight" in evidence["separation_ratios"]
     assert "quantile" in evidence["separation_ratios"]
+    summary = evidence["robustness_sweep"]["summary"]
+    assert "absolute_criteria_pass_rate" in summary
+    assert "tonesight_loss_tag_counts" in summary

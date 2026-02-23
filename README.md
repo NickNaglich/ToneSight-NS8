@@ -482,7 +482,17 @@ Benchmark artifacts (`benchmark --suite core`):
 
 Killer benchmark artifacts (`benchmark --suite killer_stability`):
 - `runs/benchmarks/killer_stability/evidence.json`
+- `runs/benchmarks/killer_stability/robustness_summary.json`
 - includes deterministic `C1/C2/C3/C4` condition distances and `separation_ratio_c12_over_c13` per method
+- includes synthetic multi-seed/profile robustness stats:
+  - `wins_by_method`
+  - `ratio_stats_by_method` (`mean/std/min/max/p10/p50/p90`)
+  - `absolute_criteria_pass_rate` (`ratio<1`, `true>false`, combined pass-rate)
+  - `tonesight_loss_tag_counts` for non-winning ToneSight robustness runs
+
+Claim boundary note:
+- killer benchmark outputs are synthetic controlled evidence for conformance/drift comparability;
+- they should not be interpreted as direct emotion-inference quality claims.
 
 Performance smoke policy:
 - deterministic eval smoke test: `tests/test_eval_performance_smoke.py`

@@ -14,8 +14,10 @@ Empirical evidence claims (benchmark-level):
 - drift visibility under controlled injections
 - model-swap robustness comparison vs simple baselines
 - false-drift vs true-drift separation under a fixed 2x2 protocol (`C1..C4`)
+- robustness under synthetic seed/profile perturbation sweeps
 
 This repository does not claim psychological ground truth accuracy.
+Killer benchmark outputs are synthetic benchmark evidence and should be interpreted as controlled protocol results.
 
 Killer benchmark protocol (v0.2.1):
 - `docs/BENCHMARK_KILLER_STABILITY.md`
@@ -85,6 +87,14 @@ Generated artifacts:
   - `distances.<method>.d_c1_c3`
   - `distances.<method>.d_c2_c4`
   - `separation_ratios.<method>`
+
+7. Killer stability robustness (v0.2.1 protocol)
+- Source: `runs/benchmarks/killer_stability/robustness_summary.json`
+- Primary fields:
+  - `robustness_sweep.summary.wins_by_method`
+  - `robustness_sweep.summary.ratio_stats_by_method.<method>.mean/std/min/max/p10/p50/p90`
+  - `robustness_sweep.summary.absolute_criteria_pass_rate.<method>.*`
+  - `robustness_sweep.summary.tonesight_loss_tag_counts`
 
 ## Reading Guidance
 

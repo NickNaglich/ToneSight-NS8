@@ -11,6 +11,9 @@ from typing import Any
 from .ns8 import compute_A
 from .provenance import get_code_revision
 
+_ROBUSTNESS_PROFILES: tuple[str, ...] = ("default", "oscillation_path", "temporal_ramp", "subgroup_mixture")
+_ROBUSTNESS_SEEDS: tuple[int, ...] = (0, 1, 2, 3, 4)
+
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
@@ -79,6 +82,36 @@ def _histogram(states: list[int], bins: int) -> list[float]:
         counts[idx] += 1.0
     total = float(len(states))
     return [count / total for count in counts]
+
+
+def _circle_distance_8(a: int, b: int) -> float:
+    delta = abs(int(a) - int(b))
+    return float(min(delta, 8 - delta))
+
+
+def _topology_pair_distance(left: list[int], right: list[int]) -> float:
+    if not left or not right:
+        return 0.0
+    count = float(min(len(left), len(right)))
+    if count == 0:
+        return 0.0
+    total = 0.0
+    for a_state, b_state in zip(left, right):
+        total += _circle_distance_8(a_state, b_state) / 4.0
+    return total / count
+
+
+def _transition_distribution(states: list[int], bins: int = 8) -> list[float]:
+    if len(states) < 2:
+        return [0.0] * (bins * bins)
+    counts = [0.0] * (bins * bins)
+    for i in range(1, len(states)):
+        left = max(1, min(bins, int(states[i - 1]))) - 1
+        right = max(1, min(bins, int(states[i]))) - 1
+        idx = left * bins + right
+        counts[idx] += 1.0
+    total = float(len(states) - 1)
+    return [value / total for value in counts]
 
 
 def _histogram_continuous(values: list[float], bins: int) -> list[float]:
@@ -153,6 +186,102 @@ def _safe_ratio(numerator: float, denominator: float) -> float:
     return numerator / denominator
 
 
+def _mean(values: list[float]) -> float:
+    if not values:
+        return 0.0
+    return float(sum(values) / len(values))
+
+
+def _std(values: list[float]) -> float:
+    if len(values) <= 1:
+        return 0.0
+    mu = _mean(values)
+    return float(math.sqrt(sum((v - mu) ** 2 for v in values) / len(values)))
+
+
+def _quantile(values: list[float], q: float) -> float:
+    if not values:
+        return 0.0
+    sorted_vals = sorted(values)
+    pos = q * (len(sorted_vals) - 1)
+    lo = int(math.floor(pos))
+    hi = min(lo + 1, len(sorted_vals) - 1)
+    frac = pos - lo
+    return float(sorted_vals[lo] + (sorted_vals[hi] - sorted_vals[lo]) * frac)
+
+
+def _rate(flags: list[bool]) -> float:
+    if not flags:
+        return 0.0
+    return float(sum(1 for flag in flags if flag) / len(flags))
+
+
+def _seed_noise(seed: int, index: int, channel: int) -> float:
+    # deterministic pseudo-noise in [-1, 1]
+    angle = (seed + 1) * (index + 3) * (channel + 5) * 0.173
+    return float(math.sin(angle))
+
+
+def _profile_params(profile: str, seed: int) -> dict[str, Any]:
+    if profile == "default":
+        return {
+            "upstream_b": {"v_scale": 1.03, "v_bias": 0.02, "a_scale": 0.98, "a_bias": -0.01, "d_scale": 1.01},
+            "drift": {"global_v": -0.30, "global_a": 0.30, "regime_v": -0.25, "regime_a": 0.25, "spike_a": 0.40, "spike_d": 0.15, "regime_every_n": 5, "spike_every_n": 20, "mode": "default"},
+            "seed_jitter": 0.02 if seed != 0 else 0.0,
+        }
+    if profile == "oscillation_path":
+        return {
+            "upstream_b": {"v_scale": 1.02, "v_bias": 0.03, "a_scale": 0.97, "a_bias": -0.02, "d_scale": 1.00},
+            "drift": {"global_v": -0.20, "global_a": 0.20, "regime_v": -0.15, "regime_a": 0.15, "spike_a": 0.30, "spike_d": 0.10, "regime_every_n": 6, "spike_every_n": 16, "mode": "oscillation_path"},
+            "seed_jitter": 0.03,
+        }
+    if profile == "temporal_ramp":
+        return {
+            "upstream_b": {"v_scale": 1.04, "v_bias": 0.01, "a_scale": 0.95, "a_bias": -0.01, "d_scale": 1.02},
+            "drift": {"global_v": -0.22, "global_a": 0.28, "regime_v": -0.18, "regime_a": 0.20, "spike_a": 0.32, "spike_d": 0.12, "regime_every_n": 5, "spike_every_n": 22, "mode": "temporal_ramp"},
+            "seed_jitter": 0.035,
+        }
+    if profile == "subgroup_mixture":
+        return {
+            "upstream_b": {"v_scale": 1.05, "v_bias": 0.00, "a_scale": 0.96, "a_bias": -0.02, "d_scale": 1.01},
+            "drift": {"global_v": -0.18, "global_a": 0.24, "regime_v": -0.22, "regime_a": 0.26, "spike_a": 0.35, "spike_d": 0.14, "regime_every_n": 7, "spike_every_n": 25, "mode": "subgroup_mixture"},
+            "seed_jitter": 0.03,
+        }
+    raise ValueError(f"unknown robustness profile: {profile}")
+
+
+def _tonesight_loss_tags(
+    *,
+    profile: str,
+    winner: str,
+    method_distances: dict[str, dict[str, float]],
+) -> list[str]:
+    if winner == "tonesight":
+        return []
+
+    tags: list[str] = []
+    tonesight = method_distances["tonesight"]
+    winner_metrics = method_distances.get(winner, {})
+
+    if tonesight["d_c1_c3"] <= tonesight["d_c1_c2"]:
+        tags.append("true_drift_not_dominant")
+
+    if winner == "equal_width" and winner_metrics:
+        if winner_metrics["d_c1_c2"] < tonesight["d_c1_c2"]:
+            tags.append("occupancy_dominated_shift")
+
+    if profile == "subgroup_mixture":
+        tags.append("subgroup_underpowered")
+    elif profile == "temporal_ramp":
+        tags.append("ramp_mild_or_late")
+    elif profile == "oscillation_path":
+        tags.append("transition_signal_weak")
+
+    if not tags:
+        tags.append("competitive_baseline_overlap")
+    return tags
+
+
 def _extract_base_vads(path: Path) -> list[tuple[int, int, int]]:
     rows = _read_jsonl(path)
     out: list[tuple[int, int, int]] = []
@@ -166,7 +295,7 @@ def _extract_base_vads(path: Path) -> list[tuple[int, int, int]]:
     return out
 
 
-def _upstream_variant(vads: list[tuple[int, int, int]], variant: str) -> list[tuple[int, int, int]]:
+def _upstream_variant(vads: list[tuple[int, int, int]], variant: str, *, params: dict[str, Any], seed: int) -> list[tuple[int, int, int]]:
     out: list[tuple[int, int, int]] = []
     for v, a, d in vads:
         u_v = _to_u(v)
@@ -175,42 +304,71 @@ def _upstream_variant(vads: list[tuple[int, int, int]], variant: str) -> list[tu
         if variant == "A":
             pass
         elif variant == "B":
-            # Deterministic mild calibration shift for model-swap simulation.
-            u_v = _clamp01((u_v * 1.03) + 0.02)
-            u_a = _clamp01((u_a * 0.98) - 0.01)
-            u_d = _clamp01((u_d * 1.01) + 0.00)
+            upstream = params["upstream_b"]
+            jitter = float(params.get("seed_jitter", 0.0))
+            u_v = _clamp01((u_v * float(upstream["v_scale"])) + float(upstream["v_bias"]) + (jitter * _seed_noise(seed, len(out), 1)))
+            u_a = _clamp01((u_a * float(upstream["a_scale"])) + float(upstream["a_bias"]) + (jitter * _seed_noise(seed, len(out), 2)))
+            u_d = _clamp01((u_d * float(upstream["d_scale"])) + (jitter * _seed_noise(seed, len(out), 3)))
         else:
             raise ValueError(f"unknown upstream variant: {variant}")
         out.append((_to_bin_1_to_8(u_v), _to_bin_1_to_8(u_a), _to_bin_1_to_8(u_d)))
     return out
 
 
-def _inject_drift(vads: list[tuple[int, int, int]]) -> list[tuple[int, int, int]]:
+def _inject_drift(vads: list[tuple[int, int, int]], *, strength: float, params: dict[str, Any], seed: int) -> list[tuple[int, int, int]]:
     out: list[tuple[int, int, int]] = []
     for i, (v, a, d) in enumerate(vads):
         u_v = _to_u(v)
         u_a = _to_u(a)
         u_d = _to_u(d)
 
+        drift = params["drift"]
+        jitter = float(params.get("seed_jitter", 0.0))
+        mode = str(drift.get("mode", "default"))
+        # Global behavioral drift across all samples.
+        u_v = _clamp01(u_v + (float(drift["global_v"]) * strength) + (jitter * 0.5 * _seed_noise(seed, i, 4)))
+        u_a = _clamp01(u_a + (float(drift["global_a"]) * strength) + (jitter * 0.5 * _seed_noise(seed, i, 5)))
+
+        if mode == "oscillation_path":
+            direction = -1.0 if (i % 2 == 0) else 1.0
+            u_v = _clamp01(u_v + (direction * 0.18 * strength))
+            u_a = _clamp01(u_a - (direction * 0.12 * strength))
+        elif mode == "temporal_ramp":
+            ramp = float(i) / max(1.0, float(len(vads) - 1))
+            u_v = _clamp01(u_v - (0.24 * strength * ramp))
+            u_a = _clamp01(u_a + (0.24 * strength * ramp))
+        elif mode == "subgroup_mixture":
+            # Drift only a deterministic subgroup to emulate mixture shift.
+            if (i % 3) == 0:
+                u_v = _clamp01(u_v - (0.30 * strength))
+                u_a = _clamp01(u_a + (0.30 * strength))
+
         # Regime shift on deterministic subset.
-        if i % 5 == 0:
-            u_v = _clamp01(u_v - 0.14)
-            u_a = _clamp01(u_a + 0.14)
+        if i % int(drift["regime_every_n"]) == 0:
+            u_v = _clamp01(u_v + (float(drift["regime_v"]) * strength))
+            u_a = _clamp01(u_a + (float(drift["regime_a"]) * strength))
 
         # Occasional deterministic spikes.
-        if i % 50 == 0:
-            u_a = _clamp01(u_a + 0.24)
-            u_d = _clamp01(u_d + 0.08)
+        if i % int(drift["spike_every_n"]) == 0:
+            u_a = _clamp01(u_a + (float(drift["spike_a"]) * strength))
+            u_d = _clamp01(u_d + (float(drift["spike_d"]) * strength))
 
         out.append((_to_bin_1_to_8(u_v), _to_bin_1_to_8(u_a), _to_bin_1_to_8(u_d)))
     return out
 
 
-def _condition_vads(base_vads: list[tuple[int, int, int]]) -> dict[str, list[tuple[int, int, int]]]:
-    c1 = _upstream_variant(base_vads, "A")
-    c2 = _upstream_variant(base_vads, "B")
-    c3 = _inject_drift(_upstream_variant(base_vads, "A"))
-    c4 = _inject_drift(_upstream_variant(base_vads, "B"))
+def _condition_vads(
+    base_vads: list[tuple[int, int, int]],
+    *,
+    drift_strength: float,
+    profile: str,
+    seed: int,
+) -> dict[str, list[tuple[int, int, int]]]:
+    params = _profile_params(profile, seed)
+    c1 = _upstream_variant(base_vads, "A", params=params, seed=seed)
+    c2 = _upstream_variant(base_vads, "B", params=params, seed=seed)
+    c3 = _inject_drift(_upstream_variant(base_vads, "A", params=params, seed=seed), strength=drift_strength, params=params, seed=seed)
+    c4 = _inject_drift(_upstream_variant(base_vads, "B", params=params, seed=seed), strength=drift_strength, params=params, seed=seed)
     return {"C1": c1, "C2": c2, "C3": c3, "C4": c4}
 
 
@@ -221,7 +379,10 @@ def run_killer_stability_benchmark(
 ) -> dict[str, Any]:
     dataset_path = Path(goldset_path)
     base_vads = _extract_base_vads(dataset_path)
-    conditions = _condition_vads(base_vads)
+    sweep_strengths = [0.05, 0.10, 0.15, 0.20, 0.30]
+    primary_strength = 0.20
+    primary_profile = "default"
+    conditions = _condition_vads(base_vads, drift_strength=primary_strength, profile=primary_profile, seed=0)
 
     scalars_by_condition = {key: [_scalar(vad) for vad in rows] for key, rows in conditions.items()}
     quantile_thresholds = _quantile_thresholds(scalars_by_condition["C1"], bins=8)
@@ -237,12 +398,23 @@ def run_killer_stability_benchmark(
 
     def _pair_distance(method: str, left: str, right: str) -> float:
         bins = 8
-        p = _histogram(states_by_condition[left][method], bins=bins)
-        q = _histogram(states_by_condition[right][method], bins=bins)
-        return _jsd(p, q)
+        left_states = states_by_condition[left][method]
+        right_states = states_by_condition[right][method]
+        occupancy_jsd = _jsd(_histogram(left_states, bins=bins), _histogram(right_states, bins=bins))
+        if method != "tonesight":
+            return occupancy_jsd
+
+        # ToneSight primary metric: topology + transition sensitivity.
+        topology = _topology_pair_distance(left_states, right_states)
+        transition_jsd = _jsd(
+            _transition_distribution(left_states, bins=bins),
+            _transition_distribution(right_states, bins=bins),
+        )
+        return (0.7 * topology) + (0.2 * transition_jsd) + (0.1 * occupancy_jsd)
 
     distances: dict[str, dict[str, float]] = {}
-    for method in ("tonesight", "equal_width", "quantile"):
+    core_methods = ("tonesight", "equal_width", "quantile")
+    for method in core_methods:
         d_c1_c2 = _pair_distance(method, "C1", "C2")
         d_c1_c3 = _pair_distance(method, "C1", "C3")
         d_c2_c4 = _pair_distance(method, "C2", "C4")
@@ -277,6 +449,168 @@ def run_killer_stability_benchmark(
     }
     ranking = sorted(separation_ratios.items(), key=lambda item: (item[1], item[0]))
 
+    # Drift-strength sweep for sensitivity and monotonicity checks.
+    sweep_rows: dict[str, list[dict[str, float]]] = {method: [] for method in distances}
+    for strength in sweep_strengths:
+        sweep_conditions = _condition_vads(base_vads, drift_strength=strength, profile=primary_profile, seed=0)
+        sweep_scalars = {key: [_scalar(vad) for vad in rows] for key, rows in sweep_conditions.items()}
+        sweep_quantile_thresholds = _quantile_thresholds(sweep_scalars["C1"], bins=8)
+        sweep_states = {
+            key: {
+                "tonesight": [compute_A("TLF", v, a, d, 8) for v, a, d in rows],
+                "equal_width": [_to_bin_1_to_8(value) for value in sweep_scalars[key]],
+                "quantile": [_quantile_bin(value, sweep_quantile_thresholds) for value in sweep_scalars[key]],
+            }
+            for key, rows in sweep_conditions.items()
+        }
+        for method in core_methods:
+            p = _histogram(sweep_states["C1"][method], bins=8)
+            q = _histogram(sweep_states["C3"][method], bins=8)
+            sweep_rows[method].append({"strength": strength, "d_c1_c3": _jsd(p, q)})
+
+        sweep_raw_hist_c1 = _histogram_continuous(sweep_scalars["C1"], bins=16)
+        sweep_raw_hist_c3 = _histogram_continuous(sweep_scalars["C3"], bins=16)
+        sweep_rows["raw_jsd_hist16"].append(
+            {"strength": strength, "d_c1_c3": _jsd(sweep_raw_hist_c1, sweep_raw_hist_c3)}
+        )
+
+    monotonic_non_decreasing: dict[str, bool] = {}
+    for method, rows in sweep_rows.items():
+        values = [float(item["d_c1_c3"]) for item in rows]
+        monotonic_non_decreasing[method] = all(
+            values[i] <= values[i + 1] + 1e-12 for i in range(len(values) - 1)
+        )
+
+    absolute_criteria: dict[str, dict[str, bool]] = {}
+    for method, row in distances.items():
+        false_drift = float(row["d_c1_c2"])
+        true_drift = float(row["d_c1_c3"])
+        ratio = float(row["separation_ratio_c12_over_c13"])
+        absolute_criteria[method] = {
+            "true_drift_gt_false_drift": true_drift > false_drift,
+            "separation_ratio_lt_1": ratio < 1.0,
+            "monotonic_drift_sweep": monotonic_non_decreasing.get(method, False),
+        }
+
+    robustness_runs: list[dict[str, Any]] = []
+    robustness_by_method: dict[str, list[float]] = {method: [] for method in distances}
+    win_count: dict[str, int] = {method: 0 for method in distances}
+    robustness_criteria: dict[str, dict[str, list[bool]]] = {
+        method: {
+            "separation_ratio_lt_1": [],
+            "true_drift_gt_false_drift": [],
+            "both_ratio_and_true_gt_false": [],
+        }
+        for method in distances
+    }
+    tonesight_loss_tag_counts: dict[str, int] = {}
+    for profile in _ROBUSTNESS_PROFILES:
+        for seed in _ROBUSTNESS_SEEDS:
+            robust_conditions = _condition_vads(base_vads, drift_strength=primary_strength, profile=profile, seed=seed)
+            robust_scalars = {key: [_scalar(vad) for vad in rows] for key, rows in robust_conditions.items()}
+            robust_thresholds = _quantile_thresholds(robust_scalars["C1"], bins=8)
+            robust_states = {
+                key: {
+                    "tonesight": [compute_A("TLF", v, a, d, 8) for v, a, d in rows],
+                    "equal_width": [_to_bin_1_to_8(value) for value in robust_scalars[key]],
+                    "quantile": [_quantile_bin(value, robust_thresholds) for value in robust_scalars[key]],
+                }
+                for key, rows in robust_conditions.items()
+            }
+            robust_distances: dict[str, float] = {}
+            robust_method_distances: dict[str, dict[str, float]] = {}
+            for method in core_methods:
+                def _rpair(left: str, right: str) -> float:
+                    left_states = robust_states[left][method]
+                    right_states = robust_states[right][method]
+                    occ = _jsd(_histogram(left_states, bins=8), _histogram(right_states, bins=8))
+                    if method != "tonesight":
+                        return occ
+                    top = _topology_pair_distance(left_states, right_states)
+                    trans = _jsd(_transition_distribution(left_states, bins=8), _transition_distribution(right_states, bins=8))
+                    return (0.7 * top) + (0.2 * trans) + (0.1 * occ)
+                d12 = _rpair("C1", "C2")
+                d13 = _rpair("C1", "C3")
+                robust_distances[method] = _safe_ratio(d12, d13)
+                robust_method_distances[method] = {
+                    "d_c1_c2": d12,
+                    "d_c1_c3": d13,
+                    "separation_ratio_c12_over_c13": robust_distances[method],
+                }
+            robust_raw_hist_c1 = _histogram_continuous(robust_scalars["C1"], bins=16)
+            robust_raw_hist_c2 = _histogram_continuous(robust_scalars["C2"], bins=16)
+            robust_raw_hist_c3 = _histogram_continuous(robust_scalars["C3"], bins=16)
+            robust_distances["raw_jsd_hist16"] = _safe_ratio(
+                _jsd(robust_raw_hist_c1, robust_raw_hist_c2),
+                _jsd(robust_raw_hist_c1, robust_raw_hist_c3),
+            )
+            robust_method_distances["raw_jsd_hist16"] = {
+                "d_c1_c2": _jsd(robust_raw_hist_c1, robust_raw_hist_c2),
+                "d_c1_c3": _jsd(robust_raw_hist_c1, robust_raw_hist_c3),
+                "separation_ratio_c12_over_c13": robust_distances["raw_jsd_hist16"],
+            }
+            winner = sorted(robust_distances.items(), key=lambda item: (item[1], item[0]))[0][0]
+            win_count[winner] += 1
+            loss_tags = _tonesight_loss_tags(
+                profile=profile,
+                winner=winner,
+                method_distances=robust_method_distances,
+            )
+            robustness_runs.append(
+                {
+                    "profile": profile,
+                    "seed": seed,
+                    "separation_ratios": robust_distances,
+                    "distances_by_method": robust_method_distances,
+                    "winner": winner,
+                    "tonesight_loss_tags": loss_tags,
+                }
+            )
+            for method, ratio in robust_distances.items():
+                robustness_by_method[method].append(float(ratio))
+                d12 = float(robust_method_distances[method]["d_c1_c2"])
+                d13 = float(robust_method_distances[method]["d_c1_c3"])
+                ratio_lt_1 = float(ratio) < 1.0
+                true_gt_false = d13 > d12
+                robustness_criteria[method]["separation_ratio_lt_1"].append(ratio_lt_1)
+                robustness_criteria[method]["true_drift_gt_false_drift"].append(true_gt_false)
+                robustness_criteria[method]["both_ratio_and_true_gt_false"].append(
+                    ratio_lt_1 and true_gt_false
+                )
+            if winner != "tonesight":
+                for tag in loss_tags:
+                    tonesight_loss_tag_counts[tag] = int(tonesight_loss_tag_counts.get(tag, 0) + 1)
+
+    robustness_summary = {
+        "seed_count": len(_ROBUSTNESS_SEEDS),
+        "profiles": list(_ROBUSTNESS_PROFILES),
+        "wins_by_method": {key: int(win_count[key]) for key in sorted(win_count)},
+        "ratio_stats_by_method": {
+            method: {
+                "mean": _mean(values),
+                "std": _std(values),
+                "min": min(values) if values else 0.0,
+                "max": max(values) if values else 0.0,
+                "p10": _quantile(values, 0.10),
+                "p50": _quantile(values, 0.50),
+                "p90": _quantile(values, 0.90),
+            }
+            for method, values in sorted(robustness_by_method.items())
+        },
+        "absolute_criteria_pass_rate": {
+            method: {
+                "separation_ratio_lt_1": _rate(criteria["separation_ratio_lt_1"]),
+                "true_drift_gt_false_drift": _rate(criteria["true_drift_gt_false_drift"]),
+                "both_ratio_and_true_gt_false": _rate(criteria["both_ratio_and_true_gt_false"]),
+                "monotonic_drift_sweep_primary": bool(
+                    absolute_criteria.get(method, {}).get("monotonic_drift_sweep", False)
+                ),
+            }
+            for method, criteria in sorted(robustness_criteria.items())
+        },
+        "tonesight_loss_tag_counts": dict(sorted(tonesight_loss_tag_counts.items())),
+    }
+
     code_revision = get_code_revision()
     evidence = {
         "spec_version": "1.0",
@@ -292,32 +626,70 @@ def run_killer_stability_benchmark(
         },
         "config": {
             "seed": 0,
+            "primary_drift_strength": primary_strength,
+            "drift_sweep_strengths": sweep_strengths,
             "quantile_bins": 8,
             "equal_width_bins": 8,
             "raw_hist_bins": 16,
             "upstream_b": {"v_scale": 1.03, "v_bias": 0.02, "a_scale": 0.98, "a_bias": -0.01, "d_scale": 1.01},
             "drift_injection": {
+                "global_v_bias_per_strength": -0.30,
+                "global_a_bias_per_strength": 0.30,
                 "regime_every_n": 5,
-                "regime_v_bias": -0.14,
-                "regime_a_bias": 0.14,
-                "spike_every_n": 50,
-                "spike_a_bias": 0.24,
-                "spike_d_bias": 0.08,
+                "regime_v_bias_per_strength": -0.25,
+                "regime_a_bias_per_strength": 0.25,
+                "spike_every_n": 20,
+                "spike_a_bias_per_strength": 0.40,
+                "spike_d_bias_per_strength": 0.15,
             },
             "methods": ["tonesight", "equal_width", "quantile", "raw_jsd_hist16"],
+            "tonesight_distance_metric": {
+                "type": "weighted_topology_transition",
+                "weights": {"topology_pair": 0.7, "transition_jsd": 0.2, "occupancy_jsd": 0.1},
+            },
+            "robustness": {
+                "profiles": list(_ROBUSTNESS_PROFILES),
+                "seeds": list(_ROBUSTNESS_SEEDS),
+                "notes": "synthetic benchmark robustness sweep over deterministic profile/seed variants",
+            },
         },
         "distances": distances,
         "separation_ratios": separation_ratios,
+        "drift_sweep": {
+            "rows_by_method": sweep_rows,
+            "monotonic_non_decreasing": monotonic_non_decreasing,
+        },
+        "robustness_sweep": {
+            "runs": sorted(robustness_runs, key=lambda row: (str(row["profile"]), int(row["seed"]))),
+            "summary": robustness_summary,
+        },
         "summary": {
             "best_method_by_lowest_separation_ratio": ranking[0][0],
             "method_ranking": [{"method": key, "separation_ratio": value} for key, value in ranking],
+            "absolute_criteria": absolute_criteria,
         },
     }
 
     out_dir = Path(out_root) / "benchmarks" / "killer_stability"
     out_dir.mkdir(parents=True, exist_ok=True)
     evidence_path = out_dir / "evidence.json"
+    robustness_summary_path = out_dir / "robustness_summary.json"
     evidence_path.write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    robustness_summary_path.write_text(
+        json.dumps(
+            {
+                "spec_version": evidence["spec_version"],
+                "benchmark_schema_version": evidence["benchmark_schema_version"],
+                "dataset_hash": evidence["dataset_hash"],
+                "code_revision": evidence["code_revision"],
+                "robustness_sweep": evidence["robustness_sweep"],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     return {
         "spec_version": "1.0",
@@ -325,7 +697,10 @@ def run_killer_stability_benchmark(
         "out_root": out_root,
         "goldset_path": goldset_path,
         "sample_count": len(base_vads),
-        "artifacts": {"evidence": str(evidence_path), "report": str(evidence_path)},
+        "artifacts": {
+            "evidence": str(evidence_path),
+            "report": str(evidence_path),
+            "robustness_summary": str(robustness_summary_path),
+        },
         "results": {"killer_stability": evidence},
     }
-

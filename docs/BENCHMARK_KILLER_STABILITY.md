@@ -10,6 +10,7 @@ Goal:
 Scope boundary:
 - this benchmark evaluates conformance/drift comparability behavior
 - this benchmark does not claim psychological inference accuracy
+- this benchmark is synthetic and controlled; results are not a universal production guarantee
 
 ## Protocol: Fixed 2x2 Conditions
 
@@ -72,6 +73,7 @@ All drift params must be recorded in evidence output.
 
 Primary artifact path target:
 - `runs/benchmarks/killer_stability/evidence.json`
+- `runs/benchmarks/killer_stability/robustness_summary.json`
 
 Required top-level fields:
 - `spec_version`
@@ -83,6 +85,14 @@ Required top-level fields:
 - `distances` (per method and condition pair)
 - `separation_ratios` (per method)
 - `summary` (winner ordering/relative interpretation)
+- `robustness_sweep` (multi-seed/profile robustness runs + aggregate statistics)
+
+Required robustness summary fields:
+- `robustness_sweep.summary.wins_by_method`
+- `robustness_sweep.summary.ratio_stats_by_method.<method>.mean/std/min/max/p10/p50/p90`
+- `robustness_sweep.summary.absolute_criteria_pass_rate.<method>.*`
+- `robustness_sweep.summary.tonesight_loss_tag_counts`
+- `robustness_sweep.runs[*].tonesight_loss_tags`
 
 Required condition-pair fields per method:
 - `d_c1_c2`
@@ -98,4 +108,3 @@ Implementation phases must later demonstrate:
 - deterministic reproducibility of evidence artifact
 - complete method coverage (ToneSight + required baselines)
 - explicit separation-ratio outputs per method
-

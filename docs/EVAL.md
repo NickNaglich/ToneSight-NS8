@@ -125,6 +125,7 @@ Benchmark artifacts (`benchmark --suite core`):
 
 Killer benchmark artifacts (`benchmark --suite killer_stability`):
 - `runs/benchmarks/killer_stability/evidence.json`
+- `runs/benchmarks/killer_stability/robustness_summary.json`
 
 Performance smoke policy:
 - deterministic eval smoke is covered by `tests/test_eval_performance_smoke.py`
@@ -137,6 +138,12 @@ Killer benchmark interpretation:
 - robustness drift distance: `d_c2_c4`
 - headline metric: `separation_ratio_c12_over_c13` (lower is better)
 - compare ToneSight against baselines under the same condition matrix and config
+- robustness summary includes:
+  - `wins_by_method`
+  - `ratio_stats_by_method.<method>.mean/std/min/max/p10/p50/p90`
+  - `absolute_criteria_pass_rate.<method>.*`
+  - `tonesight_loss_tag_counts`
+- treat findings as synthetic protocol evidence (not universal real-world performance proof)
 
 ## `eval_summary.json` Fields
 
