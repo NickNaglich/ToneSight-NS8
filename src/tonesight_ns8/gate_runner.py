@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .compatibility import compatibility_issues
 from .compare_runner import run_compare
 
 _DEFAULT_THRESHOLDS = {
@@ -19,39 +20,6 @@ def _read_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _as_str(value: Any) -> str:
-    if value is None:
-        return ""
-    return str(value)
-
-
-def _receipt_config(receipt: dict[str, Any]) -> dict[str, Any]:
-    raw = receipt.get("config")
-    if isinstance(raw, dict):
-        return raw
-    return {}
-
-
-def _identity_fields(receipt: dict[str, Any]) -> dict[str, str]:
-    config = _receipt_config(receipt)
-    spec_version = _as_str(receipt.get("spec_version"))
-    mapping_id = _as_str(receipt.get("mapping_id") or config.get("mapping_id") or "ns8")
-    mapping_version = _as_str(receipt.get("mapping_version") or config.get("mapping_version") or spec_version)
-    taxonomy_identity = _as_str(receipt.get("taxonomy_hash") or config.get("taxonomy_path"))
-    calibration_identity = _as_str(config.get("calibration_path"))
-    defaults_schema_version = _as_str(
-        receipt.get("defaults_spec_version") or config.get("defaults_spec_version") or receipt.get("defaults_hash")
-    )
-    return {
-        "spec_version": spec_version,
-        "mapping_id": mapping_id,
-        "mapping_version": mapping_version,
-        "taxonomy_identity": taxonomy_identity,
-        "calibration_identity": calibration_identity,
-        "defaults_schema_version": defaults_schema_version,
-    }
-
-
 def _compatibility_issues(
     run_a: Path,
     run_b: Path,
@@ -60,47 +28,7 @@ def _compatibility_issues(
 ) -> tuple[dict[str, Any], dict[str, Any], list[dict[str, str]]]:
     receipt_a = _read_json(run_a / "receipt.json")
     receipt_b = _read_json(run_b / "receipt.json")
-    issues: list[dict[str, str]] = []
-
-    dataset_a = str(receipt_a.get("dataset_hash", ""))
-    dataset_b = str(receipt_b.get("dataset_hash", ""))
-    if require_dataset_match and dataset_a != dataset_b:
-        issues.append(
-            {
-                "reason": "dataset_hash_mismatch",
-                "expected_dataset_hash": dataset_a,
-                "actual_dataset_hash": dataset_b,
-            }
-        )
-
-    fields_a = _identity_fields(receipt_a)
-    fields_b = _identity_fields(receipt_b)
-    field_mismatch_reasons = {
-        "spec_version": "spec_version_mismatch",
-        "mapping_id": "mapping_id_mismatch",
-        "mapping_version": "mapping_version_mismatch",
-        "taxonomy_identity": "taxonomy_identity_mismatch",
-        "calibration_identity": "calibration_identity_mismatch",
-        "defaults_schema_version": "defaults_schema_version_mismatch",
-    }
-    for field in (
-        "spec_version",
-        "mapping_id",
-        "mapping_version",
-        "taxonomy_identity",
-        "calibration_identity",
-        "defaults_schema_version",
-    ):
-        if fields_a[field] != fields_b[field]:
-            issues.append(
-                {
-                    "reason": field_mismatch_reasons[field],
-                    "field": field,
-                    "expected": fields_a[field],
-                    "actual": fields_b[field],
-                }
-            )
-
+    issues = compatibility_issues(receipt_a, receipt_b, require_dataset_match=require_dataset_match)
     return receipt_a, receipt_b, issues
 
 

@@ -166,3 +166,29 @@ def test_run_eval_compare_skips_incompatible_spec_version():
     assert second["compare_skipped_reason"] == "no_compatible_prior_run"
     assert second["incompatible_previous_runs"]
     assert second["incompatible_previous_runs"][0]["reason"] == "spec_version_mismatch"
+
+
+def test_run_eval_compare_skips_incompatible_taxonomy_identity():
+    out_root = _temp_dir("tmp_eval_compare_taxonomy_mismatch")
+    first = run_eval(
+        "data/goldset.jsonl",
+        out_root=str(out_root),
+        taxonomy_path="taxonomy/tone_taxonomy.v1.json",
+        threshold_l1=3,
+    )
+    first_receipt_path = Path(first["out_dir"]) / "receipt.json"
+    receipt = json.loads(first_receipt_path.read_text(encoding="utf-8"))
+    receipt["taxonomy_hash"] = "taxonomy_mismatch_for_test"
+    first_receipt_path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
+
+    second = run_eval_compare(
+        "data/goldset.jsonl",
+        out_root=str(out_root),
+        taxonomy_path="taxonomy/tone_taxonomy.v1.json",
+        threshold_l1=3,
+    )
+    assert second["previous_run"] is None
+    assert second["compare"] is None
+    assert second["compare_skipped_reason"] == "no_compatible_prior_run"
+    assert second["incompatible_previous_runs"]
+    assert second["incompatible_previous_runs"][0]["reason"] == "taxonomy_identity_mismatch"

@@ -304,6 +304,11 @@ These defaults are sourced from `config/defaults.json`.
 Runs eval and then compares the new run against the most recent prior run with matching:
 - `dataset_hash`
 - `spec_version`
+- `mapping_id`
+- `mapping_version`
+- `taxonomy_identity` (`taxonomy_hash` with path fallback)
+- `calibration_identity`
+- `defaults_schema_version`
 
 Returns:
 - `eval`: eval output payload

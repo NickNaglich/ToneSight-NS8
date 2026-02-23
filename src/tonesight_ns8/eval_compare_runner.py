@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .compatibility import compatibility_issues
 from .compare_runner import run_compare
 from .defaults import EVAL_DEFAULTS
 from .eval_runner import run_eval
@@ -13,8 +14,7 @@ from .eval_runner import run_eval
 
 def _find_previous_run(
     out_root: Path,
-    dataset_hash: str,
-    spec_version: str,
+    current_receipt: dict[str, Any],
     current_run_id: str,
 ) -> tuple[Path | None, list[dict[str, str]], str | None]:
     candidates: list[tuple[Path, dict[str, Any]]] = []
@@ -37,27 +37,11 @@ def _find_previous_run(
 
     candidates.sort(key=lambda item: item[0].stat().st_mtime, reverse=True)
     for path, payload in candidates:
-        receipt_dataset_hash = str(payload.get("dataset_hash", ""))
-        receipt_spec_version = str(payload.get("spec_version", ""))
-        if receipt_dataset_hash != dataset_hash:
-            incompatible.append(
-                {
-                    "run_path": str(path),
-                    "reason": "dataset_hash_mismatch",
-                    "expected_dataset_hash": dataset_hash,
-                    "actual_dataset_hash": receipt_dataset_hash,
-                }
-            )
-            continue
-        if receipt_spec_version != spec_version:
-            incompatible.append(
-                {
-                    "run_path": str(path),
-                    "reason": "spec_version_mismatch",
-                    "expected_spec_version": spec_version,
-                    "actual_spec_version": receipt_spec_version,
-                }
-            )
+        issues = compatibility_issues(current_receipt, payload, require_dataset_match=True)
+        if issues:
+            issue = dict(issues[0])
+            issue["run_path"] = str(path)
+            incompatible.append(issue)
             continue
         return path, incompatible, None
     return None, incompatible, "no_compatible_prior_run"
@@ -83,13 +67,12 @@ def run_eval_compare(
         capture_gpu=capture_gpu,
         mlflow_tracking_uri=mlflow_tracking_uri,
     )
-    dataset_hash = eval_result["receipt"]["dataset_hash"]
-    spec_version = str(eval_result["receipt"]["spec_version"])
+    current_receipt = eval_result["receipt"]
     run_id = eval_result["run_id"]
     out_root_path = Path(out_root)
     current_run_path = out_root_path / run_id
     previous, incompatible_runs, compare_skipped_reason = _find_previous_run(
-        out_root_path, dataset_hash, spec_version, run_id
+        out_root_path, current_receipt, run_id
     )
     compare_result = None
     if previous is not None:

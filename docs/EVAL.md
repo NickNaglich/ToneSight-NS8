@@ -140,7 +140,14 @@ Each scored row includes deterministic explainability values:
 - `top_regressions`: deterministic sort by `delta_l1` descending, then `id`
   - includes per-dimension changes `delta_v`, `delta_a`, `delta_d` when available
 - eval-compare compatibility gate:
-  - compares only against prior runs matching both `dataset_hash` and `spec_version`
+  - compares only against prior runs matching compatibility identity fields:
+    - `dataset_hash`
+    - `spec_version`
+    - `mapping_id`
+    - `mapping_version`
+    - `taxonomy_identity` (`taxonomy_hash` with path fallback)
+    - `calibration_identity`
+    - `defaults_schema_version`
   - exposes `incompatible_previous_runs` and `compare_skipped_reason` in payload
 
 Optional compare artifact (`--write`):

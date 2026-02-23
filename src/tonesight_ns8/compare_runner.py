@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .compatibility import compatibility_issues
 from .ns8 import compute_A
 
 class CompareInputError(ValueError):
@@ -49,15 +50,18 @@ def _validate_receipt_compatibility(
     *,
     require_dataset_match: bool = True,
 ) -> None:
-    spec_a = str(receipt_a.get("spec_version", ""))
-    spec_b = str(receipt_b.get("spec_version", ""))
-    if spec_a != spec_b:
-        raise CompareInputError(f"incompatible_receipts:spec_version:{spec_a}!={spec_b}")
-
-    dataset_a = str(receipt_a.get("dataset_hash", ""))
-    dataset_b = str(receipt_b.get("dataset_hash", ""))
-    if require_dataset_match and dataset_a and dataset_b and dataset_a != dataset_b:
-        raise CompareInputError(f"incompatible_receipts:dataset_hash:{dataset_a}!={dataset_b}")
+    issues = compatibility_issues(receipt_a, receipt_b, require_dataset_match=require_dataset_match)
+    if not issues:
+        return
+    issue = issues[0]
+    reason = issue.get("reason", "")
+    if reason == "dataset_hash_mismatch":
+        raise CompareInputError(
+            f"incompatible_receipts:dataset_hash:{issue.get('expected_dataset_hash','')}!={issue.get('actual_dataset_hash','')}"
+        )
+    if reason == "spec_version_mismatch":
+        raise CompareInputError(f"incompatible_receipts:spec_version:{issue.get('expected','')}!={issue.get('actual','')}")
+    raise CompareInputError(f"incompatible_receipts:{reason}:{issue.get('expected','')}!={issue.get('actual','')}")
 
 
 def _index_rows(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
