@@ -94,6 +94,23 @@ Required robustness summary fields:
 - `robustness_sweep.summary.tonesight_loss_tag_counts`
 - `robustness_sweep.runs[*].tonesight_loss_tags`
 
+## Fixed Metric Policy
+
+- Keep ToneSight distance weights fixed across all robustness profiles/seeds:
+  - `topology_pair=0.7`
+  - `transition_jsd=0.2`
+  - `occupancy_jsd=0.1`
+- Use profile/seed variation to test robustness coverage, not to retune weights for higher win-rate.
+- If weights change in a future release, record the change explicitly as a protocol version update.
+
+## Known Failure Regimes
+
+Interpret `tonesight_loss_tag_counts` as engineering diagnostics:
+- `occupancy_dominated_shift`: static occupancy mass shift dominates; simple bin baselines may be competitive.
+- `ramp_mild_or_late`: temporal ramp perturbation is too mild/late for topology+transition terms to dominate.
+- `transition_signal_weak`: sequence transition structure is weak, reducing topology-aware advantage.
+- `true_drift_not_dominant`: run-level failure mode where `D(C1,C3) <= D(C1,C2)` for ToneSight.
+
 Required condition-pair fields per method:
 - `d_c1_c2`
 - `d_c1_c3`

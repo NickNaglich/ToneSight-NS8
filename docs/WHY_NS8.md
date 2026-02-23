@@ -96,6 +96,30 @@ Generated artifacts:
   - `robustness_sweep.summary.absolute_criteria_pass_rate.<method>.*`
   - `robustness_sweep.summary.tonesight_loss_tag_counts`
 
+Current reproducible snapshot (`N=250`, `runs/benchmarks/killer_stability/robustness_summary.json`):
+- ToneSight: wins `10/20`, ratio stats `mean=1.037`, `p50=0.867`, `p90=1.644`, `max=1.789`
+- ToneSight pass-rates: `separation_ratio_lt_1=0.70`, `true_drift_gt_false_drift=0.70`, `both_ratio_and_true_gt_false=0.70`
+- loss tags: `occupancy_dominated_shift=5`, `ramp_mild_or_late=5`, `transition_signal_weak=3`, `true_drift_not_dominant=3`
+
+Larger-`N` subset (`N=1000`, deterministic derived fixture):
+- Source: `runs_n1000/benchmarks/killer_stability/robustness_summary.json`
+- ToneSight: wins `13/20`, ratio stats `mean=0.940`, `p50=0.868`, `p90=1.312`, `max=1.365`
+- ToneSight pass-rates: `separation_ratio_lt_1=0.75`, `true_drift_gt_false_drift=0.75`, `both_ratio_and_true_gt_false=0.75`
+- interpretation guardrail: this is a deterministic scaling check on a derived fixture, not independent-distribution or real-world diversity validation.
+
+Known failure regimes (from `tonesight_loss_tag_counts`):
+- `occupancy_dominated_shift`: drift is primarily static occupancy mass movement, where simple bins can remain competitive.
+- `ramp_mild_or_late`: temporal ramp signal is too weak/late for topology/transition terms to dominate.
+- `transition_signal_weak`: sequence dynamics are not strong enough to leverage transition-aware distance.
+- `true_drift_not_dominant`: run-level condition where `D(C1,C3)` does not exceed `D(C1,C2)` for ToneSight.
+
+Fixed-metric policy:
+- benchmark runs keep the same ToneSight distance weights (`topology_pair=0.7`, `transition_jsd=0.2`, `occupancy_jsd=0.1`) across all profiles/seeds.
+- profile variation is used for robustness testing, not per-profile metric retuning.
+
+Release-note claim template (scoped):
+- "In this deterministic synthetic robustness protocol (fixed weights, 4 profiles x 5 seeds), ToneSight led by win-rate and mean separation ratio; results are controlled-protocol evidence and not independent-distribution validation."
+
 ## Reading Guidance
 
 - Treat these benchmarks as operational evidence, not proofs of universal superiority.

@@ -145,6 +145,12 @@ Killer benchmark interpretation:
   - `tonesight_loss_tag_counts`
 - treat findings as synthetic protocol evidence (not universal real-world performance proof)
 
+Larger-`N` robustness subset (optional):
+- generate deterministic `N=1000` fixture: `runs/benchmarks/killer_stability/goldset_n1000.jsonl`
+- run: `python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs_n1000 --goldset runs/benchmarks/killer_stability/goldset_n1000.jsonl`
+- compare with default `N=250` artifacts under `runs/benchmarks/killer_stability/`
+- interpretation boundary: the `N=1000` fixture is derived/replicated from the base set and is a scaling/stability check, not independent-distribution validation.
+
 ## `eval_summary.json` Fields
 
 - `run_id`

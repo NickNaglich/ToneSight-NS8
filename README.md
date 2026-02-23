@@ -490,6 +490,40 @@ Killer benchmark artifacts (`benchmark --suite killer_stability`):
   - `absolute_criteria_pass_rate` (`ratio<1`, `true>false`, combined pass-rate)
   - `tonesight_loss_tag_counts` for non-winning ToneSight robustness runs
 
+Robustness summary snapshot (`runs/benchmarks/killer_stability/robustness_summary.json`, `N=250`):
+
+| Method | Wins (20 runs) | Mean | p50 | p90 | Max | `ratio<1` pass-rate |
+|---|---:|---:|---:|---:|---:|---:|
+| ToneSight | 10 | 1.037 | 0.867 | 1.644 | 1.789 | 0.70 |
+| equal_width | 5 | 1.702 | 1.736 | 3.107 | 3.829 | 0.40 |
+| quantile | 3 | 3.511 | 2.831 | 7.333 | 9.383 | 0.25 |
+| raw_jsd_hist16 | 2 | 1.512 | 1.399 | 2.049 | 2.758 | 0.20 |
+
+Where ToneSight loses (`tonesight_loss_tag_counts`, `N=250`):
+- `occupancy_dominated_shift`: 5
+- `ramp_mild_or_late`: 5
+- `transition_signal_weak`: 3
+- `true_drift_not_dominant`: 3
+
+Larger-`N` subset check (`N=1000` derived fixture):
+- run: `python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs_n1000 --goldset runs/benchmarks/killer_stability/goldset_n1000.jsonl`
+- artifacts: `runs_n1000/benchmarks/killer_stability/evidence.json`, `runs_n1000/benchmarks/killer_stability/robustness_summary.json`
+- ToneSight summary: wins `13/20`, mean `0.940`, p50 `0.868`, p90 `1.312`, max `1.365`, `ratio<1` pass-rate `0.75`
+- interpretation guardrail: this `N=1000` fixture is deterministically derived from the same source set and is a scaling check, not independent-distribution validation.
+
+`N=250` vs `N=1000` (derived) robustness comparison:
+
+| Method | N=250 wins | N=250 mean | N=250 p90 | N=250 `ratio<1` | N=1000 wins | N=1000 mean | N=1000 p90 | N=1000 `ratio<1` |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| ToneSight | 10 | 1.037 | 1.644 | 0.70 | 13 | 0.940 | 1.312 | 0.75 |
+| equal_width | 5 | 1.702 | 3.107 | 0.40 | 6 | 1.205 | 1.950 | 0.35 |
+| quantile | 3 | 3.511 | 7.333 | 0.25 | 0 | 3.077 | 5.556 | 0.25 |
+| raw_jsd_hist16 | 2 | 1.512 | 2.049 | 0.20 | 1 | 1.568 | 2.012 | 0.05 |
+
+Fixed-metric policy:
+- keep `tonesight_distance_metric` weights fixed (`topology_pair=0.7`, `transition_jsd=0.2`, `occupancy_jsd=0.1`) across profile/seed sweeps.
+- use robustness profiles to test structural behavior; do not retune per profile to improve win counts.
+
 Claim boundary note:
 - killer benchmark outputs are synthetic controlled evidence for conformance/drift comparability;
 - they should not be interpreted as direct emotion-inference quality claims.
