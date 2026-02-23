@@ -605,7 +605,7 @@ Output:
   - `profile_label`, `source_label`, and row-derived `source_labels`
   - artifact pointers (`out_jsonl`, `eval_summary_json`, `report_html`, `receipt_json`)
 
-### `run_benchmark_suite(*, suite: str = "core", out_root: str = "runs", goldset_path: str = "data/goldset.jsonl") -> dict`
+### `run_benchmark_suite(*, suite: str = "core", out_root: str = "runs", goldset_path: str = "data/goldset.jsonl", killer_profiles: list[str] | None = None, killer_seeds: list[int] | None = None, killer_primary_strength: float = 0.20, killer_sweep_strengths: list[float] | None = None, killer_sample_multiplier: int = 1) -> dict`
 
 Runs deterministic benchmark evidence suite and writes JSON artifacts.
 
@@ -618,6 +618,7 @@ Suite `core` artifacts:
 
 Suite `killer_stability` artifacts:
 - `<out_root>/benchmarks/killer_stability/evidence.json`
+- `<out_root>/benchmarks/killer_stability/robustness_summary.json`
 
 Current supported suite:
 - `core`
@@ -626,6 +627,7 @@ Current supported suite:
 CLI:
 - `python -m tonesight_ns8.cli benchmark --suite core`
 - `python -m tonesight_ns8.cli benchmark --suite killer_stability`
+- `python -m tonesight_ns8.cli benchmark --suite killer_stability --killer-profiles default,oscillation_path,boundary_jitter --killer-seeds 0,1,2,3,4 --killer-primary-strength 0.2 --killer-sweep-strengths 0.05,0.1,0.15,0.2,0.3 --killer-sample-multiplier 2`
 
 ### `tonesight_from_label(label: str, family: str, r: int, c: int, k: int, taxonomy_path: str) -> dict`
 

@@ -413,6 +413,7 @@ python -m tonesight_ns8.cli release-check --goldset data/goldset.jsonl --taxonom
 python -m tonesight_ns8.cli benchmark --suite core
 python -m tonesight_ns8.cli benchmark --suite core --out-root runs --goldset data/goldset.jsonl
 python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs --goldset data/goldset.jsonl
+python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs --goldset data/goldset.jsonl --killer-profiles default,oscillation_path,boundary_jitter --killer-seeds 0,1,2,3,4 --killer-primary-strength 0.2 --killer-sweep-strengths 0.05,0.1,0.15,0.2,0.3 --killer-sample-multiplier 2
 python -m tonesight_ns8.cli live-capture --events tests/fixtures/live_capture.small.jsonl --out-root runs
 python -m tonesight_ns8.cli live-replay --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
 python -m tonesight_ns8.cli live-verify --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
@@ -489,6 +490,7 @@ Killer benchmark artifacts (`benchmark --suite killer_stability`):
   - `ratio_stats_by_method` (`mean/std/min/max/p10/p50/p90`)
   - `absolute_criteria_pass_rate` (`ratio<1`, `true>false`, combined pass-rate)
   - `tonesight_loss_tag_counts` for non-winning ToneSight robustness runs
+  - `by_profile` summary blocks for per-profile ranking/tail/pass-rate review
 
 Robustness summary snapshot (`runs/benchmarks/killer_stability/robustness_summary.json`, `N=250`):
 
@@ -757,8 +759,8 @@ Note: The current layout uses a reference implementation (`ns8_ref.py`).
 
 ## Versioning and Stability
 
-- Library/package versioning follows semantic versioning and is currently pre-1.0 (`0.1.x` series).
-- Current package version target: `0.1.9`.
+- Library/package versioning follows semantic versioning and is currently pre-1.0 (`0.x` series).
+- Current package version target: `0.2.1`.
 - NS8 spec version is tracked separately in `docs/SPEC_NS8.md`.
 - The NS8 specification is stable within a major version.
 

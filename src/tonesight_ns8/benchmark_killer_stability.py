@@ -11,8 +11,15 @@ from typing import Any
 from .ns8 import compute_A
 from .provenance import get_code_revision
 
-_ROBUSTNESS_PROFILES: tuple[str, ...] = ("default", "oscillation_path", "temporal_ramp", "subgroup_mixture")
-_ROBUSTNESS_SEEDS: tuple[int, ...] = (0, 1, 2, 3, 4)
+_DEFAULT_ROBUSTNESS_PROFILES: tuple[str, ...] = ("default", "oscillation_path", "temporal_ramp", "subgroup_mixture")
+_DEFAULT_ROBUSTNESS_SEEDS: tuple[int, ...] = (0, 1, 2, 3, 4)
+_AVAILABLE_ROBUSTNESS_PROFILES: tuple[str, ...] = (
+    "default",
+    "oscillation_path",
+    "temporal_ramp",
+    "subgroup_mixture",
+    "boundary_jitter",
+)
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -247,6 +254,12 @@ def _profile_params(profile: str, seed: int) -> dict[str, Any]:
             "drift": {"global_v": -0.18, "global_a": 0.24, "regime_v": -0.22, "regime_a": 0.26, "spike_a": 0.35, "spike_d": 0.14, "regime_every_n": 7, "spike_every_n": 25, "mode": "subgroup_mixture"},
             "seed_jitter": 0.03,
         }
+    if profile == "boundary_jitter":
+        return {
+            "upstream_b": {"v_scale": 1.01, "v_bias": 0.015, "a_scale": 0.99, "a_bias": -0.015, "d_scale": 1.00},
+            "drift": {"global_v": -0.16, "global_a": 0.16, "regime_v": -0.12, "regime_a": 0.12, "spike_a": 0.22, "spike_d": 0.06, "regime_every_n": 4, "spike_every_n": 18, "mode": "boundary_jitter"},
+            "seed_jitter": 0.025,
+        }
     raise ValueError(f"unknown robustness profile: {profile}")
 
 
@@ -342,6 +355,11 @@ def _inject_drift(vads: list[tuple[int, int, int]], *, strength: float, params: 
             if (i % 3) == 0:
                 u_v = _clamp01(u_v - (0.30 * strength))
                 u_a = _clamp01(u_a + (0.30 * strength))
+        elif mode == "boundary_jitter":
+            # Push samples around bin boundaries to emulate upstream quantization jitter.
+            direction = -1.0 if ((i + seed) % 2 == 0) else 1.0
+            u_v = _clamp01(u_v + (direction * 0.11 * strength))
+            u_a = _clamp01(u_a - (direction * 0.09 * strength))
 
         # Regime shift on deterministic subset.
         if i % int(drift["regime_every_n"]) == 0:
@@ -376,12 +394,29 @@ def run_killer_stability_benchmark(
     *,
     goldset_path: str = "data/goldset.jsonl",
     out_root: str = "runs",
+    profiles: list[str] | None = None,
+    seeds: list[int] | None = None,
+    primary_drift_strength: float = 0.20,
+    drift_sweep_strengths: list[float] | None = None,
+    sample_multiplier: int = 1,
 ) -> dict[str, Any]:
     dataset_path = Path(goldset_path)
     base_vads = _extract_base_vads(dataset_path)
-    sweep_strengths = [0.05, 0.10, 0.15, 0.20, 0.30]
-    primary_strength = 0.20
-    primary_profile = "default"
+    if sample_multiplier < 1:
+        raise ValueError("sample_multiplier must be >= 1")
+    if sample_multiplier > 1:
+        base_vads = base_vads * sample_multiplier
+
+    robustness_profiles = tuple(profiles) if profiles else _DEFAULT_ROBUSTNESS_PROFILES
+    robustness_seeds = tuple(seeds) if seeds else _DEFAULT_ROBUSTNESS_SEEDS
+    for profile in robustness_profiles:
+        if profile not in _AVAILABLE_ROBUSTNESS_PROFILES:
+            raise ValueError(
+                f"unknown robustness profile: {profile}; available={list(_AVAILABLE_ROBUSTNESS_PROFILES)}"
+            )
+    sweep_strengths = drift_sweep_strengths or [0.05, 0.10, 0.15, 0.20, 0.30]
+    primary_strength = float(primary_drift_strength)
+    primary_profile = "default" if "default" in robustness_profiles else robustness_profiles[0]
     conditions = _condition_vads(base_vads, drift_strength=primary_strength, profile=primary_profile, seed=0)
 
     scalars_by_condition = {key: [_scalar(vad) for vad in rows] for key, rows in conditions.items()}
@@ -495,6 +530,26 @@ def run_killer_stability_benchmark(
     robustness_runs: list[dict[str, Any]] = []
     robustness_by_method: dict[str, list[float]] = {method: [] for method in distances}
     win_count: dict[str, int] = {method: 0 for method in distances}
+    profile_method_ratios: dict[str, dict[str, list[float]]] = {
+        profile: {method: [] for method in distances} for profile in robustness_profiles
+    }
+    profile_win_count: dict[str, dict[str, int]] = {
+        profile: {method: 0 for method in distances} for profile in robustness_profiles
+    }
+    profile_tonesight_loss_tags: dict[str, dict[str, int]] = {
+        profile: {} for profile in robustness_profiles
+    }
+    profile_criteria: dict[str, dict[str, dict[str, list[bool]]]] = {
+        profile: {
+            method: {
+                "separation_ratio_lt_1": [],
+                "true_drift_gt_false_drift": [],
+                "both_ratio_and_true_gt_false": [],
+            }
+            for method in distances
+        }
+        for profile in robustness_profiles
+    }
     robustness_criteria: dict[str, dict[str, list[bool]]] = {
         method: {
             "separation_ratio_lt_1": [],
@@ -504,8 +559,8 @@ def run_killer_stability_benchmark(
         for method in distances
     }
     tonesight_loss_tag_counts: dict[str, int] = {}
-    for profile in _ROBUSTNESS_PROFILES:
-        for seed in _ROBUSTNESS_SEEDS:
+    for profile in robustness_profiles:
+        for seed in robustness_seeds:
             robust_conditions = _condition_vads(base_vads, drift_strength=primary_strength, profile=profile, seed=seed)
             robust_scalars = {key: [_scalar(vad) for vad in rows] for key, rows in robust_conditions.items()}
             robust_thresholds = _quantile_thresholds(robust_scalars["C1"], bins=8)
@@ -551,6 +606,7 @@ def run_killer_stability_benchmark(
             }
             winner = sorted(robust_distances.items(), key=lambda item: (item[1], item[0]))[0][0]
             win_count[winner] += 1
+            profile_win_count[profile][winner] += 1
             loss_tags = _tonesight_loss_tags(
                 profile=profile,
                 winner=winner,
@@ -568,6 +624,7 @@ def run_killer_stability_benchmark(
             )
             for method, ratio in robust_distances.items():
                 robustness_by_method[method].append(float(ratio))
+                profile_method_ratios[profile][method].append(float(ratio))
                 d12 = float(robust_method_distances[method]["d_c1_c2"])
                 d13 = float(robust_method_distances[method]["d_c1_c3"])
                 ratio_lt_1 = float(ratio) < 1.0
@@ -577,13 +634,20 @@ def run_killer_stability_benchmark(
                 robustness_criteria[method]["both_ratio_and_true_gt_false"].append(
                     ratio_lt_1 and true_gt_false
                 )
+                profile_criteria[profile][method]["separation_ratio_lt_1"].append(ratio_lt_1)
+                profile_criteria[profile][method]["true_drift_gt_false_drift"].append(true_gt_false)
+                profile_criteria[profile][method]["both_ratio_and_true_gt_false"].append(
+                    ratio_lt_1 and true_gt_false
+                )
             if winner != "tonesight":
                 for tag in loss_tags:
                     tonesight_loss_tag_counts[tag] = int(tonesight_loss_tag_counts.get(tag, 0) + 1)
+                    profile_tags = profile_tonesight_loss_tags[profile]
+                    profile_tags[tag] = int(profile_tags.get(tag, 0) + 1)
 
     robustness_summary = {
-        "seed_count": len(_ROBUSTNESS_SEEDS),
-        "profiles": list(_ROBUSTNESS_PROFILES),
+        "seed_count": len(robustness_seeds),
+        "profiles": list(robustness_profiles),
         "wins_by_method": {key: int(win_count[key]) for key in sorted(win_count)},
         "ratio_stats_by_method": {
             method: {
@@ -609,6 +673,47 @@ def run_killer_stability_benchmark(
             for method, criteria in sorted(robustness_criteria.items())
         },
         "tonesight_loss_tag_counts": dict(sorted(tonesight_loss_tag_counts.items())),
+        "by_profile": {
+            profile: {
+                "wins_by_method": {
+                    key: int(profile_win_count[profile][key])
+                    for key in sorted(profile_win_count[profile])
+                },
+                "ratio_stats_by_method": {
+                    method: {
+                        "mean": _mean(values),
+                        "std": _std(values),
+                        "min": min(values) if values else 0.0,
+                        "max": max(values) if values else 0.0,
+                        "p10": _quantile(values, 0.10),
+                        "p50": _quantile(values, 0.50),
+                        "p90": _quantile(values, 0.90),
+                    }
+                    for method, values in sorted(profile_method_ratios[profile].items())
+                },
+                "absolute_criteria_pass_rate": {
+                    method: {
+                        "separation_ratio_lt_1": _rate(
+                            profile_criteria[profile][method]["separation_ratio_lt_1"]
+                        ),
+                        "true_drift_gt_false_drift": _rate(
+                            profile_criteria[profile][method]["true_drift_gt_false_drift"]
+                        ),
+                        "both_ratio_and_true_gt_false": _rate(
+                            profile_criteria[profile][method]["both_ratio_and_true_gt_false"]
+                        ),
+                        "monotonic_drift_sweep_primary": bool(
+                            absolute_criteria.get(method, {}).get("monotonic_drift_sweep", False)
+                        ),
+                    }
+                    for method in sorted(profile_criteria[profile])
+                },
+                "tonesight_loss_tag_counts": dict(
+                    sorted(profile_tonesight_loss_tags[profile].items())
+                ),
+            }
+            for profile in sorted(profile_method_ratios)
+        },
     }
 
     code_revision = get_code_revision()
@@ -626,6 +731,7 @@ def run_killer_stability_benchmark(
         },
         "config": {
             "seed": 0,
+            "sample_multiplier": sample_multiplier,
             "primary_drift_strength": primary_strength,
             "drift_sweep_strengths": sweep_strengths,
             "quantile_bins": 8,
@@ -648,8 +754,9 @@ def run_killer_stability_benchmark(
                 "weights": {"topology_pair": 0.7, "transition_jsd": 0.2, "occupancy_jsd": 0.1},
             },
             "robustness": {
-                "profiles": list(_ROBUSTNESS_PROFILES),
-                "seeds": list(_ROBUSTNESS_SEEDS),
+                "available_profiles": list(_AVAILABLE_ROBUSTNESS_PROFILES),
+                "profiles": list(robustness_profiles),
+                "seeds": list(robustness_seeds),
                 "notes": "synthetic benchmark robustness sweep over deterministic profile/seed variants",
             },
         },

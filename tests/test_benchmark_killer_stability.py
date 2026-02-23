@@ -35,6 +35,13 @@ def test_killer_stability_benchmark_contract_and_fields():
     assert set(evidence["drift_sweep"]["monotonic_non_decreasing"]) >= {"tonesight", "equal_width", "quantile", "raw_jsd_hist16"}
     assert "robustness_sweep" in evidence
     assert "summary" in evidence["robustness_sweep"]
+    assert "by_profile" in evidence["robustness_sweep"]["summary"]
+    assert set(evidence["robustness_sweep"]["summary"]["by_profile"]) >= {
+        "default",
+        "oscillation_path",
+        "temporal_ramp",
+        "subgroup_mixture",
+    }
     assert set(evidence["robustness_sweep"]["summary"]["ratio_stats_by_method"]) >= {
         "tonesight",
         "equal_width",
@@ -44,6 +51,11 @@ def test_killer_stability_benchmark_contract_and_fields():
     for method in ("tonesight", "equal_width", "quantile", "raw_jsd_hist16"):
         ratio_stats = evidence["robustness_sweep"]["summary"]["ratio_stats_by_method"][method]
         assert set(ratio_stats) >= {"mean", "std", "min", "max", "p10", "p50", "p90"}
+    profile_summary = evidence["robustness_sweep"]["summary"]["by_profile"]["default"]
+    assert "wins_by_method" in profile_summary
+    assert "ratio_stats_by_method" in profile_summary
+    assert "absolute_criteria_pass_rate" in profile_summary
+    assert "tonesight_loss_tag_counts" in profile_summary
     pass_rate = evidence["robustness_sweep"]["summary"]["absolute_criteria_pass_rate"]
     assert set(pass_rate) >= {"tonesight", "equal_width", "quantile", "raw_jsd_hist16"}
     for method in ("tonesight", "equal_width", "quantile", "raw_jsd_hist16"):

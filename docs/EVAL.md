@@ -87,6 +87,12 @@ python -m tonesight_ns8.cli benchmark --suite core --out-root runs --goldset dat
 python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs --goldset data/goldset.jsonl
 ```
 
+Optional killer benchmark controls:
+
+```bash
+python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs --goldset data/goldset.jsonl --killer-profiles default,oscillation_path,boundary_jitter --killer-seeds 0,1,2,3,4 --killer-primary-strength 0.2 --killer-sweep-strengths 0.05,0.1,0.15,0.2,0.3 --killer-sample-multiplier 2
+```
+
 Optional observability API trigger:
 
 ```http

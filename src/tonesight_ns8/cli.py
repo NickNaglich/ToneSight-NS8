@@ -60,6 +60,38 @@ def _non_negative_int(value: str) -> int:
     return parsed
 
 
+def _positive_int(value: str) -> int:
+    parsed = _non_negative_int(value)
+    if parsed < 1:
+        raise argparse.ArgumentTypeError(f"{parsed} is invalid; expected integer >= 1")
+    return parsed
+
+
+def _csv_strings(value: str) -> list[str]:
+    parts = [part.strip() for part in value.split(",")]
+    return [part for part in parts if part]
+
+
+def _csv_ints(value: str) -> list[int]:
+    out: list[int] = []
+    for part in _csv_strings(value):
+        try:
+            out.append(int(part))
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError(f"{part!r} is not an integer") from exc
+    return out
+
+
+def _csv_floats(value: str) -> list[float]:
+    out: list[float] = []
+    for part in _csv_strings(value):
+        try:
+            out.append(float(part))
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError(f"{part!r} is not a float") from exc
+    return out
+
+
 def _to_jsonable(value: Any) -> Any:
     if is_dataclass(value):
         return asdict(value)
@@ -325,10 +357,18 @@ def _cmd_release_check(args: argparse.Namespace) -> dict:
 
 
 def _cmd_benchmark(args: argparse.Namespace) -> dict:
+    killer_profiles = _csv_strings(args.killer_profiles) if args.killer_profiles else None
+    killer_seeds = _csv_ints(args.killer_seeds) if args.killer_seeds else None
+    killer_sweep_strengths = _csv_floats(args.killer_sweep_strengths) if args.killer_sweep_strengths else None
     return run_benchmark_suite(
         suite=args.suite,
         out_root=args.out_root,
         goldset_path=args.goldset,
+        killer_profiles=killer_profiles,
+        killer_seeds=killer_seeds,
+        killer_primary_strength=args.killer_primary_strength,
+        killer_sweep_strengths=killer_sweep_strengths,
+        killer_sample_multiplier=args.killer_sample_multiplier,
     )
 
 
@@ -536,6 +576,30 @@ def build_parser() -> argparse.ArgumentParser:
     benchmark_cmd.add_argument("--suite", choices=("core", "killer_stability"), default="core")
     benchmark_cmd.add_argument("--out-root", default=EVAL_DEFAULTS["out_root"])
     benchmark_cmd.add_argument("--goldset", default=ARTIFACT_DEFAULTS["goldset_path"])
+    benchmark_cmd.add_argument(
+        "--killer-profiles",
+        help="Optional comma-separated killer profiles (e.g. default,oscillation_path,boundary_jitter).",
+    )
+    benchmark_cmd.add_argument(
+        "--killer-seeds",
+        help="Optional comma-separated killer seeds (e.g. 0,1,2,3,4).",
+    )
+    benchmark_cmd.add_argument(
+        "--killer-primary-strength",
+        type=float,
+        default=0.20,
+        help="Primary killer drift strength used for C1/C2/C3/C4 comparisons.",
+    )
+    benchmark_cmd.add_argument(
+        "--killer-sweep-strengths",
+        help="Optional comma-separated drift sweep strengths (e.g. 0.05,0.1,0.15,0.2,0.3).",
+    )
+    benchmark_cmd.add_argument(
+        "--killer-sample-multiplier",
+        type=_positive_int,
+        default=1,
+        help="Deterministically replicate benchmark fixture rows before scoring.",
+    )
     benchmark_cmd.set_defaults(func=_cmd_benchmark)
 
     return parser

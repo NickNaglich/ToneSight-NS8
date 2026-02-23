@@ -106,7 +106,7 @@ python -m tonesight_ns8.cli eval
 - [ ] `determinism-matrix` job is green for all configured OS/Python entries
 - [ ] release notes summarize deterministic-impact vs docs-only changes
 - [ ] release notes include a scoped benchmark claim sentence (template below) when citing killer-stability results
-- [ ] version/tag chosen (`v0.1.x` or equivalent) and pushed
+- [ ] version/tag chosen (`v0.x` pre-1.0 series) and pushed
 
 Release-note scoped claim template:
 - "In this deterministic synthetic robustness protocol (fixed weights, 4 profiles x 5 seeds), ToneSight led by win-rate and mean separation ratio; results are controlled-protocol evidence and not independent-distribution validation."

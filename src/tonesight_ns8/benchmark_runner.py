@@ -402,10 +402,23 @@ def run_benchmark_suite(
     suite: str = "core",
     out_root: str = "runs",
     goldset_path: str = "data/goldset.jsonl",
+    killer_profiles: list[str] | None = None,
+    killer_seeds: list[int] | None = None,
+    killer_primary_strength: float = 0.20,
+    killer_sweep_strengths: list[float] | None = None,
+    killer_sample_multiplier: int = 1,
 ) -> dict[str, Any]:
     """Run deterministic benchmark suite and write JSON artifacts."""
     if suite == "killer_stability":
-        return run_killer_stability_benchmark(goldset_path=goldset_path, out_root=out_root)
+        return run_killer_stability_benchmark(
+            goldset_path=goldset_path,
+            out_root=out_root,
+            profiles=killer_profiles,
+            seeds=killer_seeds,
+            primary_drift_strength=killer_primary_strength,
+            drift_sweep_strengths=killer_sweep_strengths,
+            sample_multiplier=killer_sample_multiplier,
+        )
     if suite != "core":
         raise ValueError(f"Unknown benchmark suite: {suite}")
 

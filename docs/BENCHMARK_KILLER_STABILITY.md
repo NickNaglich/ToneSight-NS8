@@ -92,6 +92,7 @@ Required robustness summary fields:
 - `robustness_sweep.summary.ratio_stats_by_method.<method>.mean/std/min/max/p10/p50/p90`
 - `robustness_sweep.summary.absolute_criteria_pass_rate.<method>.*`
 - `robustness_sweep.summary.tonesight_loss_tag_counts`
+- `robustness_sweep.summary.by_profile.<profile>.*`
 - `robustness_sweep.runs[*].tonesight_loss_tags`
 
 ## Fixed Metric Policy
@@ -102,6 +103,15 @@ Required robustness summary fields:
   - `occupancy_jsd=0.1`
 - Use profile/seed variation to test robustness coverage, not to retune weights for higher win-rate.
 - If weights change in a future release, record the change explicitly as a protocol version update.
+
+Default robustness profiles:
+- `default`
+- `oscillation_path`
+- `temporal_ramp`
+- `subgroup_mixture`
+
+Additional available profile for independent synthetic stress:
+- `boundary_jitter` (bin-boundary sensitivity stress to separate topology vs occupancy behavior)
 
 ## Known Failure Regimes
 

@@ -95,6 +95,7 @@ Generated artifacts:
   - `robustness_sweep.summary.ratio_stats_by_method.<method>.mean/std/min/max/p10/p50/p90`
   - `robustness_sweep.summary.absolute_criteria_pass_rate.<method>.*`
   - `robustness_sweep.summary.tonesight_loss_tag_counts`
+  - `robustness_sweep.summary.by_profile.<profile>.*`
 
 Current reproducible snapshot (`N=250`, `runs/benchmarks/killer_stability/robustness_summary.json`):
 - ToneSight: wins `10/20`, ratio stats `mean=1.037`, `p50=0.867`, `p90=1.644`, `max=1.789`

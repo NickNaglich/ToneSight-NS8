@@ -119,3 +119,38 @@ def test_cli_benchmark_killer_stability_writes_evidence(capsys):
     summary = evidence["robustness_sweep"]["summary"]
     assert "absolute_criteria_pass_rate" in summary
     assert "tonesight_loss_tag_counts" in summary
+
+
+def test_cli_benchmark_killer_stability_accepts_overrides(capsys):
+    out_root = _temp_dir("tmp_killer_stability_cli_overrides")
+    rc = main(
+        [
+            "benchmark",
+            "--suite",
+            "killer_stability",
+            "--out-root",
+            str(out_root),
+            "--goldset",
+            "data/goldset.jsonl",
+            "--killer-profiles",
+            "default,boundary_jitter",
+            "--killer-seeds",
+            "0,1",
+            "--killer-primary-strength",
+            "0.25",
+            "--killer-sweep-strengths",
+            "0.1,0.2,0.3",
+            "--killer-sample-multiplier",
+            "2",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert payload["sample_count"] == 500
+    evidence_path = Path(payload["artifacts"]["evidence"])
+    evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+    assert evidence["config"]["sample_multiplier"] == 2
+    assert evidence["config"]["primary_drift_strength"] == 0.25
+    assert evidence["config"]["drift_sweep_strengths"] == [0.1, 0.2, 0.3]
+    assert evidence["config"]["robustness"]["profiles"] == ["default", "boundary_jitter"]
+    assert evidence["config"]["robustness"]["seeds"] == [0, 1]
