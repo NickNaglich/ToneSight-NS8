@@ -759,41 +759,78 @@ curl -X POST http://localhost:8080/eval/run \
 ```text
 .
 |-- README.md
+|-- pyproject.toml
+|-- docker-compose.yml
 |-- LICENSE
 |-- ns8_ref.py
+|-- src/
+|   `-- tonesight_ns8/
+|       |-- api.py
+|       |-- cli.py
+|       |-- eval_runner.py
+|       |-- compare_runner.py
+|       |-- gate_runner.py
+|       |-- stream_runner.py
+|       |-- report_runner.py
+|       |-- benchmark_killer_stability.py
+|       `-- ...
+|-- data/
+|   |-- goldset.jsonl
+|   `-- pseudo_real_trace.jsonl
 |-- vectors/
 |   `-- ns8_test_vectors.json
 |-- taxonomy/
 |   `-- tone_taxonomy.v1.json
-|-- test_ns8_vectors.py
-|-- test_tone_taxonomy.py
+|-- config/
+|   |-- defaults.json
+|   |-- gate_profiles.json
+|   |-- taxonomy_calibration.v1.json
+|   `-- vad_quantization.v1.json
 |-- docs/
+|   |-- ANALYTICS.md
 |   |-- API_REFERENCE.md
+|   |-- BENCHMARK_KILLER_STABILITY.md
 |   |-- CANONICAL_ID_POLICY.md
 |   |-- DEFAULTS_SCHEMA.md
 |   |-- DERIVED_METRICS.md
 |   |-- EVAL.md
+|   |-- IDENTITY_AND_HASHING.md
+|   |-- INCIDENT_PLAYBOOK.md
+|   |-- LIVE_COMPATIBILITY.md
+|   |-- LIVE_EVENT_SCHEMA.md
 |   |-- MONITORING.md
 |   |-- NS8_CONTRACT_ASSURANCE.md
+|   |-- PRIVACY_REDACTION.md
+|   |-- RECIPES/
+|   |   `-- drift_monitoring.md
 |   |-- RELEASE_CHECKLIST.md
+|   |-- RELEASE_NOTES_0.2.2.md
 |   |-- RECEIPT_SCHEMA.md
+|   |-- RETENTION_POLICY.md
+|   |-- SECURITY_POLICY.md
 |   |-- SPEC_NS8.md
 |   |-- SEGMENT_INTERFACE.md
 |   `-- WHY_NS8.md
-|-- config/
-|   |-- defaults.json
-|   `-- vad_quantization.v1.json
 |-- benchmarks/
 |   |-- baselines.py
 |   |-- drift_injection.py
 |   |-- model_swap_robustness.py
 |   |-- noise_tolerance.py
 |   `-- README.md
+|-- examples/
+|   |-- batch_adapters_demo.py
+|   |-- demo_compute.py
+|   `-- ns8_drift_demo.py
 |-- tools/
+|   |-- check_nosec_policy.py
 |   `-- regen_vectors.py
-|-- Makefile
-|-- PROJECT_BRIEF.md
-`-- tests/
+|-- tests/
+|   |-- test_stream_runner.py
+|   |-- test_report_runner.py
+|   |-- test_benchmark_killer_stability.py
+|   `-- ...
+|-- test_cli.py
+`-- test_ns8_vectors.py
 ```
 
 Note: The current layout uses a reference implementation (`ns8_ref.py`).

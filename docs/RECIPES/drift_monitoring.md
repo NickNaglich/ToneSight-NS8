@@ -53,8 +53,8 @@ Review:
 ## 6) Maintain rolling stream state (optional live-like mode)
 
 ```bash
-python -m tonesight_ns8.cli stream-update --segments-json examples/stream_segments.json --session-id session_ops --state-out runs/stream/session_ops.json
-python -m tonesight_ns8.cli stream-update --segments-json examples/stream_segments_next.json --state-in runs/stream/session_ops.json --state-out runs/stream/session_ops.json
+python -m tonesight_ns8.cli stream-update --segments-json segments_batch.json --session-id session_ops --state-out runs/stream/session_ops.json
+python -m tonesight_ns8.cli stream-update --segments-json segments_batch_next.json --state-in runs/stream/session_ops.json --state-out runs/stream/session_ops.json
 ```
 
 Behavior:

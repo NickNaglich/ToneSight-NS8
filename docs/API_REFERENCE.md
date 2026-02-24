@@ -194,6 +194,7 @@ Current wrappers support optional `mapping_id`:
 CLI support:
 - `encode ... --mapping ns8`
 - `decode ... --mapping ns8`
+- `stream-update --segments-json <segments.json> [--state-in <state.json>] [--state-out <state.json>] [--session-id <id>]`
 - `live-capture --events <path>`
 - `live-replay --capture <capture_dir_or_events_jsonl>`
 - `live-verify --capture <capture_dir_or_events_jsonl>`

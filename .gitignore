@@ -22,6 +22,8 @@ pytest-cache-files-*/
 # Local run artifacts
 runs/
 .agent/
+.agent/LOGS/CHANGE_LOG.md
+.agent/TO-DO/PHASED_WORKFLOW.md
 .agent/tmp_runs*/
 .agent/tmp_runs_*/
 .agent/tmp_compare*/
