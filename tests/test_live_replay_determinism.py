@@ -3,6 +3,8 @@ import shutil
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
+
 import tonesight_ns8.live_runner as live_runner_module
 from tonesight_ns8.live_runner import run_live_capture, run_live_replay, run_live_verify
 
@@ -151,3 +153,90 @@ def test_live_replay_receipt_code_revision_optional_semantics(monkeypatch):
         shadow_strict="quarantine",
     )
     assert "code_revision" not in replay_without["receipt"]
+
+
+def test_live_replay_coding_agent_adapter_emits_bins_and_adapter_receipt():
+    out_root = _temp_dir("tmp_live_coding_agent")
+    events_path = out_root / "events.coding_agent.jsonl"
+    rows = [
+        {
+            "event_id": "evt_coding_1",
+            "source": "coding_agent",
+            "timestamp_received": "2026-02-25T12:00:00Z",
+            "text": "import os\n\ndef solve(x):\n    try:\n        return x\n    except Exception:\n        raise\n",
+            "meta": {
+                "session_id": "s1",
+                "agent_id": "coder",
+                "expected_language": "python",
+                "tool_calls": 1,
+                "provider": "ollama",
+                "model_tag": "qwen3-coder:latest",
+                "model_digest": "sha256:abc123",
+                "generation_settings": {"temperature": 0, "top_p": 1, "seed": 1},
+            },
+            "privacy_flags": {"contains_pii": False, "allow_store_raw": False},
+        }
+    ]
+    events_path.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+    capture = run_live_capture(str(events_path), out_root=str(out_root))
+    replay = run_live_replay(
+        capture["capture_dir"],
+        out_root=str(out_root),
+        taxonomy_path="taxonomy/tone_taxonomy.v1.json",
+        threshold_l1=3,
+        shadow_strict="quarantine",
+        adapter="coding_agent",
+    )
+    out_rows = [json.loads(line) for line in (Path(replay["out_dir"]) / "out.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
+    assert replay["summary"]["count_rows"] == 1
+    assert out_rows[0]["adapter_id"] == "coding_agent"
+    assert "coding_agent_features" in out_rows[0]
+    assert "coding_agent_bins" in out_rows[0]
+    assert replay["receipt"]["adapter_id"] == "coding_agent"
+    assert replay["receipt"]["config"]["adapter"] == "coding_agent"
+    assert replay["receipt"]["provider"] == "ollama"
+    assert replay["receipt"]["model_tag"] == "qwen3-coder:latest"
+    assert replay["receipt"]["model_digest"] == "sha256:abc123"
+    assert replay["receipt"]["generation_settings"] == {"seed": 1, "temperature": 0, "top_p": 1}
+    assert replay["receipt"]["capture_schema_version"] == "1.0"
+
+
+def test_live_verify_coding_agent_adapter_stable():
+    out_root = _temp_dir("tmp_live_verify_coding_agent")
+    events_path = out_root / "events.coding_agent.verify.jsonl"
+    rows = [
+        {
+            "event_id": "evt_coding_2",
+            "source": "coding_agent",
+            "timestamp_received": "2026-02-25T12:00:00Z",
+            "text": "const x: string = 'ok';\ntry { return x; } catch (e) { throw e; }",
+            "meta": {"session_id": "s2", "agent_id": "coder", "expected_language": "typescript"},
+            "privacy_flags": {"contains_pii": False, "allow_store_raw": False},
+        }
+    ]
+    events_path.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+    capture = run_live_capture(str(events_path), out_root=str(out_root))
+    verify = run_live_verify(
+        capture["capture_dir"],
+        out_root=str(out_root),
+        taxonomy_path="taxonomy/tone_taxonomy.v1.json",
+        threshold_l1=3,
+        shadow_strict="quarantine",
+        adapter="coding_agent",
+    )
+    assert verify["stable"] is True
+    assert verify["mismatched_artifacts"] == []
+
+
+def test_live_replay_unknown_adapter_rejected():
+    out_root = _temp_dir("tmp_live_unknown_adapter")
+    capture = run_live_capture("tests/fixtures/live_capture.small.jsonl", out_root=str(out_root))
+    with pytest.raises(ValueError, match="unknown live adapter"):
+        run_live_replay(
+            capture["capture_dir"],
+            out_root=str(out_root),
+            taxonomy_path="taxonomy/tone_taxonomy.v1.json",
+            threshold_l1=3,
+            shadow_strict="quarantine",
+            adapter="not_supported",
+        )

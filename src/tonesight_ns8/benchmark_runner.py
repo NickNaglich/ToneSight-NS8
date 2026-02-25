@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .benchmark_killer_stability import run_killer_stability_benchmark
+from .coding_agent_adapter import adapt_coding_agent_event
 from .ns8 import compute_A
 
 
@@ -397,6 +398,121 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _mean(values: list[float]) -> float:
+    if not values:
+        return 0.0
+    return float(sum(values) / len(values))
+
+
+def _coding_agent_summary(events: list[dict[str, Any]]) -> dict[str, Any]:
+    feature_rows: list[dict[str, Any]] = []
+    for event in events:
+        payload = adapt_coding_agent_event(event)
+        features = payload["features"]
+        bins = payload["bins"]
+        feature_rows.append(
+            {
+                "event_id": str(event.get("event_id", "")),
+                "lang_detected": str(features.get("lang_detected", "")),
+                "lang_expected": str(features.get("lang_expected", "")),
+                "lang_mismatch": int(features.get("lang_mismatch", 0)),
+                "response_lines": int(features.get("response_lines", 0)),
+                "test_markers": int(features.get("test_markers", 0)),
+                "tool_call_count": int(features.get("tool_call_count", 0)),
+                "verbosity_bin": int(bins.get("verbosity_bin", 1)),
+                "tests_bin": int(bins.get("tests_bin", 1)),
+                "tool_call_bin": int(bins.get("tool_call_bin", 1)),
+                "lang_mismatch_bin": int(bins.get("lang_mismatch_bin", 1)),
+            }
+        )
+    feature_rows = sorted(feature_rows, key=lambda row: (row["event_id"], row["lang_detected"], row["lang_expected"]))
+
+    mismatch_rate = _mean([float(row["lang_mismatch"]) for row in feature_rows])
+    verbosity_bin_mean = _mean([float(row["verbosity_bin"]) for row in feature_rows])
+    tests_presence_rate = _mean([1.0 if int(row["test_markers"]) > 0 else 0.0 for row in feature_rows])
+    tool_call_rate = _mean([1.0 if int(row["tool_call_count"]) > 0 else 0.0 for row in feature_rows])
+
+    return {
+        "count_events": len(feature_rows),
+        "metrics": {
+            "language_mismatch_rate": mismatch_rate,
+            "verbosity_bin_mean": verbosity_bin_mean,
+            "tests_presence_rate": tests_presence_rate,
+            "tool_call_rate": tool_call_rate,
+        },
+        "rows": feature_rows,
+    }
+
+
+def _metric_deltas(baseline: dict[str, float], candidate: dict[str, float]) -> dict[str, float]:
+    keys = sorted(set(baseline).intersection(candidate))
+    return {key: float(candidate[key]) - float(baseline[key]) for key in keys}
+
+
+def run_coding_agent_drift_benchmark(
+    *,
+    out_root: str = "runs",
+    baseline_events_path: str = "tests/fixtures/live_event.coding_agent.python.jsonl",
+    candidate_events_paths: list[str] | None = None,
+) -> dict[str, Any]:
+    if candidate_events_paths is None:
+        candidate_events_paths = [
+            "tests/fixtures/live_event.coding_agent.typescript.jsonl",
+            "tests/fixtures/live_event.coding_agent.mismatch.jsonl",
+        ]
+    candidates = [str(path) for path in candidate_events_paths if str(path).strip()]
+    if not candidates:
+        raise ValueError("coding_agent_drift benchmark requires at least one candidate events path")
+
+    baseline_path = Path(baseline_events_path)
+    baseline_events = _read_jsonl(baseline_path)
+    baseline_summary = _coding_agent_summary(baseline_events)
+    baseline_metrics = baseline_summary["metrics"]
+
+    candidate_summaries: dict[str, Any] = {}
+    for candidate_path_raw in sorted(candidates):
+        candidate_path = Path(candidate_path_raw)
+        candidate_events = _read_jsonl(candidate_path)
+        summary = _coding_agent_summary(candidate_events)
+        summary["metric_deltas_vs_baseline"] = _metric_deltas(baseline_metrics, summary["metrics"])
+        candidate_summaries[str(candidate_path)] = summary
+
+    base_dir = Path(out_root) / "benchmarks" / "coding_agent_drift"
+    artifacts = {
+        "evidence": str(base_dir / "evidence.json"),
+        "report": str(base_dir / "report.json"),
+    }
+    evidence = {
+        "spec_version": "1.0",
+        "benchmark_schema_version": "1.0",
+        "suite": "coding_agent_drift",
+        "fixtures": {
+            "baseline_events_path": str(baseline_path),
+            "candidate_events_paths": sorted(candidate_summaries.keys()),
+        },
+        "baseline": baseline_summary,
+        "candidates": candidate_summaries,
+        "artifacts": artifacts,
+    }
+    report = {
+        "spec_version": "1.0",
+        "suite": "coding_agent_drift",
+        "out_root": out_root,
+        "baseline_events_path": str(baseline_path),
+        "candidate_count": len(candidate_summaries),
+        "artifacts": artifacts,
+        "results": {
+            "baseline_metrics": baseline_metrics,
+            "candidate_metric_deltas": {
+                path: summary["metric_deltas_vs_baseline"] for path, summary in sorted(candidate_summaries.items())
+            },
+        },
+    }
+    _write_json(Path(artifacts["evidence"]), evidence)
+    _write_json(Path(artifacts["report"]), report)
+    return report
+
+
 def run_benchmark_suite(
     *,
     suite: str = "core",
@@ -407,6 +523,8 @@ def run_benchmark_suite(
     killer_primary_strength: float = 0.20,
     killer_sweep_strengths: list[float] | None = None,
     killer_sample_multiplier: int = 1,
+    coding_baseline_events: str = "tests/fixtures/live_event.coding_agent.python.jsonl",
+    coding_candidate_events: list[str] | None = None,
 ) -> dict[str, Any]:
     """Run deterministic benchmark suite and write JSON artifacts."""
     if suite == "killer_stability":
@@ -418,6 +536,12 @@ def run_benchmark_suite(
             primary_drift_strength=killer_primary_strength,
             drift_sweep_strengths=killer_sweep_strengths,
             sample_multiplier=killer_sample_multiplier,
+        )
+    if suite == "coding_agent_drift":
+        return run_coding_agent_drift_benchmark(
+            out_root=out_root,
+            baseline_events_path=coding_baseline_events,
+            candidate_events_paths=coding_candidate_events,
         )
     if suite != "core":
         raise ValueError(f"Unknown benchmark suite: {suite}")

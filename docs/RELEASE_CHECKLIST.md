@@ -13,6 +13,8 @@ python tools/check_nosec_policy.py
 python -m bandit -r src
 python -m tonesight_ns8.cli release-check --goldset data/goldset.jsonl --taxonomy taxonomy/tone_taxonomy.v1.json
 python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs --goldset data/goldset.jsonl
+python -m tonesight_ns8.cli benchmark --suite coding_agent_drift --out-root runs --coding-baseline-events tests/fixtures/live_event.coding_agent.python.jsonl --coding-candidate-events tests/fixtures/live_event.coding_agent.typescript.jsonl,tests/fixtures/live_event.coding_agent.mismatch.jsonl
+python -m tonesight_ns8.cli gate --run-a runs/<baseline_live_run> --run-b runs/<candidate_live_run> --profile coding_agent_drift --allow-dataset-mismatch
 python -m pytest -q
 python tools/regen_vectors.py
 git diff --exit-code
@@ -44,6 +46,10 @@ python -m tonesight_ns8.cli bundle --run-b runs/<run_id>
 - killer robustness artifacts are generated at:
   - `runs/benchmarks/killer_stability/robustness_summary.json`
   - `runs/benchmarks/killer_stability/robustness_report.html`
+- coding-agent drift evidence artifacts are generated at:
+  - `runs/benchmarks/coding_agent_drift/evidence.json`
+  - `runs/benchmarks/coding_agent_drift/report.json`
+- coding-agent drift gate profile enforces pinned model identity compatibility (`provider` + model identity + generation settings)
 - release review includes false/true drift separation ratio comparison across ToneSight and baselines
 - full test suite passes
 - warnings are triaged/documented; no unexpected warnings are introduced

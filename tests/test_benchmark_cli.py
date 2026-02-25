@@ -182,3 +182,66 @@ def test_cli_benchmark_killer_stability_pseudo_real_trace_demo(capsys):
     evidence = json.loads(Path(payload["artifacts"]["evidence"]).read_text(encoding="utf-8"))
     assert evidence["dataset_path"].replace("\\", "/").endswith("data/pseudo_real_trace.jsonl")
     assert evidence["config"]["robustness"]["profiles"] == ["default", "phase_flip_cycle"]
+
+
+def test_cli_benchmark_coding_agent_drift_writes_expected_artifacts(capsys):
+    out_root = _temp_dir("tmp_coding_agent_drift_cli")
+    rc = main(
+        [
+            "benchmark",
+            "--suite",
+            "coding_agent_drift",
+            "--out-root",
+            str(out_root),
+            "--coding-baseline-events",
+            "tests/fixtures/live_event.coding_agent.python.jsonl",
+            "--coding-candidate-events",
+            "tests/fixtures/live_event.coding_agent.typescript.jsonl,tests/fixtures/live_event.coding_agent.mismatch.jsonl",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert payload["suite"] == "coding_agent_drift"
+    report_path = Path(payload["artifacts"]["report"])
+    evidence_path = Path(payload["artifacts"]["evidence"])
+    assert report_path.exists()
+    assert evidence_path.exists()
+    evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+    assert evidence["suite"] == "coding_agent_drift"
+    assert evidence["baseline"]["count_events"] == 2
+    assert len(evidence["candidates"]) == 2
+    mismatch_key = next(
+        key for key in evidence["candidates"] if key.replace("\\", "/").endswith("live_event.coding_agent.mismatch.jsonl")
+    )
+    mismatch_metrics = evidence["candidates"][mismatch_key]["metrics"]
+    assert mismatch_metrics["language_mismatch_rate"] > 0.0
+
+
+def test_cli_benchmark_coding_agent_drift_is_repeatable(capsys):
+    out_root = _temp_dir("tmp_coding_agent_drift_repeatable")
+    argv = [
+        "benchmark",
+        "--suite",
+        "coding_agent_drift",
+        "--out-root",
+        str(out_root),
+        "--coding-baseline-events",
+        "tests/fixtures/live_event.coding_agent.python.jsonl",
+        "--coding-candidate-events",
+        "tests/fixtures/live_event.coding_agent.typescript.jsonl,tests/fixtures/live_event.coding_agent.mismatch.jsonl",
+    ]
+    rc_first = main(argv)
+    first_payload = json.loads(capsys.readouterr().out)
+    assert rc_first == 0
+    first_report = Path(first_payload["artifacts"]["report"]).read_bytes()
+    first_evidence = Path(first_payload["artifacts"]["evidence"]).read_bytes()
+
+    rc_second = main(argv)
+    second_payload = json.loads(capsys.readouterr().out)
+    assert rc_second == 0
+    second_report = Path(second_payload["artifacts"]["report"]).read_bytes()
+    second_evidence = Path(second_payload["artifacts"]["evidence"]).read_bytes()
+
+    assert first_payload["artifacts"] == second_payload["artifacts"]
+    assert first_report == second_report
+    assert first_evidence == second_evidence

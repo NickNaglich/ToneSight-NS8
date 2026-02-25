@@ -9,6 +9,8 @@ def test_load_gate_profiles_has_required_profiles():
     assert "support_chat" in profiles
     assert "sales_chat" in profiles
     assert "strict_regression" in profiles
+    assert "coding_agent_drift" in profiles
+    assert profiles["coding_agent_drift"]["require_pinned_model_identity"] is True
 
 
 def test_gate_unknown_profile_raises():
@@ -16,4 +18,3 @@ def test_gate_unknown_profile_raises():
         run_gate("missing_a", "missing_b", profile="does_not_exist")
     except Exception as exc:
         assert "Unknown gate profile" in str(exc)
-

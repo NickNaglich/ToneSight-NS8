@@ -214,6 +214,7 @@ def _cmd_gate(args: argparse.Namespace) -> dict:
         min_pass_rate_delta=args.min_pass_rate_delta,
         max_avg_l1_delta=args.max_avg_l1_delta,
         max_p95_l1_delta=args.max_p95_l1_delta,
+        require_pinned_model_identity=args.require_pinned_model_identity,
         top_n=args.top_n,
         require_dataset_match=not args.allow_dataset_mismatch,
     )
@@ -295,6 +296,7 @@ def _cmd_live_replay(args: argparse.Namespace) -> dict:
         threshold_l1=args.threshold_l1,
         shadow_strict=args.shadow_strict,
         redact=not args.disable_redaction,
+        adapter=args.adapter,
     )
 
 
@@ -306,6 +308,7 @@ def _cmd_live_verify(args: argparse.Namespace) -> dict:
         threshold_l1=args.threshold_l1,
         shadow_strict=args.shadow_strict,
         redact=not args.disable_redaction,
+        adapter=args.adapter,
     )
 
 
@@ -361,6 +364,7 @@ def _cmd_benchmark(args: argparse.Namespace) -> dict:
     killer_profiles = _csv_strings(args.killer_profiles) if args.killer_profiles else None
     killer_seeds = _csv_ints(args.killer_seeds) if args.killer_seeds else None
     killer_sweep_strengths = _csv_floats(args.killer_sweep_strengths) if args.killer_sweep_strengths else None
+    coding_candidate_events = _csv_strings(args.coding_candidate_events) if args.coding_candidate_events else None
     return run_benchmark_suite(
         suite=args.suite,
         out_root=args.out_root,
@@ -370,6 +374,8 @@ def _cmd_benchmark(args: argparse.Namespace) -> dict:
         killer_primary_strength=args.killer_primary_strength,
         killer_sweep_strengths=killer_sweep_strengths,
         killer_sample_multiplier=args.killer_sample_multiplier,
+        coding_baseline_events=args.coding_baseline_events,
+        coding_candidate_events=coding_candidate_events,
     )
 
 
@@ -459,6 +465,11 @@ def build_parser() -> argparse.ArgumentParser:
     gate_cmd.add_argument("--max-avg-l1-delta", type=float, default=None)
     gate_cmd.add_argument("--max-p95-l1-delta", type=float, default=None)
     gate_cmd.add_argument(
+        "--require-pinned-model-identity",
+        action="store_true",
+        help="Require provider/model identity and generation settings compatibility in receipts.",
+    )
+    gate_cmd.add_argument(
         "--allow-dataset-mismatch",
         action="store_true",
         help="Disable dataset_hash compatibility gate (useful for live non-goldset comparisons).",
@@ -528,6 +539,7 @@ def build_parser() -> argparse.ArgumentParser:
     live_replay_cmd.add_argument("--taxonomy", default=EVAL_DEFAULTS["taxonomy_path"])
     live_replay_cmd.add_argument("--threshold-l1", type=_non_negative_int, default=EVAL_DEFAULTS["threshold_l1"])
     live_replay_cmd.add_argument("--shadow-strict", choices=("fail", "drop", "quarantine"), default="quarantine")
+    live_replay_cmd.add_argument("--adapter", choices=("upstream_signal", "coding_agent"), default="upstream_signal")
     live_replay_cmd.add_argument("--disable-redaction", action="store_true")
     live_replay_cmd.set_defaults(func=_cmd_live_replay)
 
@@ -537,6 +549,7 @@ def build_parser() -> argparse.ArgumentParser:
     live_verify_cmd.add_argument("--taxonomy", default=EVAL_DEFAULTS["taxonomy_path"])
     live_verify_cmd.add_argument("--threshold-l1", type=_non_negative_int, default=EVAL_DEFAULTS["threshold_l1"])
     live_verify_cmd.add_argument("--shadow-strict", choices=("fail", "drop", "quarantine"), default="quarantine")
+    live_verify_cmd.add_argument("--adapter", choices=("upstream_signal", "coding_agent"), default="upstream_signal")
     live_verify_cmd.add_argument("--disable-redaction", action="store_true")
     live_verify_cmd.set_defaults(func=_cmd_live_verify)
 
@@ -585,7 +598,7 @@ def build_parser() -> argparse.ArgumentParser:
         "benchmark",
         help="Run deterministic benchmark evidence suite and write JSON artifacts.",
     )
-    benchmark_cmd.add_argument("--suite", choices=("core", "killer_stability"), default="core")
+    benchmark_cmd.add_argument("--suite", choices=("core", "killer_stability", "coding_agent_drift"), default="core")
     benchmark_cmd.add_argument("--out-root", default=EVAL_DEFAULTS["out_root"])
     benchmark_cmd.add_argument("--goldset", default=ARTIFACT_DEFAULTS["goldset_path"])
     benchmark_cmd.add_argument(
@@ -611,6 +624,15 @@ def build_parser() -> argparse.ArgumentParser:
         type=_positive_int,
         default=1,
         help="Deterministically replicate benchmark fixture rows before scoring.",
+    )
+    benchmark_cmd.add_argument(
+        "--coding-baseline-events",
+        default="tests/fixtures/live_event.coding_agent.python.jsonl",
+        help="Baseline LiveEvent JSONL for coding_agent_drift suite.",
+    )
+    benchmark_cmd.add_argument(
+        "--coding-candidate-events",
+        help="Optional comma-separated candidate LiveEvent JSONL files for coding_agent_drift suite.",
     )
     benchmark_cmd.set_defaults(func=_cmd_benchmark)
 

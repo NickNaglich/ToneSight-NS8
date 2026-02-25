@@ -41,6 +41,11 @@ def _mk_run(
     mapping_id: str = "ns8",
     mapping_version: str = "1.0",
     calibration_path: str | None = None,
+    provider: str | None = None,
+    model_tag: str | None = None,
+    model_digest: str | None = None,
+    model_version: str | None = None,
+    generation_settings: dict | None = None,
 ) -> None:
     path.mkdir(parents=True, exist_ok=True)
     _write_json(
@@ -68,6 +73,11 @@ def _mk_run(
             "mapping_id": mapping_id,
             "mapping_version": mapping_version,
             "row_count": len(rows),
+            "provider": provider,
+            "model_tag": model_tag,
+            "model_digest": model_digest,
+            "model_version": model_version,
+            "generation_settings": generation_settings if isinstance(generation_settings, dict) else {},
             "config": {
                 "threshold_l1": 3,
                 "taxonomy_path": "taxonomy/tone_taxonomy.v1.json",
@@ -75,6 +85,11 @@ def _mk_run(
                 "mapping_id": mapping_id,
                 "mapping_version": mapping_version,
                 "defaults_spec_version": defaults_spec_version,
+                "provider": provider,
+                "model_tag": model_tag,
+                "model_digest": model_digest,
+                "model_version": model_version,
+                "generation_settings": generation_settings if isinstance(generation_settings, dict) else {},
             },
             "artifacts": {
                 "out_jsonl": str(path / "out.jsonl"),
@@ -354,3 +369,73 @@ def test_cli_gate_profile(capsys):
     payload = json.loads(capsys.readouterr().out)
     assert rc == 0
     assert payload["profile"] == "support_chat"
+
+
+def test_run_gate_require_pinned_identity_missing_is_incompatible():
+    root = _temp_dir("tmp_gate_pinned_missing")
+    run_a = root / "run_A"
+    run_b = root / "run_B"
+    rows = [{"id": "id_1", "label": "calm", "compliance_l1": 1, "delta_v": 0, "delta_a": 1, "delta_d": 0, "pass": True}]
+    _mk_run(
+        run_a,
+        run_id="run_A",
+        dataset_hash="abc123",
+        spec_version="1.0",
+        pass_rate=1.0,
+        avg_l1=1.0,
+        p95_l1=1.0,
+        rows=rows,
+    )
+    _mk_run(
+        run_b,
+        run_id="run_B",
+        dataset_hash="abc123",
+        spec_version="1.0",
+        pass_rate=1.0,
+        avg_l1=1.0,
+        p95_l1=1.0,
+        rows=rows,
+    )
+    payload = run_gate(str(run_a), str(run_b), require_pinned_model_identity=True)
+    assert payload["decision"] == "incompatible"
+    reasons = {item["reason"] for item in payload["incompatibilities"]}
+    assert "pinned_model_identity_missing" in reasons
+
+
+def test_run_gate_profile_coding_agent_drift_requires_pinned_identity():
+    root = _temp_dir("tmp_gate_profile_coding_agent")
+    run_a = root / "run_A"
+    run_b = root / "run_B"
+    rows = [{"id": "id_1", "label": "calm", "compliance_l1": 0, "delta_v": 0, "delta_a": 0, "delta_d": 0, "pass": True}]
+    _mk_run(
+        run_a,
+        run_id="run_A",
+        dataset_hash="abc123",
+        spec_version="1.0",
+        pass_rate=1.0,
+        avg_l1=0.0,
+        p95_l1=0.0,
+        rows=rows,
+        provider="ollama",
+        model_tag="qwen3-coder:latest",
+        model_digest="sha256:111",
+        generation_settings={"temperature": 0, "top_p": 1},
+    )
+    _mk_run(
+        run_b,
+        run_id="run_B",
+        dataset_hash="abc123",
+        spec_version="1.0",
+        pass_rate=1.0,
+        avg_l1=0.0,
+        p95_l1=0.0,
+        rows=rows,
+        provider="ollama",
+        model_tag="qwen3-coder:latest",
+        model_digest="sha256:222",
+        generation_settings={"temperature": 0, "top_p": 1},
+    )
+    payload = run_gate(str(run_a), str(run_b), profile="coding_agent_drift")
+    assert payload["decision"] == "incompatible"
+    reasons = {item["reason"] for item in payload["incompatibilities"]}
+    assert "model_identity_mismatch" in reasons

@@ -13,6 +13,7 @@ _DEFAULT_THRESHOLDS = {
     "min_pass_rate_delta": -0.02,
     "max_avg_l1_delta": 0.2,
     "max_p95_l1_delta": 0.2,
+    "require_pinned_model_identity": False,
 }
 
 
@@ -25,19 +26,25 @@ def _compatibility_issues(
     run_b: Path,
     *,
     require_dataset_match: bool = True,
+    require_pinned_model_identity: bool = False,
 ) -> tuple[dict[str, Any], dict[str, Any], list[dict[str, str]]]:
     receipt_a = _read_json(run_a / "receipt.json")
     receipt_b = _read_json(run_b / "receipt.json")
-    issues = compatibility_issues(receipt_a, receipt_b, require_dataset_match=require_dataset_match)
+    issues = compatibility_issues(
+        receipt_a,
+        receipt_b,
+        require_dataset_match=require_dataset_match,
+        require_pinned_model_identity=require_pinned_model_identity,
+    )
     return receipt_a, receipt_b, issues
 
 
-def _load_gate_profiles(path: Path) -> dict[str, dict[str, float]]:
+def _load_gate_profiles(path: Path) -> dict[str, dict[str, float | bool]]:
     payload = _read_json(path)
     profiles = payload.get("profiles")
     if not isinstance(profiles, dict):
         raise ValueError(f"Invalid gate profiles config at {path}: profiles must be object")
-    out: dict[str, dict[str, float]] = {}
+    out: dict[str, dict[str, float | bool]] = {}
     for name, raw in profiles.items():
         if not isinstance(raw, dict):
             raise ValueError(f"Invalid gate profile {name!r}: must be object")
@@ -46,6 +53,7 @@ def _load_gate_profiles(path: Path) -> dict[str, dict[str, float]]:
                 "min_pass_rate_delta": float(raw["min_pass_rate_delta"]),
                 "max_avg_l1_delta": float(raw["max_avg_l1_delta"]),
                 "max_p95_l1_delta": float(raw["max_p95_l1_delta"]),
+                "require_pinned_model_identity": bool(raw.get("require_pinned_model_identity", False)),
             }
         except KeyError as exc:
             raise ValueError(f"Invalid gate profile {name!r}: missing {exc.args[0]}") from exc
@@ -59,7 +67,7 @@ def _resolve_thresholds(
     min_pass_rate_delta: float | None,
     max_avg_l1_delta: float | None,
     max_p95_l1_delta: float | None,
-) -> tuple[dict[str, float], str | None]:
+) -> tuple[dict[str, float | bool], str | None]:
     resolved = dict(_DEFAULT_THRESHOLDS)
     selected_profile: str | None = None
     if profile:
@@ -86,6 +94,7 @@ def run_gate(
     min_pass_rate_delta: float | None = None,
     max_avg_l1_delta: float | None = None,
     max_p95_l1_delta: float | None = None,
+    require_pinned_model_identity: bool | None = None,
     top_n: int = 10,
     require_dataset_match: bool = True,
 ) -> dict[str, Any]:
@@ -97,6 +106,8 @@ def run_gate(
         max_avg_l1_delta=max_avg_l1_delta,
         max_p95_l1_delta=max_p95_l1_delta,
     )
+    if require_pinned_model_identity is not None:
+        thresholds["require_pinned_model_identity"] = bool(require_pinned_model_identity)
 
     run_a_path = Path(run_a)
     run_b_path = Path(run_b)
@@ -104,6 +115,7 @@ def run_gate(
         run_a_path,
         run_b_path,
         require_dataset_match=require_dataset_match,
+        require_pinned_model_identity=bool(thresholds.get("require_pinned_model_identity", False)),
     )
 
     base_payload: dict[str, Any] = {
@@ -124,6 +136,7 @@ def run_gate(
             "min_pass_rate_delta": float(thresholds["min_pass_rate_delta"]),
             "max_avg_l1_delta": float(thresholds["max_avg_l1_delta"]),
             "max_p95_l1_delta": float(thresholds["max_p95_l1_delta"]),
+            "require_pinned_model_identity": bool(thresholds.get("require_pinned_model_identity", False)),
         },
         "profile": selected_profile,
         "gate_profiles_path": gate_profiles_path if selected_profile else None,
@@ -143,6 +156,7 @@ def run_gate(
         top_n=top_n,
         write_artifact=False,
         require_dataset_match=require_dataset_match,
+        require_pinned_model_identity=bool(thresholds.get("require_pinned_model_identity", False)),
     )["compare_summary"]
     metrics = compare["metrics"]
     delta_pass_rate = float(metrics.get("delta_pass_rate") or 0.0)

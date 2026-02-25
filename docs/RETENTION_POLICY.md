@@ -35,3 +35,6 @@ Output contract:
 - `would_delete_count`: number of delete candidates in dry-run/apply mode
 - `deleted_count`: number of paths actually removed (apply mode)
 
+Coding-agent telemetry note:
+- retain deterministic derived artifacts (`out.jsonl`, summaries, receipts, benchmark evidence) as primary records
+- treat raw capture text as higher-sensitivity data; prefer shorter retention windows and explicit purge cadence

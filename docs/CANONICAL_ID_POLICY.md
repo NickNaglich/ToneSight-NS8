@@ -22,6 +22,11 @@ Required identity fields in receipt-level compatibility:
 - calibration identity (`config.calibration_path`, empty string when absent)
 - defaults schema identity (`defaults_spec_version` preferred; `defaults_hash` fallback)
 
+Optional pinned-model identity fields (enforced only when explicitly enabled):
+- `provider`
+- `model_identity` (`model_digest` preferred; `model_version` fallback)
+- `generation_identity` (canonicalized `generation_settings` object)
+
 Operational trace fields (informational):
 - `run_id`
 - `created_at_utc`
@@ -63,6 +68,7 @@ Primary enforcement points:
 - `src/tonesight_ns8/eval_runner.py` (identity emission in receipts)
 - `src/tonesight_ns8/gate_runner.py` (compatibility checks and mismatch reasons)
 - `src/tonesight_ns8/compare_runner.py` (run-level provenance in compare payloads)
+- `src/tonesight_ns8/live_runner.py` (coding-agent receipt identity emission)
 
 Normative tests:
 - `tests/test_canonical_id_policy.py`

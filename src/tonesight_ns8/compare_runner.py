@@ -49,8 +49,14 @@ def _validate_receipt_compatibility(
     receipt_b: dict[str, Any],
     *,
     require_dataset_match: bool = True,
+    require_pinned_model_identity: bool = False,
 ) -> None:
-    issues = compatibility_issues(receipt_a, receipt_b, require_dataset_match=require_dataset_match)
+    issues = compatibility_issues(
+        receipt_a,
+        receipt_b,
+        require_dataset_match=require_dataset_match,
+        require_pinned_model_identity=require_pinned_model_identity,
+    )
     if not issues:
         return
     issue = issues[0]
@@ -262,6 +268,7 @@ def run_compare(
     distance_mode: str = "l1",
     write_artifact: bool = False,
     require_dataset_match: bool = True,
+    require_pinned_model_identity: bool = False,
 ) -> dict[str, Any]:
     """Compare two eval runs deterministically."""
     run_a_path = Path(run_a)
@@ -273,7 +280,12 @@ def run_compare(
     receipt_b = _read_json(run_b_path / "receipt.json")
     out_a = _read_jsonl(run_a_path / "out.jsonl")
     out_b = _read_jsonl(run_b_path / "out.jsonl")
-    _validate_receipt_compatibility(receipt_a, receipt_b, require_dataset_match=require_dataset_match)
+    _validate_receipt_compatibility(
+        receipt_a,
+        receipt_b,
+        require_dataset_match=require_dataset_match,
+        require_pinned_model_identity=require_pinned_model_identity,
+    )
 
     by_id_a = _index_rows(out_a)
     by_id_b = _index_rows(out_b)

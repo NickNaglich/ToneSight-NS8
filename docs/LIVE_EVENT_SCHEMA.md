@@ -38,7 +38,17 @@ Recommended keys:
 - `user_id`
 - `tenant_id`
 
-All are expected to be pseudonymous identifiers for operational grouping only.
+Coding-agent optional keys (for pinned identity telemetry):
+- `provider` (for example `ollama`)
+- `model_tag` (human-facing model tag)
+- `model_digest` (preferred immutable identity)
+- `model_version` (fallback immutable identity when digest unavailable)
+- `generation_settings` (object; deterministic config identity such as `temperature`, `top_p`, `seed`)
+- `expected_language` (for deterministic language-mismatch telemetry)
+- `tool_calls` (integer or list for deterministic tool-call counting)
+
+Identifier keys are expected to be pseudonymous for operational grouping only.
+Coding-agent keys are deterministic telemetry metadata, not prompt/response content.
 
 ## Privacy flags (`privacy_flags`)
 

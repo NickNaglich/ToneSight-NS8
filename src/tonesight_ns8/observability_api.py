@@ -15,7 +15,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, ge
 from .defaults import ARTIFACT_DEFAULTS, EVAL_DEFAULTS
 from .eval_runner import run_eval
 
-app = FastAPI(title="tonesight-ns8-observability", version="0.2.2")
+app = FastAPI(title="tonesight-ns8-observability", version="0.2.3")
 
 HTTP_REQUESTS_TOTAL = Counter(
     "http_requests_total",

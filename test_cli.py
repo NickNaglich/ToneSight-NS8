@@ -243,6 +243,51 @@ def test_cli_live_capture_and_replay(capsys):
     assert (run_dir / "receipt.json").exists()
 
 
+def test_cli_live_replay_with_coding_agent_adapter(capsys):
+    out_root = _temp_dir("tmp_live_cli_coding_agent")
+    events_path = out_root / "events.coding_agent.jsonl"
+    events_path.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "event_id": "evt_ca_1",
+                        "source": "coding_agent",
+                        "timestamp_received": "2026-02-25T12:00:00Z",
+                        "text": "import os\n\ndef solve(x):\n    return x\n",
+                        "meta": {"session_id": "s1", "expected_language": "python", "tool_calls": 2},
+                        "privacy_flags": {"contains_pii": False, "allow_store_raw": True},
+                    }
+                )
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    rc_capture = main(["live-capture", "--events", str(events_path), "--out-root", str(out_root)])
+    capture_payload = json.loads(capsys.readouterr().out)
+    assert rc_capture == 0
+
+    rc_replay = main(
+        [
+            "live-replay",
+            "--capture",
+            capture_payload["capture_dir"],
+            "--out-root",
+            str(out_root),
+            "--taxonomy",
+            "taxonomy/tone_taxonomy.v1.json",
+            "--threshold-l1",
+            "3",
+            "--adapter",
+            "coding_agent",
+        ]
+    )
+    replay_payload = json.loads(capsys.readouterr().out)
+    assert rc_replay == 0
+    assert replay_payload["receipt"]["config"]["adapter"] == "coding_agent"
+
+
 def test_cli_live_verify(capsys):
     out_root = _temp_dir("tmp_live_verify_cli")
     rc_capture = main(
@@ -276,6 +321,56 @@ def test_cli_live_verify(capsys):
     assert rc_verify == 0
     assert verify_payload["stable"] is True
     assert verify_payload["mismatched_artifacts"] == []
+
+
+def test_cli_live_verify_with_coding_agent_adapter(capsys):
+    out_root = _temp_dir("tmp_live_verify_cli_coding_agent")
+    events_path = out_root / "events.coding_agent.verify.jsonl"
+    events_path.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "event_id": "evt_ca_2",
+                        "source": "coding_agent",
+                        "timestamp_received": "2026-02-25T12:00:00Z",
+                        "text": "const value: string = 'ok';\nreturn value;\n",
+                        "meta": {"session_id": "s2", "expected_language": "typescript"},
+                        "privacy_flags": {"contains_pii": False, "allow_store_raw": True},
+                    }
+                )
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    rc_capture = main(["live-capture", "--events", str(events_path), "--out-root", str(out_root)])
+    capture_payload = json.loads(capsys.readouterr().out)
+    assert rc_capture == 0
+
+    rc_verify = main(
+        [
+            "live-verify",
+            "--capture",
+            capture_payload["capture_dir"],
+            "--out-root",
+            str(out_root),
+            "--taxonomy",
+            "taxonomy/tone_taxonomy.v1.json",
+            "--threshold-l1",
+            "3",
+            "--adapter",
+            "coding_agent",
+        ]
+    )
+    verify_payload = json.loads(capsys.readouterr().out)
+    assert rc_verify == 0
+    assert verify_payload["stable"] is True
+
+
+def test_cli_live_replay_rejects_invalid_adapter():
+    with pytest.raises(SystemExit):
+        main(["live-replay", "--capture", "tests/fixtures/live_capture.small.jsonl", "--adapter", "bad_adapter"])
 
 
 def test_cli_canary(capsys):

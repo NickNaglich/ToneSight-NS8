@@ -196,8 +196,8 @@ CLI support:
 - `decode ... --mapping ns8`
 - `stream-update --segments-json <segments.json> [--state-in <state.json>] [--state-out <state.json>] [--session-id <id>]`
 - `live-capture --events <path>`
-- `live-replay --capture <capture_dir_or_events_jsonl>`
-- `live-verify --capture <capture_dir_or_events_jsonl>`
+- `live-replay --capture <capture_dir_or_events_jsonl> [--adapter upstream_signal|coding_agent]`
+- `live-verify --capture <capture_dir_or_events_jsonl> [--adapter upstream_signal|coding_agent]`
 - `canary --capture <capture_dir_or_events_jsonl>`
 - `incident --run-a <run_dir> --run-b <run_dir>`
 - `report --run-b <run_dir> [--run-a <run_dir>]`
@@ -351,7 +351,7 @@ CLI trace metadata (`python -m tonesight_ns8.cli eval` and `eval-compare`):
 - keys: `spec_version`, `dataset_hash`, `taxonomy_hash`, `defaults_hash`
 - output remains JSON and backward-compatible (existing fields retained)
 
-### `run_compare(run_a: str, run_b: str, *, top_n: int = 10, distance_mode: str = "l1", write_artifact: bool = False, require_dataset_match: bool = True) -> dict`
+### `run_compare(run_a: str, run_b: str, *, top_n: int = 10, distance_mode: str = "l1", write_artifact: bool = False, require_dataset_match: bool = True, require_pinned_model_identity: bool = False) -> dict`
 
 Compares two deterministic eval runs and computes regression deltas.
 
@@ -381,12 +381,13 @@ Compatibility behavior:
 - always requires matching `spec_version`
 - requires matching `dataset_hash` when `require_dataset_match=True` (default)
 - allows dataset hash mismatch when `require_dataset_match=False` (used by gate flows that explicitly disable dataset matching)
+- optionally enforces pinned-model identity when `require_pinned_model_identity=True`
 
 Optional artifact write (`write_artifact=True`):
 - `runs/<runB>/comparisons/<runA>/compare_summary.json`
 - `runs/<runB>/comparisons/<runA>/compare_report.html`
 
-### `run_gate(run_a: str, run_b: str, *, profile: str | None = None, gate_profiles_path: str = "config/gate_profiles.json", min_pass_rate_delta: float | None = None, max_avg_l1_delta: float | None = None, max_p95_l1_delta: float | None = None, top_n: int = 10, require_dataset_match: bool = True) -> dict`
+### `run_gate(run_a: str, run_b: str, *, profile: str | None = None, gate_profiles_path: str = "config/gate_profiles.json", min_pass_rate_delta: float | None = None, max_avg_l1_delta: float | None = None, max_p95_l1_delta: float | None = None, require_pinned_model_identity: bool | None = None, top_n: int = 10, require_dataset_match: bool = True) -> dict`
 
 Runs deterministic CI gate checks over compare deltas.
 
@@ -398,6 +399,7 @@ Compatibility checks:
 - `calibration_identity`
 - `defaults_schema_version`
 - optional `dataset_hash` check (`require_dataset_match`)
+- optional pinned-model identity check (`require_pinned_model_identity`)
 
 Decision semantics:
 - `decision = "passed"` -> `exit_code = 0`
@@ -413,6 +415,7 @@ Gate profiles:
 - profile config lives at `config/gate_profiles.json`
 - select with `profile="<name>"`
 - explicit threshold args override selected profile values
+- bundled `coding_agent_drift` profile enables `require_pinned_model_identity=true`
 
 ### `run_canary(capture: str, *, baseline_out_root: str = "runs/canary/baseline", candidate_out_root: str = "runs/canary/candidate", baseline_taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", candidate_taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", baseline_threshold_l1: int = 3, candidate_threshold_l1: int = 3, shadow_strict: str = "quarantine", redact: bool = True, top_n: int = 10, profile: str | None = None, gate_profiles_path: str = "config/gate_profiles.json", min_pass_rate_delta: float | None = None, max_avg_l1_delta: float | None = None, max_p95_l1_delta: float | None = None, allow_dataset_mismatch: bool = False) -> dict`
 
@@ -556,7 +559,7 @@ Writes:
 Returns:
 - `capture_id`, `capture_hash`, `capture_dir`, `event_count`, `manifest_path`
 
-### `run_live_replay(capture: str, *, out_root: str = "runs", taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", threshold_l1: int = 3, shadow_strict: str = "quarantine", redact: bool = True) -> dict`
+### `run_live_replay(capture: str, *, out_root: str = "runs", taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", threshold_l1: int = 3, shadow_strict: str = "quarantine", redact: bool = True, adapter: str = "upstream_signal") -> dict`
 
 Replays a validated capture into standard deterministic run artifacts.
 
@@ -573,8 +576,12 @@ Returns:
 - receipt includes additive artifact schema field `receipt_schema_version`
 - includes deterministic `redaction_summary` in summary/receipt when redaction is enabled
 - receipt may include additive provenance field `code_revision` (short git SHA) when available
+- with `adapter="coding_agent"`:
+  - rows include deterministic `coding_agent_features` and `coding_agent_bins`
+  - receipt includes `adapter_id`, `adapter_version`, `capture_schema_version`
+  - receipt includes pinned-model identity fields when available (`provider`, `model_tag`, `model_digest`/`model_version`, `generation_settings`)
 
-### `run_live_verify(capture: str, *, out_root: str = "runs", taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", threshold_l1: int = 3, shadow_strict: str = "quarantine", redact: bool = True) -> dict`
+### `run_live_verify(capture: str, *, out_root: str = "runs", taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", threshold_l1: int = 3, shadow_strict: str = "quarantine", redact: bool = True, adapter: str = "upstream_signal") -> dict`
 
 Runs `run_live_replay` twice over the same capture and compares artifact hashes.
 
@@ -645,7 +652,7 @@ Output:
   - `profile_label`, `source_label`, and row-derived `source_labels`
   - artifact pointers (`out_jsonl`, `eval_summary_json`, `report_html`, `receipt_json`)
 
-### `run_benchmark_suite(*, suite: str = "core", out_root: str = "runs", goldset_path: str = "data/goldset.jsonl", killer_profiles: list[str] | None = None, killer_seeds: list[int] | None = None, killer_primary_strength: float = 0.20, killer_sweep_strengths: list[float] | None = None, killer_sample_multiplier: int = 1) -> dict`
+### `run_benchmark_suite(*, suite: str = "core", out_root: str = "runs", goldset_path: str = "data/goldset.jsonl", killer_profiles: list[str] | None = None, killer_seeds: list[int] | None = None, killer_primary_strength: float = 0.20, killer_sweep_strengths: list[float] | None = None, killer_sample_multiplier: int = 1, coding_baseline_events: str = "tests/fixtures/live_event.coding_agent.python.jsonl", coding_candidate_events: list[str] | None = None) -> dict`
 
 Runs deterministic benchmark evidence suite and writes JSON artifacts.
 
@@ -661,14 +668,20 @@ Suite `killer_stability` artifacts:
 - `<out_root>/benchmarks/killer_stability/robustness_summary.json`
 - `<out_root>/benchmarks/killer_stability/robustness_report.html`
 
+Suite `coding_agent_drift` artifacts:
+- `<out_root>/benchmarks/coding_agent_drift/evidence.json`
+- `<out_root>/benchmarks/coding_agent_drift/report.json`
+
 Current supported suite:
 - `core`
 - `killer_stability`
+- `coding_agent_drift`
 
 CLI:
 - `python -m tonesight_ns8.cli benchmark --suite core`
 - `python -m tonesight_ns8.cli benchmark --suite killer_stability`
 - `python -m tonesight_ns8.cli benchmark --suite killer_stability --killer-profiles default,oscillation_path,boundary_jitter,phase_flip_cycle --killer-seeds 0,1,2,3,4 --killer-primary-strength 0.2 --killer-sweep-strengths 0.05,0.1,0.15,0.2,0.3 --killer-sample-multiplier 2`
+- `python -m tonesight_ns8.cli benchmark --suite coding_agent_drift --coding-baseline-events tests/fixtures/live_event.coding_agent.python.jsonl --coding-candidate-events tests/fixtures/live_event.coding_agent.typescript.jsonl,tests/fixtures/live_event.coding_agent.mismatch.jsonl`
 
 ### `tonesight_from_label(label: str, family: str, r: int, c: int, k: int, taxonomy_path: str) -> dict`
 

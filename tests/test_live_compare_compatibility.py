@@ -24,7 +24,18 @@ def _temp_dir(prefix: str) -> Path:
     return root
 
 
-def _mk_live_run(path: Path, *, run_id: str, dataset_hash: str, taxonomy_hash: str, defaults_spec_version: str) -> None:
+def _mk_live_run(
+    path: Path,
+    *,
+    run_id: str,
+    dataset_hash: str,
+    taxonomy_hash: str,
+    defaults_spec_version: str,
+    provider: str | None = None,
+    model_tag: str | None = None,
+    model_digest: str | None = None,
+    generation_settings: dict | None = None,
+) -> None:
     rows = [{"id": "evt1", "label": "calm", "compliance_l1": 0, "delta_v": 0, "delta_a": 0, "delta_d": 0, "pass": True}]
     path.mkdir(parents=True, exist_ok=True)
     _write_json(
@@ -47,11 +58,19 @@ def _mk_live_run(path: Path, *, run_id: str, dataset_hash: str, taxonomy_hash: s
             "defaults_spec_version": defaults_spec_version,
             "mapping_id": "ns8",
             "mapping_version": "1.0",
+            "provider": provider,
+            "model_tag": model_tag,
+            "model_digest": model_digest,
+            "generation_settings": generation_settings if isinstance(generation_settings, dict) else {},
             "config": {
                 "mapping_id": "ns8",
                 "mapping_version": "1.0",
                 "calibration_path": "",
                 "defaults_spec_version": defaults_spec_version,
+                "provider": provider,
+                "model_tag": model_tag,
+                "model_digest": model_digest,
+                "generation_settings": generation_settings if isinstance(generation_settings, dict) else {},
             },
         },
     )
@@ -71,3 +90,35 @@ def test_live_compare_rejects_identity_mismatch():
     assert "taxonomy_identity_mismatch" in reasons
     assert "defaults_schema_version_mismatch" in reasons
 
+
+def test_live_compare_rejects_pinned_model_identity_mismatch():
+    root = _temp_dir("tmp_live_compare_pinned")
+    run_a = root / "run_live_A"
+    run_b = root / "run_live_B"
+    _mk_live_run(
+        run_a,
+        run_id="run_live_A",
+        dataset_hash="same",
+        taxonomy_hash="tax_same",
+        defaults_spec_version="1.0",
+        provider="ollama",
+        model_tag="qwen3-coder:latest",
+        model_digest="sha256:aaa",
+        generation_settings={"temperature": 0, "seed": 7},
+    )
+    _mk_live_run(
+        run_b,
+        run_id="run_live_B",
+        dataset_hash="same",
+        taxonomy_hash="tax_same",
+        defaults_spec_version="1.0",
+        provider="ollama",
+        model_tag="qwen3-coder:latest",
+        model_digest="sha256:bbb",
+        generation_settings={"temperature": 0, "seed": 7},
+    )
+
+    payload = run_gate(str(run_a), str(run_b), require_dataset_match=True, require_pinned_model_identity=True)
+    assert payload["decision"] == "incompatible"
+    reasons = {item["reason"] for item in payload["incompatibilities"]}
+    assert "model_identity_mismatch" in reasons

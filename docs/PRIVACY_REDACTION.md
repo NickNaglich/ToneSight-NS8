@@ -19,6 +19,9 @@ Determinism guarantees:
 Operational behavior:
 - redaction is enabled by default for `live-replay` and `live-verify`
 - disable only for internal debugging with `--disable-redaction`
+- for coding-agent telemetry (`--adapter coding_agent`), prefer metadata-only retention:
+  - keep model/generation identity in `meta`
+  - avoid storing raw prompt/response payloads unless explicitly required
 
 Artifacts/receipts:
 - `eval_summary.json` includes `redaction_summary`
@@ -27,4 +30,3 @@ Artifacts/receipts:
 Limitations:
 - this is a bounded heuristic layer, not a full PII-classification engine
 - users should treat this as a deterministic safeguard, not a legal compliance guarantee
-

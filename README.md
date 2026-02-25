@@ -429,6 +429,7 @@ python -m tonesight_ns8.cli compare runs/<runA> runs/<runB> --top-n 10 --write
 python -m tonesight_ns8.cli compare runs/<runA> runs/<runB> --distance topology --top-n 10 --write
 python -m tonesight_ns8.cli gate --run-a runs/<baseline> --run-b runs/<candidate>
 python -m tonesight_ns8.cli gate --run-a runs/<baseline> --run-b runs/<candidate> --profile support_chat
+python -m tonesight_ns8.cli gate --run-a runs/<baseline> --run-b runs/<candidate> --profile coding_agent_drift --allow-dataset-mismatch
 python -m tonesight_ns8.cli gate --run-a runs/<baseline> --run-b runs/<candidate> --allow-dataset-mismatch
 python -m tonesight_ns8.cli triage --run-b runs/<candidate> --top-n 50 --format jsonl
 python -m tonesight_ns8.cli triage --run-a runs/<baseline> --run-b runs/<candidate> --top-n 50 --format csv
@@ -449,9 +450,12 @@ python -m tonesight_ns8.cli benchmark --suite core --out-root runs --goldset dat
 python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs --goldset data/goldset.jsonl
 python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs --goldset data/goldset.jsonl --killer-profiles default,oscillation_path,boundary_jitter --killer-seeds 0,1,2,3,4 --killer-primary-strength 0.2 --killer-sweep-strengths 0.05,0.1,0.15,0.2,0.3 --killer-sample-multiplier 2
 python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs --goldset data/pseudo_real_trace.jsonl --killer-profiles default,phase_flip_cycle --killer-seeds 0,1 --killer-sweep-strengths 0.1,0.2
+python -m tonesight_ns8.cli benchmark --suite coding_agent_drift --out-root runs --coding-baseline-events tests/fixtures/live_event.coding_agent.python.jsonl --coding-candidate-events tests/fixtures/live_event.coding_agent.typescript.jsonl,tests/fixtures/live_event.coding_agent.mismatch.jsonl
 python -m tonesight_ns8.cli live-capture --events tests/fixtures/live_capture.small.jsonl --out-root runs
 python -m tonesight_ns8.cli live-replay --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
 python -m tonesight_ns8.cli live-verify --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
+python -m tonesight_ns8.cli live-replay --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --adapter coding_agent
+python -m tonesight_ns8.cli live-verify --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --adapter coding_agent
 python -m tonesight_ns8.cli canary --capture runs/captures/<capture_id> --baseline-out-root runs/canary/baseline --candidate-out-root runs/canary/candidate --profile support_chat
 python -m tonesight_ns8.cli incident --run-a runs/<baseline> --run-b runs/<candidate> --top-n 50
 python -m tonesight_ns8.cli purge --out-root runs --older-than-days 30
@@ -487,6 +491,8 @@ Gate profiles:
 - configured in `config/gate_profiles.json`
 - selected with `--profile <name>`
 - explicit CLI thresholds still override selected profile values
+- coding-agent profile `coding_agent_drift` enforces pinned model identity
+- optional CLI enforcement: `--require-pinned-model-identity`
 
 Optional eval artifacts:
 - `runs/<run_id>/gpu_before.json`
@@ -501,6 +507,8 @@ Live replay artifacts:
 - `runs/<run_live_id>/receipt.json`
 - `runs/<run_live_id>/quarantine.jsonl` (when `--shadow-strict quarantine` and invalid events exist)
 - `redaction_summary` in replay `eval_summary.json` and `receipt.json`
+- when `--adapter coding_agent`, rows include `coding_agent_features` + `coding_agent_bins`
+- coding-agent receipts include pinned identity fields when present (`provider`, `model_tag`, `model_digest`/`model_version`, `generation_settings`)
 
 Canary/incident artifacts:
 - canary payload includes baseline/candidate replay metadata, `compare_summary`, and `gate_result`
@@ -533,6 +541,10 @@ Killer benchmark artifacts (`benchmark --suite killer_stability`):
   - `absolute_criteria_pass_rate` (`ratio<1`, `true>false`, combined pass-rate)
   - `tonesight_loss_tag_counts` for non-winning ToneSight robustness runs
   - `by_profile` summary blocks for per-profile ranking/tail/pass-rate review
+
+Coding-agent drift benchmark artifacts (`benchmark --suite coding_agent_drift`):
+- `runs/benchmarks/coding_agent_drift/evidence.json`
+- `runs/benchmarks/coding_agent_drift/report.json`
 
 Robustness summary snapshot (`runs/benchmarks/killer_stability/robustness_summary.json`, `N=250`):
 
@@ -805,6 +817,7 @@ curl -X POST http://localhost:8080/eval/run \
 |   |   `-- drift_monitoring.md
 |   |-- RELEASE_CHECKLIST.md
 |   |-- RELEASE_NOTES_0.2.2.md
+|   |-- RELEASE_NOTES_0.2.3.md
 |   |-- RECEIPT_SCHEMA.md
 |   |-- RETENTION_POLICY.md
 |   |-- SECURITY_POLICY.md
@@ -839,7 +852,7 @@ Note: The current layout uses a reference implementation (`ns8_ref.py`).
 ## Versioning and Stability
 
 - Library/package versioning follows semantic versioning and is currently pre-1.0 (`0.x` series).
-- Current package version target: `0.2.2`.
+- Current package version target: `0.2.3`.
 - NS8 spec version is tracked separately in `docs/SPEC_NS8.md`.
 - The NS8 specification is stable within a major version.
 

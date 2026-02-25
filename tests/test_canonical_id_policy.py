@@ -108,3 +108,17 @@ def test_gate_allows_dataset_mismatch_when_explicitly_disabled():
     payload = run_gate(str(run_a), str(run_b), require_dataset_match=False)
     assert payload["decision"] == "passed"
     assert payload["incompatibilities"] == []
+
+
+def test_gate_reports_missing_pinned_model_identity_when_required():
+    root = _temp_dir("tmp_canonical_pinned_missing")
+    run_a = root / "run_A"
+    run_b = root / "run_B"
+
+    _mk_run(run_a, run_id="run_A", dataset_hash="same_ds", taxonomy_hash="tax_same", defaults_spec_version="1.0")
+    _mk_run(run_b, run_id="run_B", dataset_hash="same_ds", taxonomy_hash="tax_same", defaults_spec_version="1.0")
+
+    payload = run_gate(str(run_a), str(run_b), require_dataset_match=True, require_pinned_model_identity=True)
+    assert payload["decision"] == "incompatible"
+    reasons = {item["reason"] for item in payload["incompatibilities"]}
+    assert "pinned_model_identity_missing" in reasons

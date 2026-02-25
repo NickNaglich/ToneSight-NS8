@@ -4,7 +4,7 @@ This document describes the implemented deterministic eval workflow.
 
 Conformance vs evidence:
 - eval/compare/gate artifacts in this document are conformance telemetry.
-- benchmark artifacts (`benchmark --suite core`) are empirical evidence outputs.
+- benchmark artifacts (`benchmark --suite core|killer_stability|coding_agent_drift`) are empirical evidence outputs.
 - use `docs/WHY_NS8.md` for claim-to-artifact mapping.
 - v0.2.1 killer protocol reference: `docs/BENCHMARK_KILLER_STABILITY.md`.
 
@@ -89,6 +89,7 @@ python -m tonesight_ns8.cli benchmark --suite core
 python -m tonesight_ns8.cli benchmark --suite core --out-root runs --goldset data/goldset.jsonl
 python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs --goldset data/goldset.jsonl
 python -m tonesight_ns8.cli benchmark --suite killer_stability --out-root runs --goldset data/pseudo_real_trace.jsonl --killer-profiles default,phase_flip_cycle --killer-seeds 0,1 --killer-sweep-strengths 0.1,0.2
+python -m tonesight_ns8.cli benchmark --suite coding_agent_drift --out-root runs --coding-baseline-events tests/fixtures/live_event.coding_agent.python.jsonl --coding-candidate-events tests/fixtures/live_event.coding_agent.typescript.jsonl,tests/fixtures/live_event.coding_agent.mismatch.jsonl
 ```
 
 CLI incremental stream mode:
@@ -174,6 +175,10 @@ Killer benchmark artifacts (`benchmark --suite killer_stability`):
 - `runs/benchmarks/killer_stability/evidence.json`
 - `runs/benchmarks/killer_stability/robustness_summary.json`
 - `runs/benchmarks/killer_stability/robustness_report.html`
+
+Coding-agent drift benchmark artifacts (`benchmark --suite coding_agent_drift`):
+- `runs/benchmarks/coding_agent_drift/evidence.json`
+- `runs/benchmarks/coding_agent_drift/report.json`
 
 Performance smoke policy:
 - deterministic eval smoke is covered by `tests/test_eval_performance_smoke.py`
@@ -284,6 +289,7 @@ Use deterministic gate checks against run-to-run compare deltas:
 ```bash
 python -m tonesight_ns8.cli gate --run-a runs/<baseline> --run-b runs/<candidate>
 python -m tonesight_ns8.cli gate --run-a runs/<baseline> --run-b runs/<candidate> --profile support_chat
+python -m tonesight_ns8.cli gate --run-a runs/<baseline> --run-b runs/<candidate> --profile coding_agent_drift --allow-dataset-mismatch
 ```
 
 Threshold flags:
@@ -291,6 +297,7 @@ Threshold flags:
 - `--max-avg-l1-delta` (default `0.2`)
 - `--max-p95-l1-delta` (default `0.2`)
 - `--profile <name>` (loads thresholds from `config/gate_profiles.json`)
+- `--require-pinned-model-identity` (enforce provider/model/generation compatibility)
 
 Exit codes:
 - `0`: gate passed
@@ -305,6 +312,10 @@ Compatibility gates include:
 - `calibration_identity`
 - `defaults_schema_version`
 - optional `dataset_hash` gate (disable via `--allow-dataset-mismatch` for live non-goldset comparisons)
+- optional pinned model identity gate:
+  - `provider`
+  - `model_identity` (`model_digest` preferred; `model_version` fallback)
+  - `generation_settings` identity
 
 ## Triage Command (Data QA)
 
@@ -417,11 +428,14 @@ Deterministic capture/replay/verify flow for live-shaped events:
 python -m tonesight_ns8.cli live-capture --events tests/fixtures/live_capture.small.jsonl --out-root runs
 python -m tonesight_ns8.cli live-replay --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
 python -m tonesight_ns8.cli live-verify --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
+python -m tonesight_ns8.cli live-replay --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --adapter coding_agent
+python -m tonesight_ns8.cli live-verify --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --adapter coding_agent
 ```
 
 Behavior:
 - `live-capture`: validates LiveEvent envelope and writes deterministic capture artifacts
 - `live-replay`: maps upstream signal (`upstream_vad` or `upstream_label`) into standard run artifacts
+- `live-replay --adapter coding_agent`: derives deterministic coding-agent features/bins and maps them to NS8-compatible VAD
 - `live-verify`: replays the same capture twice and checks hash identity for deterministic artifacts
 - `live-replay`/`live-verify` apply deterministic text redaction by default (disable with `--disable-redaction` only for internal debugging)
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 
@@ -18,6 +19,12 @@ def _receipt_config(receipt: dict[str, Any]) -> dict[str, Any]:
     return {}
 
 
+def _canonical_generation_identity(value: Any) -> str:
+    if not isinstance(value, dict):
+        return ""
+    return json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+
+
 def identity_fields(receipt: dict[str, Any]) -> dict[str, str]:
     """Extract normalized identity fields used by compare/gate/eval-compare."""
     config = _receipt_config(receipt)
@@ -30,6 +37,17 @@ def identity_fields(receipt: dict[str, Any]) -> dict[str, str]:
         receipt.get("defaults_spec_version") or config.get("defaults_spec_version") or receipt.get("defaults_hash")
     )
     dataset_hash = _as_str(receipt.get("dataset_hash"))
+    provider = _as_str(receipt.get("provider") or config.get("provider"))
+    model_tag = _as_str(receipt.get("model_tag") or config.get("model_tag"))
+    model_identity = _as_str(
+        receipt.get("model_digest")
+        or config.get("model_digest")
+        or receipt.get("model_version")
+        or config.get("model_version")
+    )
+    generation_identity = _canonical_generation_identity(
+        receipt.get("generation_settings") or config.get("generation_settings")
+    )
     return {
         "spec_version": spec_version,
         "mapping_id": mapping_id,
@@ -38,6 +56,10 @@ def identity_fields(receipt: dict[str, Any]) -> dict[str, str]:
         "calibration_identity": calibration_identity,
         "defaults_schema_version": defaults_schema_version,
         "dataset_hash": dataset_hash,
+        "provider": provider,
+        "model_tag": model_tag,
+        "model_identity": model_identity,
+        "generation_identity": generation_identity,
     }
 
 
@@ -46,6 +68,7 @@ def compatibility_issues(
     actual: dict[str, Any],
     *,
     require_dataset_match: bool = True,
+    require_pinned_model_identity: bool = False,
 ) -> list[dict[str, str]]:
     """Return deterministic compatibility mismatch payloads."""
     fields_expected = identity_fields(expected)
@@ -60,6 +83,53 @@ def compatibility_issues(
                 "actual_dataset_hash": fields_actual["dataset_hash"],
             }
         )
+
+    if require_pinned_model_identity:
+        for field in ("provider", "model_tag", "model_identity", "generation_identity"):
+            if not fields_expected[field] or not fields_actual[field]:
+                issues.append(
+                    {
+                        "reason": "pinned_model_identity_missing",
+                        "field": field,
+                        "expected": fields_expected[field],
+                        "actual": fields_actual[field],
+                    }
+                )
+        if fields_expected["provider"] and fields_actual["provider"] and fields_expected["provider"] != fields_actual["provider"]:
+            issues.append(
+                {
+                    "reason": "provider_mismatch",
+                    "field": "provider",
+                    "expected": fields_expected["provider"],
+                    "actual": fields_actual["provider"],
+                }
+            )
+        if (
+            fields_expected["model_identity"]
+            and fields_actual["model_identity"]
+            and fields_expected["model_identity"] != fields_actual["model_identity"]
+        ):
+            issues.append(
+                {
+                    "reason": "model_identity_mismatch",
+                    "field": "model_identity",
+                    "expected": fields_expected["model_identity"],
+                    "actual": fields_actual["model_identity"],
+                }
+            )
+        if (
+            fields_expected["generation_identity"]
+            and fields_actual["generation_identity"]
+            and fields_expected["generation_identity"] != fields_actual["generation_identity"]
+        ):
+            issues.append(
+                {
+                    "reason": "generation_identity_mismatch",
+                    "field": "generation_identity",
+                    "expected": fields_expected["generation_identity"],
+                    "actual": fields_actual["generation_identity"],
+                }
+            )
 
     reason_by_field = {
         "spec_version": "spec_version_mismatch",
@@ -87,4 +157,3 @@ def compatibility_issues(
                 }
             )
     return issues
-
