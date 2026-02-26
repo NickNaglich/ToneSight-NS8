@@ -242,11 +242,11 @@ def _render_compare_report_html(compare_summary: dict[str, Any]) -> str:
         rows_html = '<tr><td colspan="8">No regressions in top_n window.</td></tr>'
     if not labels_html:
         labels_html = '<tr><td colspan="3">No shared labels between runs.</td></tr>'
-    pass_trend = str(metrics.get("pass_rate_trend", "unknown"))
+    trend_state = str(metrics.get("pass_rate_trend", "unknown"))
     badge = "PASS"
-    if pass_trend == "regressed":
+    if trend_state == "regressed":
         badge = "REGRESSED"
-    elif pass_trend == "unknown":
+    elif trend_state == "unknown":
         badge = "INCOMPATIBLE"
     return (
         "<!doctype html>\n"
