@@ -34,6 +34,7 @@ from . import (
     run_stream_update,
     run_trend,
     run_triage,
+    run_ui_package,
     summarize_session,
     summarize_speaker,
     tonesight_from_label,
@@ -239,6 +240,15 @@ def _cmd_bundle(args: argparse.Namespace) -> dict:
         run_a=args.run_a,
         out_path=args.out,
         include_source_paths=args.include_source_paths,
+    )
+
+
+def _cmd_ui_package(args: argparse.Namespace) -> dict:
+    return run_ui_package(
+        args.out_root,
+        out_path=args.out,
+        include_source_paths=args.include_source_paths,
+        include_raw_artifacts=args.include_raw_artifacts,
     )
 
 
@@ -505,6 +515,17 @@ def build_parser() -> argparse.ArgumentParser:
     bundle_cmd.add_argument("--out", help="Optional explicit bundle output path (.zip).")
     bundle_cmd.add_argument("--include-source-paths", action="store_true", help="Include local source paths in bundle manifest (not external-safe).")
     bundle_cmd.set_defaults(func=_cmd_bundle)
+
+    ui_package_cmd = sub.add_parser("ui-package", help="Create deterministic static UI demo package ZIP.")
+    ui_package_cmd.add_argument("--out-root", default=EVAL_DEFAULTS["out_root"], help="Runs root to package under runs/.")
+    ui_package_cmd.add_argument("--out", help="Optional explicit UI package output path (.zip).")
+    ui_package_cmd.add_argument("--include-source-paths", action="store_true", help="Include local source paths in package manifest (not external-safe).")
+    ui_package_cmd.add_argument(
+        "--include-raw-artifacts",
+        action="store_true",
+        help="Include raw artifacts (out.jsonl/events.raw.jsonl/quarantine.jsonl) under runs/.",
+    )
+    ui_package_cmd.set_defaults(func=_cmd_ui_package)
 
     trend_cmd = sub.add_parser("trend", help="Create deterministic trend rollups across historical runs.")
     trend_cmd.add_argument("--out-root", default=EVAL_DEFAULTS["out_root"])

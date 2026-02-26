@@ -457,6 +457,17 @@ Contract boundary:
 - API serves existing JSON artifacts only.
 - API does not run eval/compare/gate computations.
 
+Optional static UI demo package:
+
+```bash
+python -m tonesight_ns8.cli ui-package --out-root runs
+```
+
+Behavior:
+- writes deterministic ZIP at `runs/ui_demo_package.zip` by default
+- includes `ui/`, `server/`, and UI-safe run artifacts for local demo playback
+- excludes raw artifacts (`out.jsonl`, `events.raw.jsonl`, `quarantine.jsonl`) unless `--include-raw-artifacts`
+
 ## Live Shadow Harness (Phase 17)
 
 Deterministic capture/replay/verify flow for live-shaped events:

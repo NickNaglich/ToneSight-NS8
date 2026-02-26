@@ -562,6 +562,14 @@ Minimal static artifact API (Phase 2):
   - `/api/compare-report/{run_a}/{run_b}`
   - `/api/gate/{run_a}/{run_b}`
 
+Optional static UI demo packaging helper (v0.2.6 hardening):
+- `python -m tonesight_ns8.cli ui-package --out-root runs`
+- writes deterministic ZIP (`runs/ui_demo_package.zip` by default) containing:
+  - `ui/` static client assets
+  - `server/` static artifact API app
+  - `runs/` UI-safe demo artifacts (`index.jsonl`, `index.json`, `receipt.json`, `eval_summary.json`, `report.html`, compare/gate artifacts)
+- raw artifacts are excluded by default (`out.jsonl`, `events.raw.jsonl`, `quarantine.jsonl`)
+
 Benchmark artifacts (`benchmark --suite core`):
 - `runs/benchmarks/core/noise_tolerance.json`
 - `runs/benchmarks/core/drift_injection.json`

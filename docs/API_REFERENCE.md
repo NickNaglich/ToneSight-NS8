@@ -47,6 +47,7 @@ Stable public imports are the names exported by `tonesight_ns8.__all__`:
 - `run_benchmark_suite`
 - `run_index`
 - `run_index_json`
+- `run_ui_package`
  - `run_live_capture`
  - `run_live_replay`
  - `run_live_verify`
@@ -673,6 +674,30 @@ Behavior:
 CLI:
 - `python -m tonesight_ns8.cli index-runs-json --out-root runs`
 - `python tools/generate_run_index_json.py --out-root runs`
+
+### `run_ui_package(out_root: str, *, out_path: str | None = None, include_source_paths: bool = False, include_raw_artifacts: bool = False) -> dict`
+
+Builds deterministic ZIP package for local read-only UI demos.
+
+Behavior:
+- packages repo `ui/` and `server/` directories
+- packages run artifacts under `runs/` from `out_root`
+- ensures `index.jsonl` and `index.json` exist (generates deterministically when missing)
+- excludes raw artifacts by default:
+  - `out.jsonl`
+  - `events.raw.jsonl`
+  - `quarantine.jsonl`
+
+Returns:
+- `package_path`
+- `file_count`
+- `external_safe`
+- deterministic `manifest`
+
+CLI:
+- `python -m tonesight_ns8.cli ui-package --out-root runs`
+- `python -m tonesight_ns8.cli ui-package --out-root runs --out runs/demo_ui_package.zip`
+- `python -m tonesight_ns8.cli ui-package --out-root runs --include-raw-artifacts` (internal-only)
 
 ### `run_benchmark_suite(*, suite: str = "core", out_root: str = "runs", goldset_path: str = "data/goldset.jsonl", killer_profiles: list[str] | None = None, killer_seeds: list[int] | None = None, killer_primary_strength: float = 0.20, killer_sweep_strengths: list[float] | None = None, killer_sample_multiplier: int = 1, coding_baseline_events: str = "tests/fixtures/live_event.coding_agent.python.jsonl", coding_candidate_events: list[str] | None = None) -> dict`
 

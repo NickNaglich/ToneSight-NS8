@@ -38,6 +38,7 @@ from .schema import Route, SegmentRecord, SessionSummary, SpeakerSummary, ToneRe
 from .stream_runner import new_stream_state, run_stream_update, snapshot_stream_state
 from .trend_runner import run_trend
 from .triage_runner import run_triage
+from .ui_package_runner import run_ui_package
 
 __all__ = [
     "compute_A",
@@ -64,6 +65,7 @@ __all__ = [
     "run_gate",
     "run_canary",
     "run_triage",
+    "run_ui_package",
     "run_bundle",
     "run_benchmark_suite",
     "run_incident",
