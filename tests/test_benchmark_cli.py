@@ -215,6 +215,11 @@ def test_cli_benchmark_coding_agent_drift_writes_expected_artifacts(capsys):
     )
     mismatch_metrics = evidence["candidates"][mismatch_key]["metrics"]
     assert mismatch_metrics["language_mismatch_rate"] > 0.0
+    assert "gate_ready" in evidence
+    assert "aggregate_deltas" in evidence["gate_ready"]
+    assert "max_language_mismatch_rate_delta" in evidence["gate_ready"]["aggregate_deltas"]
+    report_payload = json.loads(report_path.read_text(encoding="utf-8"))
+    assert "gate_ready" in report_payload["results"]
 
 
 def test_cli_benchmark_coding_agent_drift_is_repeatable(capsys):

@@ -240,3 +240,87 @@ def test_live_replay_unknown_adapter_rejected():
             shadow_strict="quarantine",
             adapter="not_supported",
         )
+
+
+def test_live_replay_require_pinned_identity_passes_for_coding_agent():
+    out_root = _temp_dir("tmp_live_require_pinned_ok")
+    events_path = out_root / "events.coding_agent.pinned_ok.jsonl"
+    rows = [
+        {
+            "event_id": "evt_coding_pinned_ok",
+            "source": "coding_agent",
+            "timestamp_received": "2026-02-25T12:00:00Z",
+            "text": "def solve(x):\n    return x\n",
+            "meta": {
+                "session_id": "s1",
+                "agent_id": "coder",
+                "expected_language": "python",
+                "provider": "ollama",
+                "model_tag": "qwen3-coder:latest",
+                "model_digest": "sha256:abc123",
+                "generation_settings": {"temperature": 0, "top_p": 1, "seed": 1},
+            },
+            "privacy_flags": {"contains_pii": False, "allow_store_raw": False},
+        }
+    ]
+    events_path.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+    capture = run_live_capture(str(events_path), out_root=str(out_root))
+    replay = run_live_replay(
+        capture["capture_dir"],
+        out_root=str(out_root),
+        taxonomy_path="taxonomy/tone_taxonomy.v1.json",
+        threshold_l1=3,
+        shadow_strict="quarantine",
+        adapter="coding_agent",
+        require_pinned_model_identity=True,
+    )
+    assert replay["receipt"]["provider"] == "ollama"
+    assert replay["receipt"]["model_tag"] == "qwen3-coder:latest"
+    assert replay["receipt"]["model_digest"] == "sha256:abc123"
+    assert replay["receipt"]["config"]["require_pinned_model_identity"] is True
+
+
+def test_live_replay_require_pinned_identity_fails_when_missing_fields():
+    out_root = _temp_dir("tmp_live_require_pinned_missing")
+    events_path = out_root / "events.coding_agent.pinned_missing.jsonl"
+    rows = [
+        {
+            "event_id": "evt_coding_pinned_missing",
+            "source": "coding_agent",
+            "timestamp_received": "2026-02-25T12:00:00Z",
+            "text": "def solve(x):\n    return x\n",
+            "meta": {
+                "session_id": "s1",
+                "agent_id": "coder",
+                "expected_language": "python",
+            },
+            "privacy_flags": {"contains_pii": False, "allow_store_raw": False},
+        }
+    ]
+    events_path.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+    capture = run_live_capture(str(events_path), out_root=str(out_root))
+    with pytest.raises(ValueError, match="pinned model identity missing required fields"):
+        run_live_replay(
+            capture["capture_dir"],
+            out_root=str(out_root),
+            taxonomy_path="taxonomy/tone_taxonomy.v1.json",
+            threshold_l1=3,
+            shadow_strict="quarantine",
+            adapter="coding_agent",
+            require_pinned_model_identity=True,
+        )
+
+
+def test_live_replay_require_pinned_identity_rejected_for_non_coding_adapter():
+    out_root = _temp_dir("tmp_live_require_pinned_non_coding")
+    capture = run_live_capture("tests/fixtures/live_capture.small.jsonl", out_root=str(out_root))
+    with pytest.raises(ValueError, match="only supported with adapter='coding_agent'"):
+        run_live_replay(
+            capture["capture_dir"],
+            out_root=str(out_root),
+            taxonomy_path="taxonomy/tone_taxonomy.v1.json",
+            threshold_l1=3,
+            shadow_strict="quarantine",
+            adapter="upstream_signal",
+            require_pinned_model_identity=True,
+        )

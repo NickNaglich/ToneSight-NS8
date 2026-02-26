@@ -439,3 +439,111 @@ def test_run_gate_profile_coding_agent_drift_requires_pinned_identity():
     assert payload["decision"] == "incompatible"
     reasons = {item["reason"] for item in payload["incompatibilities"]}
     assert "model_identity_mismatch" in reasons
+
+
+def test_run_gate_profile_coding_agent_drift_applies_behavioral_thresholds():
+    root = _temp_dir("tmp_gate_profile_coding_agent_behavior")
+    run_a = root / "run_A"
+    run_b = root / "run_B"
+    rows_a = [
+        {
+            "id": "id_1",
+            "label": "calm",
+            "compliance_l1": 0,
+            "delta_v": 0,
+            "delta_a": 0,
+            "delta_d": 0,
+            "pass": True,
+            "adapter_id": "coding_agent",
+            "coding_agent_features": {"lang_mismatch": 0, "test_markers": 1, "tool_call_count": 1},
+            "coding_agent_bins": {"verbosity_bin": 2, "tests_bin": 4, "tool_call_bin": 3},
+        }
+    ]
+    rows_b = [
+        {
+            "id": "id_1",
+            "label": "calm",
+            "compliance_l1": 0,
+            "delta_v": 0,
+            "delta_a": 0,
+            "delta_d": 0,
+            "pass": True,
+            "adapter_id": "coding_agent",
+            "coding_agent_features": {"lang_mismatch": 1, "test_markers": 0, "tool_call_count": 0},
+            "coding_agent_bins": {"verbosity_bin": 6, "tests_bin": 1, "tool_call_bin": 1},
+        }
+    ]
+    _mk_run(
+        run_a,
+        run_id="run_A",
+        dataset_hash="abc123",
+        spec_version="1.0",
+        pass_rate=1.0,
+        avg_l1=0.0,
+        p95_l1=0.0,
+        rows=rows_a,
+        provider="ollama",
+        model_tag="qwen3-coder:latest",
+        model_digest="sha256:stable",
+        generation_settings={"temperature": 0, "top_p": 1},
+    )
+    _mk_run(
+        run_b,
+        run_id="run_B",
+        dataset_hash="abc123",
+        spec_version="1.0",
+        pass_rate=1.0,
+        avg_l1=0.0,
+        p95_l1=0.0,
+        rows=rows_b,
+        provider="ollama",
+        model_tag="qwen3-coder:latest",
+        model_digest="sha256:stable",
+        generation_settings={"temperature": 0, "top_p": 1},
+    )
+    payload = run_gate(str(run_a), str(run_b), profile="coding_agent_drift")
+    assert payload["decision"] == "regressed"
+    metrics = {item["metric"] for item in payload["violations"]}
+    assert "delta_language_mismatch_rate" in metrics
+    assert "delta_tests_presence_rate" in metrics
+    assert "delta_tool_call_rate" in metrics
+    assert payload["coding_agent_metrics"]["delta"]["language_mismatch_rate"] == 1.0
+
+
+def test_run_gate_profile_coding_agent_drift_missing_coding_metrics_is_incompatible():
+    root = _temp_dir("tmp_gate_profile_coding_agent_missing_metrics")
+    run_a = root / "run_A"
+    run_b = root / "run_B"
+    rows = [{"id": "id_1", "label": "calm", "compliance_l1": 0, "delta_v": 0, "delta_a": 0, "delta_d": 0, "pass": True}]
+    _mk_run(
+        run_a,
+        run_id="run_A",
+        dataset_hash="abc123",
+        spec_version="1.0",
+        pass_rate=1.0,
+        avg_l1=0.0,
+        p95_l1=0.0,
+        rows=rows,
+        provider="ollama",
+        model_tag="qwen3-coder:latest",
+        model_digest="sha256:stable",
+        generation_settings={"temperature": 0, "top_p": 1},
+    )
+    _mk_run(
+        run_b,
+        run_id="run_B",
+        dataset_hash="abc123",
+        spec_version="1.0",
+        pass_rate=1.0,
+        avg_l1=0.0,
+        p95_l1=0.0,
+        rows=rows,
+        provider="ollama",
+        model_tag="qwen3-coder:latest",
+        model_digest="sha256:stable",
+        generation_settings={"temperature": 0, "top_p": 1},
+    )
+    payload = run_gate(str(run_a), str(run_b), profile="coding_agent_drift")
+    assert payload["decision"] == "incompatible"
+    reasons = {item["reason"] for item in payload["incompatibilities"]}
+    assert "coding_agent_metrics_missing" in reasons

@@ -22,6 +22,43 @@ def _sha256_12(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
 
 
+def _mk_min_run(path: Path, *, run_id: str, rows: list[dict]) -> None:
+    path.mkdir(parents=True, exist_ok=True)
+    (path / "eval_summary.json").write_text(
+        json.dumps(
+            {
+                "run_id": run_id,
+                "count_rows": len(rows),
+                "pass_rate": 1.0,
+                "avg_l1": 0.0,
+                "p95_l1": 0.0,
+                "summary_schema_version": "1.0",
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (path / "receipt.json").write_text(
+        json.dumps(
+            {
+                "spec_version": "1.0",
+                "receipt_schema_version": "1.0",
+                "run_id": run_id,
+                "dataset_hash": "same",
+                "taxonomy_hash": "tax",
+                "defaults_hash": "def",
+                "mapping_id": "ns8",
+                "mapping_version": "1.0",
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (path / "out.jsonl").write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+
+
 def test_run_report_single_run_is_deterministic():
     out_root = _temp_dir("tmp_report_single")
     eval_payload = run_eval(
@@ -83,3 +120,57 @@ def test_run_report_with_compare_and_gate_highlights():
     assert len(heatmap_payload["run_b"]["matrix_8x8"]) == 8
     assert all(len(row) == 8 for row in heatmap_payload["run_b"]["matrix_8x8"])
     assert "delta_run_b_minus_run_a_8x8" in heatmap_payload
+
+
+def test_run_report_includes_coding_agent_drift_slices_when_present():
+    out_root = _temp_dir("tmp_report_coding_drift")
+    run_a = out_root / "run_A"
+    run_b = out_root / "run_B"
+    rows_a = [
+        {
+            "id": "evt_1",
+            "pred_vad": {"V": 4, "A": 3, "D": 4},
+            "target_vad": {"V": 4, "A": 3, "D": 4},
+            "compliance_l1": 0,
+            "delta_v": 0,
+            "delta_a": 0,
+            "delta_d": 0,
+            "adapter_id": "coding_agent",
+            "coding_agent_features": {
+                "lang_detected": "python",
+                "lang_expected": "python",
+                "lang_mismatch": 0,
+                "test_markers": 1,
+                "tool_calls": 1,
+            },
+            "coding_agent_bins": {"verbosity_bin": 3, "tests_bin": 4, "tool_call_bin": 4},
+        }
+    ]
+    rows_b = [
+        {
+            "id": "evt_1",
+            "pred_vad": {"V": 4, "A": 3, "D": 4},
+            "target_vad": {"V": 4, "A": 3, "D": 4},
+            "compliance_l1": 0,
+            "delta_v": 0,
+            "delta_a": 0,
+            "delta_d": 0,
+            "adapter_id": "coding_agent",
+            "coding_agent_features": {
+                "lang_detected": "typescript",
+                "lang_expected": "python",
+                "lang_mismatch": 1,
+                "test_markers": 0,
+                "tool_calls": 0,
+            },
+            "coding_agent_bins": {"verbosity_bin": 6, "tests_bin": 1, "tool_call_bin": 1},
+        }
+    ]
+    _mk_min_run(run_a, run_id="run_A", rows=rows_a)
+    _mk_min_run(run_b, run_id="run_B", rows=rows_b)
+
+    payload = run_report(str(run_b), run_a=str(run_a), require_dataset_match=False)["report"]
+    assert payload["coding_agent_drift"]["available"] is True
+    assert payload["coding_agent_drift"]["run_b"]["language_mismatch_rate"] == 1.0
+    assert payload["coding_agent_drift"]["run_a"]["language_mismatch_rate"] == 0.0
+    assert payload["coding_agent_drift"]["delta_run_b_minus_run_a"]["language_mismatch_rate"] == 1.0

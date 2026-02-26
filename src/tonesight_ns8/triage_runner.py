@@ -34,6 +34,60 @@ def _to_float(value: Any) -> float:
         return 0.0
 
 
+def _coding_agent_single_fields(row: dict[str, Any]) -> dict[str, Any]:
+    features = row.get("coding_agent_features")
+    bins = row.get("coding_agent_bins")
+    if not isinstance(features, dict) or not isinstance(bins, dict):
+        return {}
+    return {
+        "adapter_id": row.get("adapter_id"),
+        "adapter_version": row.get("adapter_version"),
+        "coding_agent_lang_detected": features.get("lang_detected"),
+        "coding_agent_lang_expected": features.get("lang_expected"),
+        "coding_agent_lang_mismatch": features.get("lang_mismatch"),
+        "coding_agent_verbosity_bin": bins.get("verbosity_bin"),
+        "coding_agent_tests_bin": bins.get("tests_bin"),
+        "coding_agent_tool_call_bin": bins.get("tool_call_bin"),
+    }
+
+
+def _coding_agent_diff_fields(row_a: dict[str, Any] | None, row_b: dict[str, Any]) -> dict[str, Any]:
+    a_features = row_a.get("coding_agent_features") if isinstance(row_a, dict) else None
+    a_bins = row_a.get("coding_agent_bins") if isinstance(row_a, dict) else None
+    b_features = row_b.get("coding_agent_features")
+    b_bins = row_b.get("coding_agent_bins")
+    if not isinstance(b_features, dict) or not isinstance(b_bins, dict):
+        return {}
+
+    lang_mismatch_a = _to_float(a_features.get("lang_mismatch")) if isinstance(a_features, dict) else None
+    lang_mismatch_b = _to_float(b_features.get("lang_mismatch"))
+    verbosity_a = _to_float(a_bins.get("verbosity_bin")) if isinstance(a_bins, dict) else None
+    verbosity_b = _to_float(b_bins.get("verbosity_bin"))
+    tests_a = _to_float(a_bins.get("tests_bin")) if isinstance(a_bins, dict) else None
+    tests_b = _to_float(b_bins.get("tests_bin"))
+    tool_calls_a = _to_float(a_bins.get("tool_call_bin")) if isinstance(a_bins, dict) else None
+    tool_calls_b = _to_float(b_bins.get("tool_call_bin"))
+
+    return {
+        "adapter_id": row_b.get("adapter_id"),
+        "adapter_version": row_b.get("adapter_version"),
+        "coding_agent_lang_detected_b": b_features.get("lang_detected"),
+        "coding_agent_lang_expected_b": b_features.get("lang_expected"),
+        "coding_agent_lang_mismatch_a": lang_mismatch_a,
+        "coding_agent_lang_mismatch_b": lang_mismatch_b,
+        "delta_coding_agent_lang_mismatch": (lang_mismatch_b - lang_mismatch_a) if lang_mismatch_a is not None else None,
+        "coding_agent_verbosity_bin_a": verbosity_a,
+        "coding_agent_verbosity_bin_b": verbosity_b,
+        "delta_coding_agent_verbosity_bin": (verbosity_b - verbosity_a) if verbosity_a is not None else None,
+        "coding_agent_tests_bin_a": tests_a,
+        "coding_agent_tests_bin_b": tests_b,
+        "delta_coding_agent_tests_bin": (tests_b - tests_a) if tests_a is not None else None,
+        "coding_agent_tool_call_bin_a": tool_calls_a,
+        "coding_agent_tool_call_bin_b": tool_calls_b,
+        "delta_coding_agent_tool_call_bin": (tool_calls_b - tool_calls_a) if tool_calls_a is not None else None,
+    }
+
+
 def _single_run_triage_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for i, row in enumerate(rows):
@@ -50,6 +104,7 @@ def _single_run_triage_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "threshold_margin": row.get("threshold_margin"),
                 "compliance_l1": row.get("compliance_l1"),
                 "pass": row.get("pass"),
+                **_coding_agent_single_fields(row),
             }
         )
     return out
@@ -79,6 +134,7 @@ def _diff_triage_rows(rows_a: list[dict[str, Any]], rows_b: list[dict[str, Any]]
                 "delta_compliance_l1": (b_l1 - a_l1) if a_l1 is not None else None,
                 "pass_a": row_a.get("pass") if row_a is not None else None,
                 "pass_b": row_b.get("pass"),
+                **_coding_agent_diff_fields(row_a, row_b),
             }
         )
     return out
@@ -155,4 +211,3 @@ def run_triage(
         "output_path": str(target),
         "triage_preview": selected[: min(5, len(selected))],
     }
-

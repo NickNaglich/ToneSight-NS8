@@ -196,8 +196,8 @@ CLI support:
 - `decode ... --mapping ns8`
 - `stream-update --segments-json <segments.json> [--state-in <state.json>] [--state-out <state.json>] [--session-id <id>]`
 - `live-capture --events <path>`
-- `live-replay --capture <capture_dir_or_events_jsonl> [--adapter upstream_signal|coding_agent]`
-- `live-verify --capture <capture_dir_or_events_jsonl> [--adapter upstream_signal|coding_agent]`
+- `live-replay --capture <capture_dir_or_events_jsonl> [--adapter <live_adapter_id>] [--require-pinned-model-identity]`
+- `live-verify --capture <capture_dir_or_events_jsonl> [--adapter <live_adapter_id>] [--require-pinned-model-identity]`
 - `canary --capture <capture_dir_or_events_jsonl>`
 - `incident --run-a <run_dir> --run-b <run_dir>`
 - `report --run-b <run_dir> [--run-a <run_dir>]`
@@ -416,6 +416,11 @@ Gate profiles:
 - select with `profile="<name>"`
 - explicit threshold args override selected profile values
 - bundled `coding_agent_drift` profile enables `require_pinned_model_identity=true`
+- bundled `coding_agent_drift` profile also includes optional behavioral deltas:
+  - `max_language_mismatch_rate_delta`
+  - `max_verbosity_bin_mean_delta`
+  - `min_tests_presence_rate_delta`
+  - `min_tool_call_rate_delta`
 
 ### `run_canary(capture: str, *, baseline_out_root: str = "runs/canary/baseline", candidate_out_root: str = "runs/canary/candidate", baseline_taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", candidate_taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", baseline_threshold_l1: int = 3, candidate_threshold_l1: int = 3, shadow_strict: str = "quarantine", redact: bool = True, top_n: int = 10, profile: str | None = None, gate_profiles_path: str = "config/gate_profiles.json", min_pass_rate_delta: float | None = None, max_avg_l1_delta: float | None = None, max_p95_l1_delta: float | None = None, allow_dataset_mismatch: bool = False) -> dict`
 
@@ -494,6 +499,7 @@ Output:
   - reproducibility metadata from receipt (`spec_version`, hashes, mapping IDs, code revision when present)
   - compare highlights (`metrics`, regression coverage, top regressions) when `run_a` is provided
   - gate summary (`decision`, thresholds, violations, incompatibilities, exit code) when `run_a` is provided
+  - additive `coding_agent_drift` slice when coding-agent rows are present
 
 Determinism guarantees:
 - consumes existing artifacts only
@@ -559,7 +565,7 @@ Writes:
 Returns:
 - `capture_id`, `capture_hash`, `capture_dir`, `event_count`, `manifest_path`
 
-### `run_live_replay(capture: str, *, out_root: str = "runs", taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", threshold_l1: int = 3, shadow_strict: str = "quarantine", redact: bool = True, adapter: str = "upstream_signal") -> dict`
+### `run_live_replay(capture: str, *, out_root: str = "runs", taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", threshold_l1: int = 3, shadow_strict: str = "quarantine", redact: bool = True, adapter: str = "upstream_signal", require_pinned_model_identity: bool = False) -> dict`
 
 Replays a validated capture into standard deterministic run artifacts.
 
@@ -580,8 +586,9 @@ Returns:
   - rows include deterministic `coding_agent_features` and `coding_agent_bins`
   - receipt includes `adapter_id`, `adapter_version`, `capture_schema_version`
   - receipt includes pinned-model identity fields when available (`provider`, `model_tag`, `model_digest`/`model_version`, `generation_settings`)
+  - when `require_pinned_model_identity=True`, replay fails fast unless provider/model identity/generation settings are present
 
-### `run_live_verify(capture: str, *, out_root: str = "runs", taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", threshold_l1: int = 3, shadow_strict: str = "quarantine", redact: bool = True, adapter: str = "upstream_signal") -> dict`
+### `run_live_verify(capture: str, *, out_root: str = "runs", taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", threshold_l1: int = 3, shadow_strict: str = "quarantine", redact: bool = True, adapter: str = "upstream_signal", require_pinned_model_identity: bool = False) -> dict`
 
 Runs `run_live_replay` twice over the same capture and compares artifact hashes.
 
@@ -671,6 +678,7 @@ Suite `killer_stability` artifacts:
 Suite `coding_agent_drift` artifacts:
 - `<out_root>/benchmarks/coding_agent_drift/evidence.json`
 - `<out_root>/benchmarks/coding_agent_drift/report.json`
+- includes deterministic `gate_ready` summaries for profile/gate consumption
 
 Current supported suite:
 - `core`

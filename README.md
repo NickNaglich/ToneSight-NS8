@@ -15,7 +15,7 @@ Conceptual flow:
 `VAD bins -> Tone taxonomy -> NS8 mapping -> Deterministic anchor`
 
 Positioning summary:
-- ToneSight NS8 is a deterministic conformance layer for VAD-based affect telemetry.
+- ToneSight NS8 is a deterministic conformance layer for agent behavioral telemetry.
 - It bridges probabilistic upstream affect outputs and production evaluation/monitoring systems.
 - It provides vector-verified behavioral stability for the NS8 mapping contract (not psychological ground truth).
 
@@ -456,6 +456,8 @@ python -m tonesight_ns8.cli live-replay --capture runs/captures/<capture_id> --t
 python -m tonesight_ns8.cli live-verify --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
 python -m tonesight_ns8.cli live-replay --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --adapter coding_agent
 python -m tonesight_ns8.cli live-verify --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --adapter coding_agent
+python -m tonesight_ns8.cli live-replay --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --adapter coding_agent --require-pinned-model-identity
+python -m tonesight_ns8.cli live-verify --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --adapter coding_agent --require-pinned-model-identity
 python -m tonesight_ns8.cli canary --capture runs/captures/<capture_id> --baseline-out-root runs/canary/baseline --candidate-out-root runs/canary/candidate --profile support_chat
 python -m tonesight_ns8.cli incident --run-a runs/<baseline> --run-b runs/<candidate> --top-n 50
 python -m tonesight_ns8.cli purge --out-root runs --older-than-days 30
@@ -477,6 +479,7 @@ Static report artifacts:
 - `runs/<runB>/reports/report_<runA>_to_<runB>.json` (compare)
 - `runs/<runB>/reports/transition_heatmap_<runB>.json` (single-run transitions)
 - `runs/<runB>/reports/transition_heatmap_<runA>_to_<runB>.json` (compare transitions + delta matrix)
+- report JSON includes additive `coding_agent_drift` slices when coding-agent rows are present.
 
 Gate command (`gate`) exit codes:
 - `0`: gate passed
@@ -492,6 +495,7 @@ Gate profiles:
 - selected with `--profile <name>`
 - explicit CLI thresholds still override selected profile values
 - coding-agent profile `coding_agent_drift` enforces pinned model identity
+- coding-agent profile includes deterministic behavioral thresholds (`max_language_mismatch_rate_delta`, `max_verbosity_bin_mean_delta`, `min_tests_presence_rate_delta`, `min_tool_call_rate_delta`)
 - optional CLI enforcement: `--require-pinned-model-identity`
 
 Optional eval artifacts:
@@ -509,6 +513,12 @@ Live replay artifacts:
 - `redaction_summary` in replay `eval_summary.json` and `receipt.json`
 - when `--adapter coding_agent`, rows include `coding_agent_features` + `coding_agent_bins`
 - coding-agent receipts include pinned identity fields when present (`provider`, `model_tag`, `model_digest`/`model_version`, `generation_settings`)
+
+ClawDBot Mode A (log ingestion):
+- write ClawDBot interaction logs as LiveEvent JSONL
+- ingest with `live-capture`
+- replay with `--adapter coding_agent --require-pinned-model-identity`
+- use existing `gate/report` flows for deterministic drift monitoring
 
 Canary/incident artifacts:
 - canary payload includes baseline/candidate replay metadata, `compare_summary`, and `gate_result`
@@ -545,6 +555,7 @@ Killer benchmark artifacts (`benchmark --suite killer_stability`):
 Coding-agent drift benchmark artifacts (`benchmark --suite coding_agent_drift`):
 - `runs/benchmarks/coding_agent_drift/evidence.json`
 - `runs/benchmarks/coding_agent_drift/report.json`
+- includes deterministic `gate_ready` summary deltas for profile/gate consumption.
 
 Robustness summary snapshot (`runs/benchmarks/killer_stability/robustness_summary.json`, `N=250`):
 
@@ -818,6 +829,7 @@ curl -X POST http://localhost:8080/eval/run \
 |   |-- RELEASE_CHECKLIST.md
 |   |-- RELEASE_NOTES_0.2.2.md
 |   |-- RELEASE_NOTES_0.2.3.md
+|   |-- RELEASE_NOTES_0.2.4.md
 |   |-- RECEIPT_SCHEMA.md
 |   |-- RETENTION_POLICY.md
 |   |-- SECURITY_POLICY.md
@@ -852,7 +864,7 @@ Note: The current layout uses a reference implementation (`ns8_ref.py`).
 ## Versioning and Stability
 
 - Library/package versioning follows semantic versioning and is currently pre-1.0 (`0.x` series).
-- Current package version target: `0.2.3`.
+- Current package version target: `0.2.4`.
 - NS8 spec version is tracked separately in `docs/SPEC_NS8.md`.
 - The NS8 specification is stable within a major version.
 

@@ -373,6 +373,81 @@ def test_cli_live_replay_rejects_invalid_adapter():
         main(["live-replay", "--capture", "tests/fixtures/live_capture.small.jsonl", "--adapter", "bad_adapter"])
 
 
+def test_cli_live_replay_require_pinned_identity_missing_fails(capsys):
+    out_root = _temp_dir("tmp_live_cli_require_pinned_missing")
+    events_path = out_root / "events.coding_agent.missing_identity.jsonl"
+    events_path.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "event_id": "evt_ca_missing_identity",
+                        "source": "coding_agent",
+                        "timestamp_received": "2026-02-25T12:00:00Z",
+                        "text": "def solve(x):\n    return x\n",
+                        "meta": {"session_id": "s1", "expected_language": "python"},
+                        "privacy_flags": {"contains_pii": False, "allow_store_raw": True},
+                    }
+                )
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    rc_capture = main(["live-capture", "--events", str(events_path), "--out-root", str(out_root)])
+    capture_payload = json.loads(capsys.readouterr().out)
+    assert rc_capture == 0
+
+    rc_replay = main(
+        [
+            "live-replay",
+            "--capture",
+            capture_payload["capture_dir"],
+            "--out-root",
+            str(out_root),
+            "--taxonomy",
+            "taxonomy/tone_taxonomy.v1.json",
+            "--threshold-l1",
+            "3",
+            "--adapter",
+            "coding_agent",
+            "--require-pinned-model-identity",
+        ]
+    )
+    assert rc_replay == 2
+
+
+def test_cli_live_replay_require_pinned_identity_non_coding_rejected(capsys):
+    out_root = _temp_dir("tmp_live_cli_require_pinned_non_coding")
+    rc_capture = main(
+        [
+            "live-capture",
+            "--events",
+            "tests/fixtures/live_capture.small.jsonl",
+            "--out-root",
+            str(out_root),
+        ]
+    )
+    capture_payload = json.loads(capsys.readouterr().out)
+    assert rc_capture == 0
+
+    rc_replay = main(
+        [
+            "live-replay",
+            "--capture",
+            capture_payload["capture_dir"],
+            "--out-root",
+            str(out_root),
+            "--taxonomy",
+            "taxonomy/tone_taxonomy.v1.json",
+            "--adapter",
+            "upstream_signal",
+            "--require-pinned-model-identity",
+        ]
+    )
+    assert rc_replay == 2
+
+
 def test_cli_canary(capsys):
     root = _temp_dir("tmp_canary_cli")
     rc = main(

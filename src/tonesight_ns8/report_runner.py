@@ -70,6 +70,71 @@ def _matrix_delta(matrix_b: list[list[int]], matrix_a: list[list[int]]) -> list[
     ]
 
 
+def _to_float(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _coding_agent_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    coding_rows = [
+        row
+        for row in rows
+        if row.get("adapter_id") == "coding_agent"
+        and isinstance(row.get("coding_agent_features"), dict)
+        and isinstance(row.get("coding_agent_bins"), dict)
+    ]
+    if not coding_rows:
+        return {
+            "row_count": 0,
+            "language_mismatch_rate": 0.0,
+            "tests_present_rate": 0.0,
+            "tool_call_rate": 0.0,
+            "avg_verbosity_bin": 0.0,
+            "avg_tests_bin": 0.0,
+            "avg_tool_call_bin": 0.0,
+        }
+
+    mismatch_count = 0
+    tests_present_count = 0
+    tool_call_count = 0
+    verbosity_sum = 0.0
+    tests_bin_sum = 0.0
+    tool_call_bin_sum = 0.0
+    for row in coding_rows:
+        features = row.get("coding_agent_features", {})
+        bins = row.get("coding_agent_bins", {})
+        mismatch_count += 1 if int(features.get("lang_mismatch", 0)) == 1 else 0
+        tests_present_count += 1 if int(features.get("test_markers", 0)) > 0 else 0
+        tool_call_count += 1 if int(features.get("tool_calls", 0)) > 0 else 0
+        verbosity_sum += _to_float(bins.get("verbosity_bin"))
+        tests_bin_sum += _to_float(bins.get("tests_bin"))
+        tool_call_bin_sum += _to_float(bins.get("tool_call_bin"))
+
+    total = float(len(coding_rows))
+    return {
+        "row_count": int(total),
+        "language_mismatch_rate": mismatch_count / total,
+        "tests_present_rate": tests_present_count / total,
+        "tool_call_rate": tool_call_count / total,
+        "avg_verbosity_bin": verbosity_sum / total,
+        "avg_tests_bin": tests_bin_sum / total,
+        "avg_tool_call_bin": tool_call_bin_sum / total,
+    }
+
+
+def _coding_agent_delta(run_a: dict[str, Any], run_b: dict[str, Any]) -> dict[str, float]:
+    return {
+        "language_mismatch_rate": _to_float(run_b.get("language_mismatch_rate")) - _to_float(run_a.get("language_mismatch_rate")),
+        "tests_present_rate": _to_float(run_b.get("tests_present_rate")) - _to_float(run_a.get("tests_present_rate")),
+        "tool_call_rate": _to_float(run_b.get("tool_call_rate")) - _to_float(run_a.get("tool_call_rate")),
+        "avg_verbosity_bin": _to_float(run_b.get("avg_verbosity_bin")) - _to_float(run_a.get("avg_verbosity_bin")),
+        "avg_tests_bin": _to_float(run_b.get("avg_tests_bin")) - _to_float(run_a.get("avg_tests_bin")),
+        "avg_tool_call_bin": _to_float(run_b.get("avg_tool_call_bin")) - _to_float(run_a.get("avg_tool_call_bin")),
+    }
+
+
 def run_report(
     run_b: str,
     *,
@@ -88,6 +153,7 @@ def run_report(
     summary_b = _read_json(run_b_path / "eval_summary.json")
     receipt_b = _read_json(run_b_path / "receipt.json")
     rows_b = _read_jsonl(run_b_path / "out.jsonl")
+    coding_metrics_b = _coding_agent_metrics(rows_b)
     matrix_b, transitions_b = _transition_matrix_from_rows(rows_b)
 
     compare_highlights: dict[str, Any] = {
@@ -115,6 +181,7 @@ def run_report(
     if run_a:
         run_a_path = Path(run_a)
         rows_a = _read_jsonl(run_a_path / "out.jsonl")
+        coding_metrics_a = _coding_agent_metrics(rows_a)
         matrix_a, transitions_a = _transition_matrix_from_rows(rows_a)
         compare_payload = run_compare(
             str(run_a_path),
@@ -163,6 +230,8 @@ def run_report(
             "human_summary": gate_payload.get("human_summary"),
             "exit_code": int(gate_payload.get("exit_code", 0)),
         }
+    else:
+        coding_metrics_a = None
 
     transition_heatmap_payload: dict[str, Any] = {
         "transition_heatmap_schema_version": TRANSITION_HEATMAP_SCHEMA_VERSION,
@@ -209,6 +278,14 @@ def run_report(
         },
         "compare_highlights": compare_highlights,
         "gate_summary": gate_summary,
+        "coding_agent_drift": {
+            "available": bool(coding_metrics_b.get("row_count", 0) > 0),
+            "run_b": coding_metrics_b,
+            "run_a": coding_metrics_a,
+            "delta_run_b_minus_run_a": _coding_agent_delta(coding_metrics_a, coding_metrics_b)
+            if coding_metrics_a is not None
+            else None,
+        },
         "artifacts": {
             "run_b_eval_summary_json": str(run_b_path / "eval_summary.json"),
             "run_b_receipt_json": str(run_b_path / "receipt.json"),

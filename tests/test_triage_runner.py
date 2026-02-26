@@ -117,3 +117,51 @@ def test_cli_triage(capsys):
     assert payload["top_n_returned"] == 1
     assert Path(payload["output_path"]).exists()
 
+
+def test_run_triage_diff_includes_coding_agent_fields_when_present():
+    root = _temp_dir("tmp_triage_coding_agent")
+    run_a = root / "run_A"
+    run_b = root / "run_B"
+    rows_a = [
+        {
+            "id": "id_1",
+            "label": "calm",
+            "tags": ["a"],
+            "delta_v": 0,
+            "delta_a": 0,
+            "delta_d": 0,
+            "threshold_margin": 3,
+            "compliance_l1": 0,
+            "pass": True,
+            "adapter_id": "coding_agent",
+            "coding_agent_features": {"lang_detected": "python", "lang_expected": "python", "lang_mismatch": 0},
+            "coding_agent_bins": {"verbosity_bin": 2, "tests_bin": 4, "tool_call_bin": 3},
+        }
+    ]
+    rows_b = [
+        {
+            "id": "id_1",
+            "label": "calm",
+            "tags": ["a"],
+            "delta_v": 0,
+            "delta_a": 0,
+            "delta_d": 0,
+            "threshold_margin": 3,
+            "compliance_l1": 0,
+            "pass": True,
+            "adapter_id": "coding_agent",
+            "coding_agent_features": {"lang_detected": "typescript", "lang_expected": "python", "lang_mismatch": 1},
+            "coding_agent_bins": {"verbosity_bin": 6, "tests_bin": 1, "tool_call_bin": 1},
+        }
+    ]
+    _mk_run(run_a, run_id="run_A", dataset_hash="abc123", rows=rows_a)
+    _mk_run(run_b, run_id="run_B", dataset_hash="abc123", rows=rows_b)
+
+    payload = run_triage(str(run_b), run_a=str(run_a), top_n=1, output_format="jsonl")
+    exported = [json.loads(line) for line in Path(payload["output_path"]).read_text(encoding="utf-8").splitlines() if line.strip()]
+    assert len(exported) == 1
+    assert exported[0]["coding_agent_lang_mismatch_a"] == 0.0
+    assert exported[0]["coding_agent_lang_mismatch_b"] == 1.0
+    assert exported[0]["delta_coding_agent_lang_mismatch"] == 1.0
+    assert exported[0]["coding_agent_verbosity_bin_a"] == 2.0
+    assert exported[0]["coding_agent_verbosity_bin_b"] == 6.0

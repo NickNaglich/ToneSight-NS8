@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from .coding_agent_adapter import (
     CODING_AGENT_ADAPTER_ID,
@@ -23,8 +23,58 @@ from .taxonomy import UnknownToneLabel, get_vad, load_taxonomy
 
 RECEIPT_SCHEMA_VERSION = "1.0"
 SUMMARY_SCHEMA_VERSION = "1.0"
-_LIVE_ADAPTERS = {"upstream_signal", CODING_AGENT_ADAPTER_ID}
 _LIVE_CAPTURE_SCHEMA_VERSION = "1.0"
+LiveAdapterResolver = Callable[[dict[str, Any], dict[str, Any]], tuple[tuple[int, int, int], dict[str, Any] | None]]
+
+
+def _resolve_upstream_signal_event(
+    event: dict[str, Any],
+    taxonomy: dict[str, Any],
+) -> tuple[tuple[int, int, int], dict[str, Any] | None]:
+    vad = event.get("upstream_vad")
+    if isinstance(vad, dict):
+        return (int(vad["V"]), int(vad["A"]), int(vad["D"])), None
+    label = event.get("upstream_label")
+    if isinstance(label, str) and label.strip():
+        return get_vad(label, taxonomy), None
+    raise ValueError("missing upstream_vad/upstream_label")
+
+
+def _resolve_coding_agent_event(
+    event: dict[str, Any],
+    taxonomy: dict[str, Any],
+) -> tuple[tuple[int, int, int], dict[str, Any] | None]:
+    del taxonomy  # unused; kept for shared resolver signature.
+    payload = adapt_coding_agent_event(event)
+    vad = payload["vad"]
+    return (int(vad["V"]), int(vad["A"]), int(vad["D"])), payload
+
+
+_LIVE_ADAPTER_REGISTRY: dict[str, LiveAdapterResolver] = {
+    "upstream_signal": _resolve_upstream_signal_event,
+    CODING_AGENT_ADAPTER_ID: _resolve_coding_agent_event,
+}
+
+
+def list_live_adapters() -> tuple[str, ...]:
+    return tuple(sorted(_LIVE_ADAPTER_REGISTRY.keys()))
+
+
+def register_live_adapter(adapter_id: str, resolver: LiveAdapterResolver) -> None:
+    key = str(adapter_id).strip()
+    if not key:
+        raise ValueError("adapter_id must be non-empty")
+    if key in _LIVE_ADAPTER_REGISTRY:
+        raise ValueError(f"duplicate live adapter id: {key}")
+    _LIVE_ADAPTER_REGISTRY[key] = resolver
+
+
+def _get_live_adapter(adapter: str) -> LiveAdapterResolver:
+    resolver = _LIVE_ADAPTER_REGISTRY.get(adapter)
+    if resolver is None:
+        available = ", ".join(list_live_adapters())
+        raise ValueError(f"unknown live adapter: {adapter} (available: {available})")
+    return resolver
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -187,20 +237,24 @@ def _pred_vad_for_event(
     *,
     adapter: str,
 ) -> tuple[tuple[int, int, int], dict[str, Any] | None]:
-    if adapter == CODING_AGENT_ADAPTER_ID:
-        payload = adapt_coding_agent_event(event)
-        vad = payload["vad"]
-        return (int(vad["V"]), int(vad["A"]), int(vad["D"])), payload
-    if adapter != "upstream_signal":
-        raise ValueError(f"unknown live adapter: {adapter}")
+    resolver = _get_live_adapter(adapter)
+    return resolver(event, taxonomy)
 
-    vad = event.get("upstream_vad")
-    if isinstance(vad, dict):
-        return (int(vad["V"]), int(vad["A"]), int(vad["D"])), None
-    label = event.get("upstream_label")
-    if isinstance(label, str) and label.strip():
-        return get_vad(label, taxonomy), None
-    raise ValueError("missing upstream_vad/upstream_label")
+
+def _require_pinned_identity(identity: dict[str, Any]) -> None:
+    missing: list[str] = []
+    if not str(identity.get("provider") or "").strip():
+        missing.append("provider")
+    if not str(identity.get("model_tag") or "").strip():
+        missing.append("model_tag")
+    model_digest = str(identity.get("model_digest") or "").strip()
+    model_version = str(identity.get("model_version") or "").strip()
+    if not model_digest and not model_version:
+        missing.append("model_digest|model_version")
+    if not isinstance(identity.get("generation_settings"), dict) or not identity.get("generation_settings"):
+        missing.append("generation_settings")
+    if missing:
+        raise ValueError(f"pinned model identity missing required fields: {', '.join(missing)}")
 
 
 def run_live_replay(
@@ -212,10 +266,12 @@ def run_live_replay(
     shadow_strict: str = "quarantine",
     redact: bool = True,
     adapter: str = "upstream_signal",
+    require_pinned_model_identity: bool = False,
 ) -> dict[str, Any]:
     """Replay a live capture into deterministic run artifacts."""
-    if adapter not in _LIVE_ADAPTERS:
-        raise ValueError(f"unknown live adapter: {adapter}")
+    _get_live_adapter(adapter)
+    if require_pinned_model_identity and adapter != CODING_AGENT_ADAPTER_ID:
+        raise ValueError("require_pinned_model_identity is only supported with adapter='coding_agent'")
 
     events_path, capture_id, events, capture_hash = _load_capture_events(capture)
     taxonomy = load_taxonomy(taxonomy_path)
@@ -368,6 +424,8 @@ def run_live_replay(
     receipt["redaction_summary"] = redaction_summary
     if adapter == CODING_AGENT_ADAPTER_ID:
         identity = _extract_coding_agent_identity(valid_events)
+        if require_pinned_model_identity:
+            _require_pinned_identity(identity)
         receipt["adapter_id"] = CODING_AGENT_ADAPTER_ID
         receipt["adapter_version"] = CODING_AGENT_ADAPTER_VERSION
         receipt["provider"] = identity["provider"]
@@ -380,6 +438,7 @@ def run_live_replay(
         receipt["config"]["model_digest"] = identity["model_digest"]
         receipt["config"]["model_version"] = identity["model_version"]
         receipt["config"]["generation_settings"] = identity["generation_settings"]
+        receipt["config"]["require_pinned_model_identity"] = bool(require_pinned_model_identity)
 
     _write_jsonl(out_dir / "out.jsonl", scored)
     (out_dir / "eval_summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
@@ -407,6 +466,7 @@ def run_live_verify(
     shadow_strict: str = "quarantine",
     redact: bool = True,
     adapter: str = "upstream_signal",
+    require_pinned_model_identity: bool = False,
 ) -> dict[str, Any]:
     """Replay twice and verify deterministic artifact hashes are identical."""
     first = run_live_replay(
@@ -417,6 +477,7 @@ def run_live_verify(
         shadow_strict=shadow_strict,
         redact=redact,
         adapter=adapter,
+        require_pinned_model_identity=require_pinned_model_identity,
     )
     run_dir = Path(first["out_dir"])
     first_hashes = {
@@ -436,6 +497,7 @@ def run_live_verify(
         shadow_strict=shadow_strict,
         redact=redact,
         adapter=adapter,
+        require_pinned_model_identity=require_pinned_model_identity,
     )
     second_hashes = {
         "out_jsonl": _file_hash(run_dir / "out.jsonl"),

@@ -19,6 +19,10 @@ Empirical evidence claims (benchmark-level):
 This repository does not claim psychological ground truth accuracy.
 Killer benchmark outputs are synthetic benchmark evidence and should be interpreted as controlled protocol results.
 
+Positioning note:
+- ToneSight NS8 is a deterministic behavioral telemetry layer for agent systems.
+- Coding-agent telemetry is the first implemented adapter path; broader agent adapters are extension surfaces, not core-math changes.
+
 Killer benchmark protocol (v0.2.1):
 - `docs/BENCHMARK_KILLER_STABILITY.md`
 

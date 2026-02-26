@@ -449,6 +449,48 @@ def _metric_deltas(baseline: dict[str, float], candidate: dict[str, float]) -> d
     return {key: float(candidate[key]) - float(baseline[key]) for key in keys}
 
 
+def _coding_gate_ready_summary(
+    baseline_metrics: dict[str, float],
+    candidate_summaries: dict[str, Any],
+) -> dict[str, Any]:
+    deltas_by_candidate: dict[str, dict[str, float]] = {}
+    mismatch_deltas: list[float] = []
+    verbosity_deltas: list[float] = []
+    tests_deltas: list[float] = []
+    tool_call_deltas: list[float] = []
+
+    for path in sorted(candidate_summaries.keys()):
+        summary = candidate_summaries[path]
+        deltas = _metric_deltas(baseline_metrics, summary["metrics"])
+        canonical = {
+            "language_mismatch_rate_delta": float(deltas.get("language_mismatch_rate", 0.0)),
+            "verbosity_bin_mean_delta": float(deltas.get("verbosity_bin_mean", 0.0)),
+            "tests_presence_rate_delta": float(deltas.get("tests_presence_rate", 0.0)),
+            "tool_call_rate_delta": float(deltas.get("tool_call_rate", 0.0)),
+        }
+        deltas_by_candidate[path] = canonical
+        mismatch_deltas.append(canonical["language_mismatch_rate_delta"])
+        verbosity_deltas.append(canonical["verbosity_bin_mean_delta"])
+        tests_deltas.append(canonical["tests_presence_rate_delta"])
+        tool_call_deltas.append(canonical["tool_call_rate_delta"])
+
+    return {
+        "candidate_deltas": deltas_by_candidate,
+        "aggregate_deltas": {
+            "max_language_mismatch_rate_delta": max(mismatch_deltas) if mismatch_deltas else 0.0,
+            "max_verbosity_bin_mean_delta": max(verbosity_deltas) if verbosity_deltas else 0.0,
+            "min_tests_presence_rate_delta": min(tests_deltas) if tests_deltas else 0.0,
+            "min_tool_call_rate_delta": min(tool_call_deltas) if tool_call_deltas else 0.0,
+        },
+        "profile_field_mapping": {
+            "max_language_mismatch_rate_delta": "max_language_mismatch_rate_delta",
+            "max_verbosity_bin_mean_delta": "max_verbosity_bin_mean_delta",
+            "min_tests_presence_rate_delta": "min_tests_presence_rate_delta",
+            "min_tool_call_rate_delta": "min_tool_call_rate_delta",
+        },
+    }
+
+
 def run_coding_agent_drift_benchmark(
     *,
     out_root: str = "runs",
@@ -477,6 +519,8 @@ def run_coding_agent_drift_benchmark(
         summary["metric_deltas_vs_baseline"] = _metric_deltas(baseline_metrics, summary["metrics"])
         candidate_summaries[str(candidate_path)] = summary
 
+    gate_ready = _coding_gate_ready_summary(baseline_metrics, candidate_summaries)
+
     base_dir = Path(out_root) / "benchmarks" / "coding_agent_drift"
     artifacts = {
         "evidence": str(base_dir / "evidence.json"),
@@ -492,6 +536,7 @@ def run_coding_agent_drift_benchmark(
         },
         "baseline": baseline_summary,
         "candidates": candidate_summaries,
+        "gate_ready": gate_ready,
         "artifacts": artifacts,
     }
     report = {
@@ -506,6 +551,7 @@ def run_coding_agent_drift_benchmark(
             "candidate_metric_deltas": {
                 path: summary["metric_deltas_vs_baseline"] for path, summary in sorted(candidate_summaries.items())
             },
+            "gate_ready": gate_ready,
         },
     }
     _write_json(Path(artifacts["evidence"]), evidence)

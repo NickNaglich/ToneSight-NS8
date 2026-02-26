@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .defaults import ARTIFACT_DEFAULTS, EVAL_DEFAULTS
+from .live_runner import list_live_adapters
 from .mapping import get_mapping, list_mappings
 from . import (
     SegmentRecord,
@@ -297,6 +298,7 @@ def _cmd_live_replay(args: argparse.Namespace) -> dict:
         shadow_strict=args.shadow_strict,
         redact=not args.disable_redaction,
         adapter=args.adapter,
+        require_pinned_model_identity=args.require_pinned_model_identity,
     )
 
 
@@ -309,6 +311,7 @@ def _cmd_live_verify(args: argparse.Namespace) -> dict:
         shadow_strict=args.shadow_strict,
         redact=not args.disable_redaction,
         adapter=args.adapter,
+        require_pinned_model_identity=args.require_pinned_model_identity,
     )
 
 
@@ -467,6 +470,7 @@ def build_parser() -> argparse.ArgumentParser:
     gate_cmd.add_argument(
         "--require-pinned-model-identity",
         action="store_true",
+        default=None,
         help="Require provider/model identity and generation settings compatibility in receipts.",
     )
     gate_cmd.add_argument(
@@ -539,7 +543,12 @@ def build_parser() -> argparse.ArgumentParser:
     live_replay_cmd.add_argument("--taxonomy", default=EVAL_DEFAULTS["taxonomy_path"])
     live_replay_cmd.add_argument("--threshold-l1", type=_non_negative_int, default=EVAL_DEFAULTS["threshold_l1"])
     live_replay_cmd.add_argument("--shadow-strict", choices=("fail", "drop", "quarantine"), default="quarantine")
-    live_replay_cmd.add_argument("--adapter", choices=("upstream_signal", "coding_agent"), default="upstream_signal")
+    live_replay_cmd.add_argument("--adapter", choices=list_live_adapters(), default="upstream_signal")
+    live_replay_cmd.add_argument(
+        "--require-pinned-model-identity",
+        action="store_true",
+        help="Require pinned provider/model identity and generation settings for coding-agent replay.",
+    )
     live_replay_cmd.add_argument("--disable-redaction", action="store_true")
     live_replay_cmd.set_defaults(func=_cmd_live_replay)
 
@@ -549,7 +558,12 @@ def build_parser() -> argparse.ArgumentParser:
     live_verify_cmd.add_argument("--taxonomy", default=EVAL_DEFAULTS["taxonomy_path"])
     live_verify_cmd.add_argument("--threshold-l1", type=_non_negative_int, default=EVAL_DEFAULTS["threshold_l1"])
     live_verify_cmd.add_argument("--shadow-strict", choices=("fail", "drop", "quarantine"), default="quarantine")
-    live_verify_cmd.add_argument("--adapter", choices=("upstream_signal", "coding_agent"), default="upstream_signal")
+    live_verify_cmd.add_argument("--adapter", choices=list_live_adapters(), default="upstream_signal")
+    live_verify_cmd.add_argument(
+        "--require-pinned-model-identity",
+        action="store_true",
+        help="Require pinned provider/model identity and generation settings for coding-agent verify.",
+    )
     live_verify_cmd.add_argument("--disable-redaction", action="store_true")
     live_verify_cmd.set_defaults(func=_cmd_live_verify)
 

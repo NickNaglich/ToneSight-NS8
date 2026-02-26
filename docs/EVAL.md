@@ -179,6 +179,7 @@ Killer benchmark artifacts (`benchmark --suite killer_stability`):
 Coding-agent drift benchmark artifacts (`benchmark --suite coding_agent_drift`):
 - `runs/benchmarks/coding_agent_drift/evidence.json`
 - `runs/benchmarks/coding_agent_drift/report.json`
+- includes deterministic `gate_ready` summary deltas for profile/gate consumption.
 
 Performance smoke policy:
 - deterministic eval smoke is covered by `tests/test_eval_performance_smoke.py`
@@ -298,6 +299,11 @@ Threshold flags:
 - `--max-p95-l1-delta` (default `0.2`)
 - `--profile <name>` (loads thresholds from `config/gate_profiles.json`)
 - `--require-pinned-model-identity` (enforce provider/model/generation compatibility)
+- coding-agent profile adds behavioral thresholds:
+  - `max_language_mismatch_rate_delta`
+  - `max_verbosity_bin_mean_delta`
+  - `min_tests_presence_rate_delta`
+  - `min_tool_call_rate_delta`
 
 Exit codes:
 - `0`: gate passed
@@ -332,6 +338,7 @@ Behavior:
 - deterministic ranking by `--score` (default `compliance_l1`), then `id`
 - exports `jsonl` or `csv`
 - rationale fields include `delta_v`, `delta_a`, `delta_d`, `threshold_margin`, `label`, `tags`
+- when coding-agent rows are present, triage includes additive coding fields (language mismatch and bin deltas)
 
 ## Static Report Command (Phase 5)
 
@@ -346,6 +353,7 @@ Behavior:
 - consumes existing artifacts only (`receipt.json`, `eval_summary.json`, optional compare/gate from `run_a`)
 - includes reproducibility metadata from receipt (`spec_version`, hashes, mapping metadata)
 - includes compare highlights and gate summary when `--run-a` is provided
+- includes additive `coding_agent_drift` slice when coding-agent rows are present
 - writes deterministic report JSON under `runs/<run_b>/reports/` by default
 - repeated runs over unchanged inputs produce byte-stable output (`sort_keys=True` JSON)
 
@@ -430,12 +438,15 @@ python -m tonesight_ns8.cli live-replay --capture runs/captures/<capture_id> --t
 python -m tonesight_ns8.cli live-verify --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --shadow-strict quarantine
 python -m tonesight_ns8.cli live-replay --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --adapter coding_agent
 python -m tonesight_ns8.cli live-verify --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --adapter coding_agent
+python -m tonesight_ns8.cli live-replay --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --adapter coding_agent --require-pinned-model-identity
+python -m tonesight_ns8.cli live-verify --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --adapter coding_agent --require-pinned-model-identity
 ```
 
 Behavior:
 - `live-capture`: validates LiveEvent envelope and writes deterministic capture artifacts
 - `live-replay`: maps upstream signal (`upstream_vad` or `upstream_label`) into standard run artifacts
 - `live-replay --adapter coding_agent`: derives deterministic coding-agent features/bins and maps them to NS8-compatible VAD
+- `--require-pinned-model-identity` (coding-agent only): fail-fast when provider/model identity/generation settings are missing
 - `live-verify`: replays the same capture twice and checks hash identity for deterministic artifacts
 - `live-replay`/`live-verify` apply deterministic text redaction by default (disable with `--disable-redaction` only for internal debugging)
 
@@ -488,3 +499,23 @@ When validating live event envelopes in shadow mode, invalid rows follow one of:
 Identity note:
 - stable event hashing excludes `timestamp_received` from hash input to keep replay identity deterministic
 - see `docs/IDENTITY_AND_HASHING.md`
+
+## ClawDBot Mode A (Log Ingestion)
+
+Recommended low-coupling integration:
+- write ClawDBot interaction logs as LiveEvent JSONL (`docs/LIVE_EVENT_SCHEMA.md`)
+- ingest with `live-capture`
+- replay with `live-replay --adapter coding_agent`
+- compare/gate/report using existing run artifacts
+
+Example:
+
+```bash
+python -m tonesight_ns8.cli live-capture --events clawdbot_events.jsonl --out-root runs
+python -m tonesight_ns8.cli live-replay --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --adapter coding_agent --require-pinned-model-identity
+python -m tonesight_ns8.cli gate --run-a runs/<baseline_live_run> --run-b runs/<candidate_live_run> --profile coding_agent_drift --allow-dataset-mismatch
+python -m tonesight_ns8.cli report --run-a runs/<baseline_live_run> --run-b runs/<candidate_live_run> --profile coding_agent_drift --allow-dataset-mismatch
+```
+
+Boundary note:
+- this mode provides deterministic behavioral consistency telemetry; it is not code-correctness or cognition scoring.

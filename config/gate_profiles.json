@@ -20,7 +20,11 @@
       "min_pass_rate_delta": -0.02,
       "max_avg_l1_delta": 0.2,
       "max_p95_l1_delta": 0.2,
-      "require_pinned_model_identity": true
+      "require_pinned_model_identity": true,
+      "max_language_mismatch_rate_delta": 0.1,
+      "max_verbosity_bin_mean_delta": 2.0,
+      "min_tests_presence_rate_delta": -0.25,
+      "min_tool_call_rate_delta": -0.25
     }
   }
 }
