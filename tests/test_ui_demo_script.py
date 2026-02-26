@@ -3,6 +3,8 @@ import shutil
 import subprocess
 from pathlib import Path
 from uuid import uuid4
+import shutil as _shutil
+import pytest
 
 
 def _temp_dir(prefix: str) -> Path:
@@ -17,9 +19,12 @@ def test_ui_demo_script_skip_servers_writes_expected_artifacts():
     out_root = _temp_dir("tmp_ui_demo_script")
     script = Path("scripts/demo_ui_drift_gate_2min.ps1")
     assert script.exists()
+    ps_exe = _shutil.which("pwsh") or _shutil.which("powershell")
+    if ps_exe is None:
+        pytest.skip("PowerShell runtime not available in this environment.")
 
     cmd = [
-        "powershell",
+        ps_exe,
         "-ExecutionPolicy",
         "Bypass",
         "-File",
