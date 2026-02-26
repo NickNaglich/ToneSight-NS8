@@ -92,3 +92,30 @@ def run_index(
         "index_path": str(target),
         "rows_preview": rows[: min(3, len(rows))],
     }
+
+
+def run_index_json(
+    out_root: str,
+    *,
+    index_jsonl_path: str | None = None,
+    out_path: str | None = None,
+) -> dict[str, Any]:
+    """Build deterministic runs index JSON array from index.jsonl rows."""
+    out_root_path = Path(out_root)
+    source = Path(index_jsonl_path) if index_jsonl_path else (out_root_path / "index.jsonl")
+    if not source.exists():
+        raise FileNotFoundError(f"Missing index jsonl: {source}")
+
+    rows = _read_jsonl(source)
+    rows = sorted(rows, key=lambda row: str(row.get("run_id", "")))
+    target = Path(out_path) if out_path else (out_root_path / "index.json")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(rows, indent=2, sort_keys=True, ensure_ascii=True) + "\n", encoding="utf-8")
+    return {
+        "spec_version": "1.0",
+        "out_root": str(out_root_path),
+        "run_count": len(rows),
+        "index_jsonl_path": str(source),
+        "index_json_path": str(target),
+        "rows_preview": rows[: min(3, len(rows))],
+    }

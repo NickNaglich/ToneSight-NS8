@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 from uuid import uuid4
 
-from tonesight_ns8.run_index import run_index
+from tonesight_ns8.run_index import run_index, run_index_json
 
 
 def _write_json(path: Path, payload: dict) -> None:
@@ -84,4 +84,37 @@ def test_run_index_idempotent_for_unchanged_runs():
     first_bytes = Path(first["index_path"]).read_bytes()
     second = run_index(str(root))
     second_bytes = Path(second["index_path"]).read_bytes()
+    assert first_bytes == second_bytes
+
+
+def test_run_index_json_is_generated_from_index_jsonl():
+    root = _temp_dir("tmp_run_index_json")
+    _mk_run(root / "run_b", run_id="run_002", source="chat", source_mode="eval")
+    _mk_run(root / "run_a", run_id="run_001", source="live", source_mode="live_replay")
+
+    jsonl_payload = run_index(str(root))
+    json_payload = run_index_json(str(root))
+
+    jsonl_path = Path(jsonl_payload["index_path"])
+    json_path = Path(json_payload["index_json_path"])
+    assert jsonl_path.exists()
+    assert json_path.exists()
+
+    json_rows = json.loads(json_path.read_text(encoding="utf-8"))
+    assert isinstance(json_rows, list)
+    assert len(json_rows) == 2
+    assert json_rows[0]["run_id"] == "run_001"
+    assert json_rows[1]["run_id"] == "run_002"
+
+
+def test_run_index_json_idempotent_for_unchanged_runs():
+    root = _temp_dir("tmp_run_index_json_idempotent")
+    _mk_run(root / "run_1", run_id="run_001", source="chat", source_mode="eval")
+    _mk_run(root / "run_2", run_id="run_002", source="chat", source_mode="eval")
+    run_index(str(root))
+
+    first = run_index_json(str(root))
+    first_bytes = Path(first["index_json_path"]).read_bytes()
+    second = run_index_json(str(root))
+    second_bytes = Path(second["index_json_path"]).read_bytes()
     assert first_bytes == second_bytes

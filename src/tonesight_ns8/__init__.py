@@ -33,7 +33,7 @@ from .redaction import redact_live_event, redact_text
 from .report_runner import run_report
 from .release_check_runner import run_release_check
 from .retention import run_retention_purge
-from .run_index import run_index
+from .run_index import run_index, run_index_json
 from .schema import Route, SegmentRecord, SessionSummary, SpeakerSummary, ToneReceipt
 from .stream_runner import new_stream_state, run_stream_update, snapshot_stream_state
 from .trend_runner import run_trend
@@ -77,6 +77,7 @@ __all__ = [
     "run_report",
     "run_release_check",
     "run_index",
+    "run_index_json",
     "new_stream_state",
     "snapshot_stream_state",
     "run_stream_update",

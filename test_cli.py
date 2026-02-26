@@ -554,6 +554,35 @@ def test_cli_index_runs(capsys):
     assert Path(payload["index_path"]).exists()
 
 
+def test_cli_index_runs_json(capsys):
+    out_root = _temp_dir("tmp_index_json_cli")
+    rc_eval = main(
+        [
+            "eval",
+            "--goldset",
+            "data/goldset.jsonl",
+            "--out-root",
+            str(out_root),
+            "--taxonomy",
+            "taxonomy/tone_taxonomy.v1.json",
+            "--threshold-l1",
+            "3",
+        ]
+    )
+    _ = json.loads(capsys.readouterr().out)
+    assert rc_eval == 0
+
+    rc_index = main(["index-runs", "--out-root", str(out_root)])
+    _ = json.loads(capsys.readouterr().out)
+    assert rc_index == 0
+
+    rc_index_json = main(["index-runs-json", "--out-root", str(out_root)])
+    payload = json.loads(capsys.readouterr().out)
+    assert rc_index_json == 0
+    assert payload["run_count"] >= 1
+    assert Path(payload["index_json_path"]).exists()
+
+
 def test_cli_report(capsys):
     out_root = _temp_dir("tmp_report_cli")
     rc_a = main(

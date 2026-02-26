@@ -439,6 +439,7 @@ python -m tonesight_ns8.cli bundle --run-b runs/<candidate> --include-source-pat
 python -m tonesight_ns8.cli trend --out-root runs
 python -m tonesight_ns8.cli trend --out-root runs --group-by source
 python -m tonesight_ns8.cli index-runs --out-root runs
+python -m tonesight_ns8.cli index-runs-json --out-root runs
 python -m tonesight_ns8.cli report --run-b runs/<candidate>
 python -m tonesight_ns8.cli report --run-a runs/<baseline> --run-b runs/<candidate> --top-n 10
 python -m tonesight_ns8.cli stream-update --segments-json segments_batch.json --session-id session_ops --state-out runs/stream/session_ops.json
@@ -463,6 +464,21 @@ python -m tonesight_ns8.cli incident --run-a runs/<baseline> --run-b runs/<candi
 python -m tonesight_ns8.cli purge --out-root runs --older-than-days 30
 python -m tonesight_ns8.cli purge --out-root runs --older-than-days 30 --apply
 ```
+
+UI drift/gate 2-minute demo:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/demo_ui_drift_gate_2min.ps1
+```
+
+Centralized dashboard deep links (printed by the script):
+- `http://127.0.0.1:8090/index.html` (dashboard)
+- `http://127.0.0.1:8090/index.html?run=<candidate_run_id>&panel=detail`
+- `http://127.0.0.1:8090/index.html?run=<candidate_run_id>&panel=compare`
+- `http://127.0.0.1:8090/index.html?run=<candidate_run_id>&panel=gate`
+
+Recipe:
+- `docs/RECIPES/ui_drift_gate_demo.md`
 
 Eval artifacts:
 - `runs/<run_id>/out.jsonl`
@@ -531,6 +547,20 @@ Canary/incident artifacts:
 
 Run index artifact:
 - `runs/index.jsonl` (`index-runs`) with one deterministic row per discovered run
+- `runs/index.json` (`index-runs-json` or `tools/generate_run_index_json.py`) deterministic JSON array for read-only UI clients
+
+Minimal static artifact API (Phase 2):
+- `python server/app.py --runs-root runs --host 127.0.0.1 --port 8081`
+- serves existing artifacts only (no eval/compare/gate computation path)
+- key routes:
+  - `/api/index`
+  - `/api/run/{run_id}/receipt`
+  - `/api/run/{run_id}/summary`
+  - `/api/run/{run_id}/report`
+  - `/api/run/{run_id}/report-html`
+  - `/api/compare/{run_a}/{run_b}`
+  - `/api/compare-report/{run_a}/{run_b}`
+  - `/api/gate/{run_a}/{run_b}`
 
 Benchmark artifacts (`benchmark --suite core`):
 - `runs/benchmarks/core/noise_tolerance.json`
@@ -830,6 +860,7 @@ curl -X POST http://localhost:8080/eval/run \
 |   |-- RELEASE_NOTES_0.2.2.md
 |   |-- RELEASE_NOTES_0.2.3.md
 |   |-- RELEASE_NOTES_0.2.4.md
+|   |-- RELEASE_NOTES_0.2.5.md
 |   |-- RECEIPT_SCHEMA.md
 |   |-- RETENTION_POLICY.md
 |   |-- SECURITY_POLICY.md
@@ -864,7 +895,7 @@ Note: The current layout uses a reference implementation (`ns8_ref.py`).
 ## Versioning and Stability
 
 - Library/package versioning follows semantic versioning and is currently pre-1.0 (`0.x` series).
-- Current package version target: `0.2.4`.
+- Current package version target: `0.2.5`.
 - NS8 spec version is tracked separately in `docs/SPEC_NS8.md`.
 - The NS8 specification is stable within a major version.
 

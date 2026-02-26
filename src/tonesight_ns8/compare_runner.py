@@ -184,6 +184,35 @@ def _render_compare_report_html(compare_summary: dict[str, Any]) -> str:
     per_label = compare_summary["per_label_delta"]
     distance_mode = compare_summary.get("distance_mode", "l1")
     title = f"ToneSight Compare Report: {run_a.get('run_id')} -> {run_b.get('run_id')}"
+    def _bar_width(value: Any, scale: float = 0.35) -> int:
+        try:
+            magnitude = abs(float(value))
+        except (TypeError, ValueError):
+            magnitude = 0.0
+        return max(2, min(100, int(round(magnitude * 100 * scale))))
+
+    def _bar_color(value: Any) -> str:
+        try:
+            val = float(value)
+        except (TypeError, ValueError):
+            return "#94a3b8"
+        return "#2f9e44" if val <= 0 else "#c92a2a"
+
+    delta_blocks = [
+        ("delta_pass_rate", metrics.get("delta_pass_rate")),
+        ("delta_avg_l1", metrics.get("delta_avg_l1")),
+        ("delta_p95_l1", metrics.get("delta_p95_l1")),
+    ]
+    delta_bars_html = "".join(
+        (
+            '<div class="bar-kpi">'
+            f'<div class="k">{html.escape(name)}</div>'
+            f'<div class="v">{value}</div>'
+            f'<div class="bar-track"><div class="bar-fill" style="width:{_bar_width(value)}%;background:{_bar_color(value)}"></div></div>'
+            "</div>"
+        )
+        for name, value in delta_blocks
+    )
     rows_html = "".join(
         (
             "<tr>"
@@ -213,49 +242,74 @@ def _render_compare_report_html(compare_summary: dict[str, Any]) -> str:
         rows_html = '<tr><td colspan="8">No regressions in top_n window.</td></tr>'
     if not labels_html:
         labels_html = '<tr><td colspan="3">No shared labels between runs.</td></tr>'
+    pass_trend = str(metrics.get("pass_rate_trend", "unknown"))
+    badge = "PASS"
+    if pass_trend == "regressed":
+        badge = "REGRESSED"
+    elif pass_trend == "unknown":
+        badge = "INCOMPATIBLE"
     return (
         "<!doctype html>\n"
         '<html lang="en">\n'
         "<head>\n"
         '<meta charset="utf-8" />\n'
+        '<meta name="viewport" content="width=device-width, initial-scale=1" />\n'
         f"<title>{html.escape(title)}</title>\n"
-        "<style>"
-        "body{font-family:Segoe UI,Arial,sans-serif;background:#0f172a;color:#e5e7eb;padding:20px;}"
-        ".panel{background:#111827;border:1px solid #1f2937;border-radius:10px;padding:14px;margin-bottom:14px;}"
-        "table{width:100%;border-collapse:collapse}th,td{border:1px solid #1f2937;padding:6px;text-align:left;font-size:12px}"
-        "th{background:#0b1220}.kpi{display:inline-block;margin-right:16px}"
+        "<style>\n"
+        ":root{--bg:#f3f6fb;--card:#ffffff;--ink:#12243c;--muted:#51657f;--line:#ced9e8;--ok:#2f9e44;--bad:#c92a2a;--warn:#e67700;}\n"
+        "*{box-sizing:border-box} body{margin:0;font-family:Segoe UI,Trebuchet MS,sans-serif;background:radial-gradient(circle at 12% 12%,#e0e9f7 0%,#f6f9ff 55%,#fbfdff 100%);color:var(--ink)}\n"
+        ".wrap{max-width:1220px;margin:0 auto;padding:16px}.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}\n"
+        ".top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.badge{padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;color:#fff}\n"
+        ".badge.pass{background:var(--ok)}.badge.regressed{background:var(--bad)}.badge.incompatible{background:var(--warn)}\n"
+        ".meta{color:var(--muted);font-size:12px}.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.kpi{border:1px solid var(--line);border-radius:8px;padding:8px;background:#f9fbff}\n"
+        ".bars{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}.bar-kpi{border:1px solid var(--line);border-radius:8px;padding:8px;background:#f9fbff}\n"
+        ".bar-track{height:8px;background:#e7eefb;border-radius:999px;overflow:hidden;margin-top:6px}.bar-fill{height:8px;border-radius:999px}\n"
+        ".k{font-size:11px;color:var(--muted)}.v{font-weight:700;font-size:15px;margin-top:2px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}\n"
+        "table{width:100%;border-collapse:collapse}th,td{border:1px solid var(--line);padding:6px;text-align:left;font-size:12px}th{background:#f1f6ff}\n"
+        "@media (max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2{grid-template-columns:1fr}}\n"
         "</style>\n"
         "</head>\n"
-        "<body>\n"
-        f"<h1>{html.escape(title)}</h1>\n"
-        '<div class="panel">\n'
-        f"<div><strong>run_a</strong>: {html.escape(str(run_a.get('path')))}</div>\n"
-        f"<div><strong>run_b</strong>: {html.escape(str(run_b.get('path')))}</div>\n"
-        f"<div><strong>distance_mode</strong>: {html.escape(str(distance_mode))}</div>\n"
-        "</div>\n"
-        '<div class="panel">\n'
-        '<h2>Delta KPIs</h2>\n'
-        f'<div class="kpi">delta_pass_rate: {metrics.get("delta_pass_rate")}</div>\n'
-        f'<div class="kpi">delta_avg_l1: {metrics.get("delta_avg_l1")}</div>\n'
-        f'<div class="kpi">delta_p95_l1: {metrics.get("delta_p95_l1")}</div>\n'
-        "</div>\n"
-        '<div class="panel">\n'
-        "<h2>Regression Coverage</h2>\n"
-        f"<div>total={coverage.get('regression_count_total')} requested={coverage.get('top_n_requested')} returned={coverage.get('top_n_returned')} truncated={coverage.get('truncated')}</div>\n"
-        "</div>\n"
-        '<div class="panel">\n'
-        "<h2>Top Regressions</h2>\n"
+        "<body><main class=\"wrap\">\n"
+        "<section class=\"panel top\">"
+        f"<div><h1 style=\"margin:0\">Compare Report</h1><div class=\"meta\">{html.escape(title)}</div></div>"
+        f"<span class=\"badge {'pass' if badge=='PASS' else ('regressed' if badge=='REGRESSED' else 'incompatible')}\">{badge}</span>"
+        "</section>\n"
+        "<section class=\"panel\">"
+        "<div class=\"grid2\">"
+        f"<div><div class=\"k\">run_a</div><div class=\"v\">{html.escape(str(run_a.get('run_id')))}</div><div class=\"meta\">{html.escape(str(run_a.get('path')))}</div></div>"
+        f"<div><div class=\"k\">run_b</div><div class=\"v\">{html.escape(str(run_b.get('run_id')))}</div><div class=\"meta\">{html.escape(str(run_b.get('path')))}</div></div>"
+        "</div>"
+        f"<div class=\"meta\" style=\"margin-top:8px\">distance_mode: {html.escape(str(distance_mode))}</div>"
+        "</section>\n"
+        "<section class=\"panel\"><h2 style=\"margin:0 0 8px\">Delta KPIs</h2>"
+        "<div class=\"kpis\">"
+        f"<div class=\"kpi\"><div class=\"k\">delta_pass_rate</div><div class=\"v\">{metrics.get('delta_pass_rate')}</div></div>"
+        f"<div class=\"kpi\"><div class=\"k\">delta_avg_l1</div><div class=\"v\">{metrics.get('delta_avg_l1')}</div></div>"
+        f"<div class=\"kpi\"><div class=\"k\">delta_p95_l1</div><div class=\"v\">{metrics.get('delta_p95_l1')}</div></div>"
+        f"<div class=\"kpi\"><div class=\"k\">pass_rate_trend</div><div class=\"v\">{metrics.get('pass_rate_trend')}</div></div>"
+        "</div>"
+        f"<div class=\"bars\">{delta_bars_html}</div>"
+        "</section>\n"
+        "<section class=\"panel\"><h2 style=\"margin:0 0 8px\">Regression Coverage</h2>"
+        "<div class=\"kpis\">"
+        f"<div class=\"kpi\"><div class=\"k\">total</div><div class=\"v\">{coverage.get('regression_count_total')}</div></div>"
+        f"<div class=\"kpi\"><div class=\"k\">top_n_requested</div><div class=\"v\">{coverage.get('top_n_requested')}</div></div>"
+        f"<div class=\"kpi\"><div class=\"k\">top_n_returned</div><div class=\"v\">{coverage.get('top_n_returned')}</div></div>"
+        f"<div class=\"kpi\"><div class=\"k\">truncated</div><div class=\"v\">{coverage.get('truncated')}</div></div>"
+        "</div></section>\n"
+        '<section class="panel">\n'
+        "<h2 style=\"margin:0 0 8px\">Top Regressions</h2>\n"
         "<table><thead><tr><th>id</th><th>label</th><th>l1_a</th><th>l1_b</th><th>delta_l1</th><th>delta_v</th><th>delta_a</th><th>delta_d</th></tr></thead><tbody>\n"
         f"{rows_html}\n"
         "</tbody></table>\n"
-        "</div>\n"
-        '<div class="panel">\n'
-        "<h2>Per-Label Delta</h2>\n"
+        "</section>\n"
+        '<section class="panel">\n'
+        "<h2 style=\"margin:0 0 8px\">Per-Label Delta</h2>\n"
         "<table><thead><tr><th>label</th><th>delta_avg_l1</th><th>delta_count</th></tr></thead><tbody>\n"
         f"{labels_html}\n"
         "</tbody></table>\n"
-        "</div>\n"
-        "</body>\n"
+        "</section>\n"
+        "</main></body>\n"
         "</html>\n"
     )
 

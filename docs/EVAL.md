@@ -417,6 +417,8 @@ Build deterministic run metadata index with one JSONL row per discovered run:
 ```bash
 python -m tonesight_ns8.cli index-runs --out-root runs
 python -m tonesight_ns8.cli index-runs --out-root runs --out runs/index.jsonl
+python -m tonesight_ns8.cli index-runs-json --out-root runs
+python tools/generate_run_index_json.py --out-root runs
 ```
 
 Behavior:
@@ -427,6 +429,33 @@ Behavior:
   - profile/source labels (`profile_label`, `source_label`, `source_labels`)
   - artifact pointers (`out_jsonl`, `eval_summary_json`, `report_html`, `receipt_json`)
 - idempotent output for unchanged run sets
+
+JSON index bridge for read-only UI:
+- `index-runs-json` converts deterministic `runs/index.jsonl` into deterministic `runs/index.json` array.
+- conversion is read-only and does not recompute run metrics.
+
+## Static Artifact API (Phase 2)
+
+Minimal local API is available at `server/app.py`:
+
+```bash
+python server/app.py --runs-root runs --host 127.0.0.1 --port 8081
+```
+
+Routes (read-only artifact passthrough):
+- `GET /health`
+- `GET /api/index` -> `runs/index.json`
+- `GET /api/run/{run_id}/receipt` -> `runs/{run_id}/receipt.json`
+- `GET /api/run/{run_id}/summary` -> `runs/{run_id}/eval_summary.json`
+- `GET /api/run/{run_id}/report` -> `runs/{run_id}/reports/report_{run_id}.json`
+- `GET /api/run/{run_id}/report-html` -> `runs/{run_id}/report.html`
+- `GET /api/compare/{run_a}/{run_b}` -> `runs/{run_b}/comparisons/{run_a}/compare_summary.json`
+- `GET /api/compare-report/{run_a}/{run_b}` -> `runs/{run_b}/comparisons/{run_a}/compare_report.html`
+- `GET /api/gate/{run_a}/{run_b}` -> `runs/{run_b}/comparisons/{run_a}/gate_result.json` (when persisted)
+
+Contract boundary:
+- API serves existing JSON artifacts only.
+- API does not run eval/compare/gate computations.
 
 ## Live Shadow Harness (Phase 17)
 

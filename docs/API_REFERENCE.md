@@ -46,6 +46,7 @@ Stable public imports are the names exported by `tonesight_ns8.__all__`:
 - `run_release_check`
 - `run_benchmark_suite`
 - `run_index`
+- `run_index_json`
  - `run_live_capture`
  - `run_live_replay`
  - `run_live_verify`
@@ -658,6 +659,20 @@ Output:
   - run IDs and hash/version metadata
   - `profile_label`, `source_label`, and row-derived `source_labels`
   - artifact pointers (`out_jsonl`, `eval_summary_json`, `report_html`, `receipt_json`)
+
+### `run_index_json(out_root: str, *, index_jsonl_path: str | None = None, out_path: str | None = None) -> dict`
+
+Builds deterministic JSON array index for read-only UI clients from `index.jsonl`.
+
+Behavior:
+- reads `index_jsonl_path` or default `<out_root>/index.jsonl`
+- writes deterministic JSON array to `<out_root>/index.json` by default
+- preserves run ordering by `run_id`
+- performs no metric recomputation
+
+CLI:
+- `python -m tonesight_ns8.cli index-runs-json --out-root runs`
+- `python tools/generate_run_index_json.py --out-root runs`
 
 ### `run_benchmark_suite(*, suite: str = "core", out_root: str = "runs", goldset_path: str = "data/goldset.jsonl", killer_profiles: list[str] | None = None, killer_seeds: list[int] | None = None, killer_primary_strength: float = 0.20, killer_sweep_strengths: list[float] | None = None, killer_sample_multiplier: int = 1, coding_baseline_events: str = "tests/fixtures/live_event.coding_agent.python.jsonl", coding_candidate_events: list[str] | None = None) -> dict`
 

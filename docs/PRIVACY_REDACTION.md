@@ -30,3 +30,18 @@ Artifacts/receipts:
 Limitations:
 - this is a bounded heuristic layer, not a full PII-classification engine
 - users should treat this as a deterministic safeguard, not a legal compliance guarantee
+
+## UI Exposure Boundary (v0.2.5)
+
+Default UI exposure policy:
+- UI surfaces derived artifacts only (summaries, reports, receipts, compare/gate outputs).
+- UI does not read raw capture files by default.
+- UI may display restricted artifact class labels as non-clickable safety items.
+
+Disallowed-by-default artifact classes for UI:
+- `runs/captures/<capture_id>/events.raw.jsonl`
+- `runs/<run_live_id>/quarantine.jsonl`
+
+Reference allowlist:
+- `docs/UI_ALLOWED_CONTRACTS.md`
+- `ui/src/contracts.ts`

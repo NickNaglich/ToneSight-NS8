@@ -27,6 +27,7 @@ from . import (
     run_live_replay,
     run_live_verify,
     run_index,
+    run_index_json,
     run_retention_purge,
     run_report,
     run_release_check,
@@ -332,6 +333,14 @@ def _cmd_index_runs(args: argparse.Namespace) -> dict:
     )
 
 
+def _cmd_index_runs_json(args: argparse.Namespace) -> dict:
+    return run_index_json(
+        args.out_root,
+        index_jsonl_path=args.index_jsonl,
+        out_path=args.out,
+    )
+
+
 def _cmd_report(args: argparse.Namespace) -> dict:
     return run_report(
         args.run_b,
@@ -579,6 +588,12 @@ def build_parser() -> argparse.ArgumentParser:
     index_cmd.add_argument("--out-root", default=EVAL_DEFAULTS["out_root"])
     index_cmd.add_argument("--out", help="Optional explicit index output path.")
     index_cmd.set_defaults(func=_cmd_index_runs)
+
+    index_json_cmd = sub.add_parser("index-runs-json", help="Build deterministic index.json array from index.jsonl.")
+    index_json_cmd.add_argument("--out-root", default=EVAL_DEFAULTS["out_root"])
+    index_json_cmd.add_argument("--index-jsonl", help="Optional explicit index.jsonl input path.")
+    index_json_cmd.add_argument("--out", help="Optional explicit index JSON output path.")
+    index_json_cmd.set_defaults(func=_cmd_index_runs_json)
 
     report_cmd = sub.add_parser("report", help="Create deterministic static report from existing run artifacts.")
     report_cmd.add_argument("--run-b", required=True, help="Candidate/current run directory path.")
