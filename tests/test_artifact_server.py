@@ -1,10 +1,13 @@
 import json
 import shutil
 import threading
+import urllib.error
 import urllib.request
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
+import server.app as server_app
 from server.app import ArtifactRequestHandler, ThreadingHTTPServer, get_artifact_response, resolve_html_artifact_path
 from tonesight_ns8.run_index import run_index, run_index_json
 
@@ -163,6 +166,7 @@ def test_artifact_server_http_includes_cors_headers():
             assert resp.status == 200
             assert resp.headers.get("Access-Control-Allow-Origin") == "*"
             assert "GET" in str(resp.headers.get("Access-Control-Allow-Methods", ""))
+            assert "POST" in str(resp.headers.get("Access-Control-Allow-Methods", ""))
         with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/run/run_a/report-html", timeout=2) as resp:
             assert resp.status == 200
             assert "text/html" in str(resp.headers.get("Content-Type", ""))
@@ -171,6 +175,74 @@ def test_artifact_server_http_includes_cors_headers():
             assert resp.status == 200
             assert "text/html" in str(resp.headers.get("Content-Type", ""))
             assert resp.headers.get("Access-Control-Allow-Origin") == "*"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
+def test_artifact_server_http_pipeline_endpoint_disabled_by_default():
+    root = _temp_dir("tmp_artifact_server_pipeline_disabled")
+    _mk_run(root / "run_a", run_id="run_a")
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), ArtifactRequestHandler)
+    setattr(server, "runs_root", str(root))
+    setattr(server, "enable_pipeline", False)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        port = int(server.server_address[1])
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{port}/api/pipeline/run",
+            data=json.dumps({"events_path": "x.jsonl"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with pytest.raises(urllib.error.HTTPError) as exc:
+            urllib.request.urlopen(req, timeout=2)
+        err = exc.value
+        assert err.code == 403
+        payload = json.loads(err.read().decode("utf-8"))
+        err.close()
+        assert payload["error"]["code"] == "pipeline_disabled"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
+def test_artifact_server_http_pipeline_endpoint_enabled_uses_runner(monkeypatch):
+    root = _temp_dir("tmp_artifact_server_pipeline_enabled")
+    _mk_run(root / "run_a", run_id="run_a")
+
+    def _stub_pipeline(request_payload: dict, *, runs_root: str | Path, python_exe: str) -> tuple[int, dict]:
+        assert request_payload["events_path"] == "events.jsonl"
+        assert str(runs_root) == str(root)
+        assert python_exe
+        return 200, {"ok": True, "run_id": "run_stub"}
+
+    monkeypatch.setattr(server_app, "run_pipeline_request", _stub_pipeline)
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), ArtifactRequestHandler)
+    setattr(server, "runs_root", str(root))
+    setattr(server, "enable_pipeline", True)
+    setattr(server, "python_exe", "python")
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        port = int(server.server_address[1])
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{port}/api/pipeline/run",
+            data=json.dumps({"events_path": "events.jsonl"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=2) as resp:
+            assert resp.status == 200
+            payload = json.loads(resp.read().decode("utf-8"))
+            assert payload["ok"] is True
+            assert payload["run_id"] == "run_stub"
+            assert "POST" in str(resp.headers.get("Access-Control-Allow-Methods", ""))
     finally:
         server.shutdown()
         server.server_close()

@@ -118,6 +118,39 @@ a:hover {
   gap: 10px;
 }
 
+.pipeline-panel {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.pipeline-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pipeline-note {
+  grid-column: 1 / -1;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 12px;
+}
+
+.pipeline-note.ok {
+  background: #e9f8ee;
+  border: 1px solid #b2e2bf;
+  color: #1f6b2e;
+}
+
+.pipeline-note.err {
+  background: #fff4f4;
+  border: 1px solid #f1c2c2;
+  color: #9b2c2c;
+}
+
 .field {
   background: var(--card);
   border: 1px solid var(--line);
@@ -364,6 +397,10 @@ a:hover {
 
 @media (max-width: 720px) {
   .filters {
+    grid-template-columns: 1fr;
+  }
+
+  .pipeline-panel {
     grid-template-columns: 1fr;
   }
 

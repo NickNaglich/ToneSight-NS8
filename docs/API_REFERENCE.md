@@ -699,6 +699,19 @@ CLI:
 - `python -m tonesight_ns8.cli ui-package --out-root runs --out runs/demo_ui_package.zip`
 - `python -m tonesight_ns8.cli ui-package --out-root runs --include-raw-artifacts` (internal-only)
 
+## Static Artifact API (Server)
+
+Server entrypoint:
+- `python server/app.py --runs-root runs --host 127.0.0.1 --port 8081`
+
+Default behavior:
+- serves deterministic existing artifacts only.
+
+Optional operator control-plane mode:
+- enable with `--enable-pipeline`
+- exposes `POST /api/pipeline/run` for deterministic orchestration of existing flows (`live-capture`, `live-replay`, optional `compare`/`gate`, `index-runs`, `index-runs-json`)
+- does not authorize UI-side recomputation of metrics or hidden scoring paths
+
 ### `run_benchmark_suite(*, suite: str = "core", out_root: str = "runs", goldset_path: str = "data/goldset.jsonl", killer_profiles: list[str] | None = None, killer_seeds: list[int] | None = None, killer_primary_strength: float = 0.20, killer_sweep_strengths: list[float] | None = None, killer_sample_multiplier: int = 1, coding_baseline_events: str = "tests/fixtures/live_event.coding_agent.python.jsonl", coding_candidate_events: list[str] | None = None) -> dict`
 
 Runs deterministic benchmark evidence suite and writes JSON artifacts.

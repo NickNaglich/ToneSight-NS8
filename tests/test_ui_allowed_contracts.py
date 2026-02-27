@@ -90,6 +90,9 @@ def test_ui_phase_a_status_mapping_and_raw_artifact_exclusion():
     assert "/api/compare-report/" in app_text
     assert "/api/compare/" in app_text
     assert "/api/gate/" in app_text
+    assert "/api/pipeline/run" in app_text
+    assert "runPipelineBtn" in app_text
+    assert "pipelineEventsPath" in app_text
     assert "events.raw.jsonl" not in app_text
     assert "quarantine.jsonl" not in app_text
 

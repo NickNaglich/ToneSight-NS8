@@ -442,7 +442,7 @@ Minimal local API is available at `server/app.py`:
 python server/app.py --runs-root runs --host 127.0.0.1 --port 8081
 ```
 
-Routes (read-only artifact passthrough):
+Routes (artifact API):
 - `GET /health`
 - `GET /api/index` -> `runs/index.json`
 - `GET /api/run/{run_id}/receipt` -> `runs/{run_id}/receipt.json`
@@ -452,10 +452,12 @@ Routes (read-only artifact passthrough):
 - `GET /api/compare/{run_a}/{run_b}` -> `runs/{run_b}/comparisons/{run_a}/compare_summary.json`
 - `GET /api/compare-report/{run_a}/{run_b}` -> `runs/{run_b}/comparisons/{run_a}/compare_report.html`
 - `GET /api/gate/{run_a}/{run_b}` -> `runs/{run_b}/comparisons/{run_a}/gate_result.json` (when persisted)
+- `POST /api/pipeline/run` (optional, only when server starts with `--enable-pipeline`)
 
 Contract boundary:
 - API serves existing JSON artifacts only.
 - API does not run eval/compare/gate computations.
+- Optional `POST /api/pipeline/run` is an operator-triggered orchestration path that calls deterministic existing CLI/library workflows (capture/replay/compare/gate/index); it does not introduce UI-side scoring logic.
 
 Optional static UI demo package:
 

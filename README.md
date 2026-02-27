@@ -30,6 +30,8 @@ Quick links:
 - benchmark command: `python -m tonesight_ns8.cli benchmark --suite core`
 - evidence narrative: `docs/WHY_NS8.md`
 - conformance contract: `docs/NS8_CONTRACT_ASSURANCE.md`
+- multi-domain draft spec (v0.2.6 planning): `docs/NS8_MULTI_DOMAIN_SPEC.md`
+- domain pack draft guide (v0.2.6 planning): `docs/DOMAIN_PACKS.md`
 
 ## Why This Exists
 

@@ -6,6 +6,8 @@ Boundary:
 - UI is a read-only renderer over existing deterministic artifacts.
 - UI must not compute new scores, bins, drift metrics, or gate decisions.
 - If a value is not present in an existing artifact, UI cannot invent or derive it.
+- UI may trigger an explicit operator control-plane action (`POST /api/pipeline/run`) only when the artifact API is started with `--enable-pipeline`.
+- Control-plane actions must orchestrate existing deterministic library/CLI flows; they do not authorize UI-side recomputation.
 
 ## Allowed Artifact Paths
 
@@ -101,6 +103,7 @@ UI may not recompute these values from row-level artifacts.
 - raw capture payloads (`events.raw.jsonl`)
 - quarantine/raw logs (`quarantine.jsonl` and similar raw event exports)
 - any direct rendering of unredacted raw prompt/response content
+- backend "UI convenience" endpoints that compute novel aggregate metrics outside existing deterministic artifact paths
 
 ## Enforcement
 

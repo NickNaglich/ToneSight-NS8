@@ -40,6 +40,10 @@ const state = {
   density: "expanded",
   autoRefresh: false,
   lastRefreshedAt: null,
+  pipelineRunning: false,
+  pipelineMessage: "",
+  pipelineError: "",
+  pipelineResult: null,
   error: "",
 };
 
@@ -83,6 +87,21 @@ async function fetchJson(path) {
   return { ok: true, status: resp.status, payload };
 }
 
+async function postJson(path, body) {
+  const resp = await fetch(toApi(path), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  let payload = null;
+  try {
+    payload = await resp.json();
+  } catch (_err) {
+    payload = null;
+  }
+  return { ok: resp.ok, status: resp.status, payload };
+}
+
 function uiLink(runId, panel) {
   const params = new URLSearchParams();
   if (runId) {
@@ -92,6 +111,17 @@ function uiLink(runId, panel) {
     params.set("panel", panel);
   }
   if (DEMO_MODE) {
+    params.set("demo", "1");
+  }
+  const query = params.toString();
+  return `${window.location.origin}${window.location.pathname}${query ? `?${query}` : ""}`;
+}
+
+function demoToggleLink() {
+  const params = new URLSearchParams(window.location.search);
+  if (DEMO_MODE) {
+    params.delete("demo");
+  } else {
     params.set("demo", "1");
   }
   const query = params.toString();
@@ -386,6 +416,55 @@ function wireEvents() {
     });
   }
 
+  const runPipelineBtn = document.getElementById("runPipelineBtn");
+  if (runPipelineBtn) {
+    runPipelineBtn.addEventListener("click", async () => {
+      if (state.pipelineRunning) {
+        return;
+      }
+      const eventsPath = document.getElementById("pipelineEventsPath")?.value?.trim() || "";
+      const baselineRunId = document.getElementById("pipelineBaselineRunId")?.value?.trim() || "";
+      const taxonomyPath = document.getElementById("pipelineTaxonomyPath")?.value?.trim() || "taxonomy/tone_taxonomy.v1.json";
+      const adapter = document.getElementById("pipelineAdapter")?.value?.trim() || "coding_agent";
+      const requirePinned = Boolean(document.getElementById("pipelineRequirePinned")?.checked);
+      if (!eventsPath) {
+        state.pipelineError = "events_path is required.";
+        state.pipelineMessage = "";
+        render();
+        return;
+      }
+      state.pipelineRunning = true;
+      state.pipelineError = "";
+      state.pipelineMessage = "Running pipeline...";
+      render();
+      const resp = await postJson("/api/pipeline/run", {
+        events_path: eventsPath,
+        baseline_run_id: baselineRunId || null,
+        taxonomy_path: taxonomyPath,
+        adapter,
+        require_pinned_model_identity: requirePinned,
+        allow_dataset_mismatch: true,
+        gate_profile: "coding_agent_drift",
+        threshold_l1: 3,
+        top_n: 20,
+        shadow_strict: "quarantine",
+      });
+      state.pipelineRunning = false;
+      if (!resp.ok) {
+        const message = resp.payload?.error?.message || `Pipeline request failed (status ${resp.status})`;
+        state.pipelineError = message;
+        state.pipelineMessage = "";
+        state.pipelineResult = resp.payload || null;
+        render();
+        return;
+      }
+      state.pipelineResult = resp.payload || null;
+      state.pipelineMessage = `Pipeline completed for run ${safeText(resp.payload?.run_id)}.`;
+      state.pipelineError = "";
+      await load({ silent: true });
+    });
+  }
+
   document.querySelectorAll("[data-action='view']").forEach((el) => {
     el.addEventListener("click", (ev) => {
       ev.preventDefault();
@@ -483,6 +562,7 @@ function render() {
   const adapters = distinctAdapters();
   const selected = selectedRow();
   const maxPage = Math.max(1, Math.ceil(state.filtered.length / PAGE_SIZE));
+  const selectedBaseline = state.selectedRunId || "";
 
   app.innerHTML = `
     <header class="topbar">
@@ -496,7 +576,7 @@ function render() {
           <button id="refreshBtn" class="btn">Refresh</button>
           <button id="densityBtn" class="btn">${state.density === "expanded" ? "Compact" : "Expanded"} view</button>
           <label class="toggle"><input id="autoRefreshToggle" type="checkbox" ${state.autoRefresh ? "checked" : ""}> Auto refresh (30s)</label>
-          <a class="btn btn-primary" href="${DEMO_MODE ? "/index.html" : "/index.html?demo=1"}">${DEMO_MODE ? "Demo Off" : "Demo Mode"}</a>
+          <a class="btn btn-primary" href="${demoToggleLink()}">${DEMO_MODE ? "Demo Off" : "Demo Mode"}</a>
         </div>
       </div>
     </header>
@@ -520,6 +600,36 @@ function render() {
               .map((s) => `<option value="${s}" ${state.status === s ? "selected" : ""}>${s}</option>`).join("")}
           </select>
         </div>
+      </section>
+      <section class="pipeline-panel">
+        <div class="field">
+          <label for="pipelineEventsPath">Run Pipeline: events JSONL path</label>
+          <input id="pipelineEventsPath" placeholder="D:\\data\\events.jsonl">
+        </div>
+        <div class="field">
+          <label for="pipelineBaselineRunId">Baseline run id (optional)</label>
+          <select id="pipelineBaselineRunId">
+            <option value="">None (capture + replay only)</option>
+            ${state.rows.map((r) => `<option value="${r.runId}" ${selectedBaseline === r.runId ? "selected" : ""}>${r.runId}</option>`).join("")}
+          </select>
+        </div>
+        <div class="field">
+          <label for="pipelineAdapter">Adapter</label>
+          <select id="pipelineAdapter">
+            <option value="coding_agent">coding_agent</option>
+            <option value="upstream_signal">upstream_signal</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="pipelineTaxonomyPath">Taxonomy path</label>
+          <input id="pipelineTaxonomyPath" value="taxonomy/tone_taxonomy.v1.json">
+        </div>
+        <div class="pipeline-actions">
+          <label class="toggle"><input id="pipelineRequirePinned" type="checkbox" checked> Require pinned model identity</label>
+          <button id="runPipelineBtn" class="btn btn-primary" ${state.pipelineRunning ? "disabled" : ""}>${state.pipelineRunning ? "Running..." : "Run Pipeline"}</button>
+        </div>
+        ${state.pipelineMessage ? `<div class="pipeline-note ok">${state.pipelineMessage}</div>` : ""}
+        ${state.pipelineError ? `<div class="pipeline-note err">${state.pipelineError}</div>` : ""}
       </section>
 
       <section class="kpis">
