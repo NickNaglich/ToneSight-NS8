@@ -1,4 +1,4 @@
-# Server Scaffold (v0.2.5 Phase 1)
+# Server Scaffold (v0.2.6)
 
 This directory is reserved for the minimal static artifact API.
 

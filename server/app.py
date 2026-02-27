@@ -298,7 +298,7 @@ def get_artifact_response(request_path: str, runs_root: str | Path = "runs") -> 
 
 
 class ArtifactRequestHandler(BaseHTTPRequestHandler):
-    server_version = "ToneSightArtifactServer/0.1"
+    server_version = "ToneSightArtifactServer/0.2.6"
 
     def do_GET(self) -> None:  # noqa: N802 (stdlib method name)
         runs_root = getattr(self.server, "runs_root", "runs")

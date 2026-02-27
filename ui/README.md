@@ -1,4 +1,4 @@
-# UI Scaffold (v0.2.5 Phase 1)
+# UI Scaffold (v0.2.6)
 
 This directory is reserved for the read-only artifact UI.
 
