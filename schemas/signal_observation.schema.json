@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tonesight.local/schemas/signal_observation.schema.json",
+  "title": "ToneSight Signal Observation",
+  "type": "object",
+  "required": [
+    "schema",
+    "t",
+    "domain",
+    "entity_type",
+    "entity_id",
+    "stream_id",
+    "channels"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "ns8.signal.observation.v1"
+    },
+    "t": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "domain": {
+      "type": "string",
+      "minLength": 1
+    },
+    "entity_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "entity_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stream_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "channels": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 8
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "weights": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

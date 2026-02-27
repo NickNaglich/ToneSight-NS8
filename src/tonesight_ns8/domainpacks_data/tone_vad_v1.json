@@ -1,0 +1,41 @@
+{
+  "schema": "ns8.mapping.profile.v1",
+  "name": "tone_vad",
+  "version": "v1",
+  "n": 8,
+  "channels": {
+    "valence_bin": {
+      "required": true,
+      "range": [
+        1,
+        8
+      ]
+    },
+    "arousal_bin": {
+      "required": true,
+      "range": [
+        1,
+        8
+      ]
+    },
+    "dominance_bin": {
+      "required": true,
+      "range": [
+        1,
+        8
+      ]
+    }
+  },
+  "compose": {
+    "mode": "multi_channel_fold",
+    "channel_order": [
+      "valence_bin",
+      "arousal_bin",
+      "dominance_bin"
+    ]
+  },
+  "validation": {
+    "reject_on_out_of_range": true,
+    "missing_channel_policy": "quarantine"
+  }
+}

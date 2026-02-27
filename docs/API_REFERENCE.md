@@ -196,6 +196,8 @@ Current wrappers support optional `mapping_id`:
 CLI support:
 - `encode ... --mapping ns8`
 - `decode ... --mapping ns8`
+- `signal-map --observation-json <observation.json> --profile <profile_path_or_builtin>`
+- `signal-run --observations <observations.jsonl> --profile <profile_path_or_builtin>`
 - `stream-update --segments-json <segments.json> [--state-in <state.json>] [--state-out <state.json>] [--session-id <id>]`
 - `live-capture --events <path>`
 - `live-replay --capture <capture_dir_or_events_jsonl> [--adapter <live_adapter_id>] [--require-pinned-model-identity]`
@@ -698,6 +700,22 @@ CLI:
 - `python -m tonesight_ns8.cli ui-package --out-root runs`
 - `python -m tonesight_ns8.cli ui-package --out-root runs --out runs/demo_ui_package.zip`
 - `python -m tonesight_ns8.cli ui-package --out-root runs --include-raw-artifacts` (internal-only)
+
+### `run_signal_pipeline(observations_path: str, *, mapping_profile_path: str, out_root: str = "runs", domain_pack: str = "custom_v1") -> dict`
+
+Runs deterministic multi-domain signal mapping over observation JSONL and writes:
+- `<out_root>/<run_signal_id>/anchor_events.jsonl`
+- `<out_root>/<run_signal_id>/metrics_summary.json`
+- `<out_root>/<run_signal_id>/transition_matrix.json`
+- `<out_root>/<run_signal_id>/density_map.json`
+- `<out_root>/<run_signal_id>/quarantine.jsonl`
+- `<out_root>/<run_signal_id>/receipt.json`
+
+Receipt includes additive signal-layer fields:
+- `mapping_profile`, `mapping_profile_hash`
+- `domain_pack`, `domain_pack_hash`
+- `quarantine_count_total`, `quarantine_counts_by_reason`
+- `quarantine_artifact_path`, `quarantine_artifact_hash`
 
 ## Static Artifact API (Server)
 

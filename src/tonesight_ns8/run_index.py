@@ -26,7 +26,9 @@ def _run_dirs(out_root: Path) -> list[Path]:
     for child in out_root.iterdir():
         if not child.is_dir():
             continue
-        if (child / "receipt.json").exists() and (child / "eval_summary.json").exists() and (child / "out.jsonl").exists():
+        has_eval = (child / "eval_summary.json").exists() and (child / "out.jsonl").exists()
+        has_signal = (child / "metrics_summary.json").exists() and (child / "anchor_events.jsonl").exists()
+        if (child / "receipt.json").exists() and (has_eval or has_signal):
             runs.append(child)
     return sorted(runs, key=lambda p: p.name)
 
@@ -38,11 +40,25 @@ def _source_labels(out_rows: list[dict[str, Any]]) -> list[str]:
 
 def _index_row(run_dir: Path) -> dict[str, Any]:
     receipt = _read_json(run_dir / "receipt.json")
-    summary = _read_json(run_dir / "eval_summary.json")
-    rows = _read_jsonl(run_dir / "out.jsonl")
+    eval_summary_path = run_dir / "eval_summary.json"
+    signal_summary_path = run_dir / "metrics_summary.json"
+    out_jsonl_path = run_dir / "out.jsonl"
+    anchor_events_path = run_dir / "anchor_events.jsonl"
+    mode = "eval"
+    if eval_summary_path.exists() and out_jsonl_path.exists():
+        summary = _read_json(eval_summary_path)
+        rows = _read_jsonl(out_jsonl_path)
+    elif signal_summary_path.exists() and anchor_events_path.exists():
+        mode = "signal"
+        summary = _read_json(signal_summary_path)
+        rows = _read_jsonl(anchor_events_path)
+    else:
+        raise FileNotFoundError(f"run_dir missing required eval/signal artifact set: {run_dir}")
     config = receipt.get("config") if isinstance(receipt.get("config"), dict) else {}
     artifacts = receipt.get("artifacts") if isinstance(receipt.get("artifacts"), dict) else {}
     run_id = str(receipt.get("run_id") or summary.get("run_id") or run_dir.name)
+    quarantine_total = receipt.get("quarantine_count_total")
+    quarantine_by_reason = receipt.get("quarantine_counts_by_reason")
     return {
         "spec_version": "1.0",
         "run_id": run_id,
@@ -55,19 +71,30 @@ def _index_row(run_dir: Path) -> dict[str, Any]:
         "mapping_id": str(receipt.get("mapping_id") or config.get("mapping_id") or ""),
         "mapping_version": str(receipt.get("mapping_version") or config.get("mapping_version") or ""),
         "profile_label": str(config.get("profile") or config.get("gate_profile") or ""),
-        "source_label": str(config.get("source_mode") or "eval"),
+        "source_label": str(config.get("source_mode") or mode),
         "source_labels": _source_labels(rows),
+        "signal_layer": {
+            "mapping_profile": receipt.get("mapping_profile"),
+            "mapping_profile_hash": receipt.get("mapping_profile_hash"),
+            "domain_pack": receipt.get("domain_pack"),
+            "domain_pack_hash": receipt.get("domain_pack_hash"),
+            "quarantine_count_total": quarantine_total if isinstance(quarantine_total, int) else 0,
+            "quarantine_counts_by_reason": quarantine_by_reason if isinstance(quarantine_by_reason, dict) else {},
+        },
         "metrics": {
-            "count_rows": summary.get("count_rows"),
+            "count_rows": summary.get("count_rows", summary.get("count_anchor_events")),
             "pass_rate": summary.get("pass_rate"),
-            "avg_l1": summary.get("avg_l1"),
-            "p95_l1": summary.get("p95_l1"),
+            "avg_l1": summary.get("avg_l1", summary.get("volatility_mean_step_distance")),
+            "p95_l1": summary.get("p95_l1", summary.get("transition_entropy")),
         },
         "artifacts": {
-            "out_jsonl": artifacts.get("out_jsonl", str(run_dir / "out.jsonl")),
-            "eval_summary_json": artifacts.get("eval_summary_json", str(run_dir / "eval_summary.json")),
+            "out_jsonl": artifacts.get("out_jsonl", str(out_jsonl_path)) if out_jsonl_path.exists() else None,
+            "eval_summary_json": artifacts.get("eval_summary_json", str(eval_summary_path)) if eval_summary_path.exists() else None,
+            "anchor_events_jsonl": artifacts.get("anchor_events_jsonl", str(anchor_events_path)) if anchor_events_path.exists() else None,
+            "metrics_summary_json": artifacts.get("metrics_summary_json", str(signal_summary_path)) if signal_summary_path.exists() else None,
             "report_html": artifacts.get("report_html", str(run_dir / "report.html")),
             "receipt_json": artifacts.get("receipt_json", str(run_dir / "receipt.json")),
+            "quarantine_jsonl": artifacts.get("quarantine_jsonl", str(run_dir / "quarantine.jsonl")),
         },
     }
 

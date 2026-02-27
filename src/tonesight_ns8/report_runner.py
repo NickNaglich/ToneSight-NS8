@@ -150,11 +150,32 @@ def run_report(
 ) -> dict[str, Any]:
     """Create a deterministic static report JSON from existing run artifacts."""
     run_b_path = Path(run_b)
-    summary_b = _read_json(run_b_path / "eval_summary.json")
     receipt_b = _read_json(run_b_path / "receipt.json")
-    rows_b = _read_jsonl(run_b_path / "out.jsonl")
-    coding_metrics_b = _coding_agent_metrics(rows_b)
-    matrix_b, transitions_b = _transition_matrix_from_rows(rows_b)
+    eval_summary_path = run_b_path / "eval_summary.json"
+    signal_summary_path = run_b_path / "metrics_summary.json"
+    out_rows_path = run_b_path / "out.jsonl"
+    anchor_rows_path = run_b_path / "anchor_events.jsonl"
+    if eval_summary_path.exists() and out_rows_path.exists():
+        mode = "eval"
+        summary_b = _read_json(eval_summary_path)
+        rows_b = _read_jsonl(out_rows_path)
+    elif signal_summary_path.exists() and anchor_rows_path.exists():
+        mode = "signal"
+        summary_b = _read_json(signal_summary_path)
+        rows_b = _read_jsonl(anchor_rows_path)
+    else:
+        raise ValueError(f"run_b missing required eval/signal report inputs: {run_b_path}")
+
+    coding_metrics_b = _coding_agent_metrics(rows_b) if mode == "eval" else {
+        "row_count": 0,
+        "language_mismatch_rate": 0.0,
+        "tests_present_rate": 0.0,
+        "tool_call_rate": 0.0,
+        "avg_verbosity_bin": 0.0,
+        "avg_tests_bin": 0.0,
+        "avg_tool_call_bin": 0.0,
+    }
+    matrix_b, transitions_b = _transition_matrix_from_rows(rows_b if mode == "eval" else [])
 
     compare_highlights: dict[str, Any] = {
         "available": False,
@@ -178,7 +199,7 @@ def run_report(
     rows_a: list[dict[str, Any]] = []
     matrix_a: list[list[int]] | None = None
     transitions_a: int | None = None
-    if run_a:
+    if run_a and mode == "eval":
         run_a_path = Path(run_a)
         rows_a = _read_jsonl(run_a_path / "out.jsonl")
         coding_metrics_a = _coding_agent_metrics(rows_a)
@@ -260,11 +281,12 @@ def run_report(
         "run_b_path": str(run_b_path),
         "run_b": {
             "run_id": summary_b.get("run_id"),
-            "count_rows": summary_b.get("count_rows"),
+            "count_rows": summary_b.get("count_rows", summary_b.get("count_anchor_events")),
             "pass_rate": summary_b.get("pass_rate"),
-            "avg_l1": summary_b.get("avg_l1"),
-            "p95_l1": summary_b.get("p95_l1"),
-            "summary_schema_version": summary_b.get("summary_schema_version"),
+            "avg_l1": summary_b.get("avg_l1", summary_b.get("volatility_mean_step_distance")),
+            "p95_l1": summary_b.get("p95_l1", summary_b.get("transition_entropy")),
+            "summary_schema_version": summary_b.get("summary_schema_version", summary_b.get("metrics_schema_version")),
+            "run_mode": mode,
         },
         "reproducibility": {
             "spec_version": receipt_b.get("spec_version"),
@@ -286,12 +308,22 @@ def run_report(
             if coding_metrics_a is not None
             else None,
         },
+        "signal_layer": {
+            "available": bool(receipt_b.get("mapping_profile") or (run_b_path / "metrics_summary.json").exists()),
+            "mapping_profile": receipt_b.get("mapping_profile"),
+            "mapping_profile_hash": receipt_b.get("mapping_profile_hash"),
+            "domain_pack": receipt_b.get("domain_pack"),
+            "domain_pack_hash": receipt_b.get("domain_pack_hash"),
+            "quarantine_count_total": receipt_b.get("quarantine_count_total"),
+            "quarantine_counts_by_reason": receipt_b.get("quarantine_counts_by_reason"),
+        },
         "artifacts": {
-            "run_b_eval_summary_json": str(run_b_path / "eval_summary.json"),
+            "run_b_eval_summary_json": str(eval_summary_path) if eval_summary_path.exists() else None,
+            "run_b_metrics_summary_json": str(signal_summary_path) if signal_summary_path.exists() else None,
             "run_b_receipt_json": str(run_b_path / "receipt.json"),
         },
     }
-    if run_a_path is not None:
+    if run_a_path is not None and mode == "eval":
         report_payload["artifacts"]["run_a_receipt_json"] = str(run_a_path / "receipt.json")
         report_name = f"report_{run_a_path.name}_to_{run_b_path.name}.json"
         heatmap_name = f"transition_heatmap_{run_a_path.name}_to_{run_b_path.name}.json"

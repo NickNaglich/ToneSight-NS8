@@ -99,6 +99,14 @@ python -m tonesight_ns8.cli stream-update --segments-json segments_batch.json --
 python -m tonesight_ns8.cli stream-update --segments-json segments_batch_next.json --state-in runs/stream/session_ops.json --state-out runs/stream/session_ops.json
 ```
 
+CLI signal-layer mode (v0.2.6):
+
+```bash
+python -m tonesight_ns8.cli signal-map --observation-json observation.json --profile tone_vad_v1
+python -m tonesight_ns8.cli signal-run --observations observations.jsonl --profile tone_vad_v1 --out-root runs --domain-pack tone_vad_v1
+python -m tonesight_ns8.cli signal-run --observations observations.jsonl --profile src/tonesight_ns8/domainpacks_data/kasbah_env_v1.json --out-root runs --domain-pack kasbah_env_v1
+```
+
 Optional killer benchmark controls:
 
 ```bash
@@ -158,6 +166,14 @@ Always written:
 - `runs/<run_id>/eval_summary.json`
 - `runs/<run_id>/report.html`
 - `runs/<run_id>/receipt.json`
+
+Signal artifacts (`signal-run`):
+- `runs/<run_signal_id>/anchor_events.jsonl`
+- `runs/<run_signal_id>/metrics_summary.json`
+- `runs/<run_signal_id>/transition_matrix.json`
+- `runs/<run_signal_id>/density_map.json`
+- `runs/<run_signal_id>/quarantine.jsonl`
+- `runs/<run_signal_id>/receipt.json`
 
 Optional (when `capture_gpu=true`):
 - `runs/<run_id>/gpu_before.json`

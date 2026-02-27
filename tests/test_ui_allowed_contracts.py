@@ -29,11 +29,15 @@ def test_ui_contracts_allowlist_contains_required_artifacts_and_fields():
     assert "run_id" in index_fields
     assert "dataset_hash" in index_fields
     assert "artifacts.eval_summary_json" in index_fields
+    assert "signal_layer.quarantine_count_total" in index_fields
+    assert "artifacts.metrics_summary_json" in index_fields
 
     receipt_fields = _extract_ts_string_array(source, "UI_RECEIPT_ALLOWED_FIELDS")
     assert "mapping_id" in receipt_fields
     assert "model_digest" in receipt_fields
     assert "redaction_summary" in receipt_fields
+    assert "mapping_profile" in receipt_fields
+    assert "quarantine_count_total" in receipt_fields
 
     eval_fields = _extract_ts_string_array(source, "UI_EVAL_SUMMARY_ALLOWED_FIELDS")
     assert "pass_rate" in eval_fields

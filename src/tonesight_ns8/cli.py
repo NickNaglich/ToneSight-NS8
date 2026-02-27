@@ -14,6 +14,9 @@ from .live_runner import list_live_adapters
 from .mapping import get_mapping, list_mappings
 from . import (
     SegmentRecord,
+    load_builtin_domainpack_profile,
+    load_mapping_profile,
+    map_observation_to_ns8,
     run_bundle,
     run_benchmark_suite,
     run_canary,
@@ -31,6 +34,7 @@ from . import (
     run_retention_purge,
     run_report,
     run_release_check,
+    run_signal_pipeline_with_profile,
     run_stream_update,
     run_trend,
     run_triage,
@@ -412,6 +416,31 @@ def _cmd_stream_update(args: argparse.Namespace) -> dict:
     )
 
 
+def _resolve_signal_profile(profile_arg: str) -> dict[str, Any]:
+    path = Path(profile_arg)
+    if path.exists():
+        return load_mapping_profile(path)
+    return load_builtin_domainpack_profile(profile_arg)
+
+
+def _cmd_signal_map(args: argparse.Namespace) -> dict:
+    observation = json.loads(Path(args.observation_json).read_text(encoding="utf-8"))
+    if not isinstance(observation, dict):
+        raise ValueError("observation-json root must be object")
+    profile = _resolve_signal_profile(args.profile)
+    return map_observation_to_ns8(observation, profile)
+
+
+def _cmd_signal_run(args: argparse.Namespace) -> dict:
+    profile = _resolve_signal_profile(args.profile)
+    return run_signal_pipeline_with_profile(
+        args.observations,
+        mapping_profile=profile,
+        out_root=args.out_root,
+        domain_pack=args.domain_pack,
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="tonesight-ns8",
@@ -697,6 +726,32 @@ def build_parser() -> argparse.ArgumentParser:
     stream_cmd.add_argument("--spike-threshold", type=_int_1_to_8, default=7)
     stream_cmd.add_argument("--drift-window-k", type=_positive_int, default=2)
     stream_cmd.set_defaults(func=_cmd_stream_update)
+
+    signal_map_cmd = sub.add_parser(
+        "signal-map",
+        help="Map one signal observation JSON to deterministic NS8 parameters using a mapping profile.",
+    )
+    signal_map_cmd.add_argument("--observation-json", required=True, help="Path to one observation JSON object.")
+    signal_map_cmd.add_argument(
+        "--profile",
+        required=True,
+        help="Mapping profile path or built-in profile id (tone_vad_v1, kasbah_env_v1).",
+    )
+    signal_map_cmd.set_defaults(func=_cmd_signal_map)
+
+    signal_run_cmd = sub.add_parser(
+        "signal-run",
+        help="Run deterministic signal-layer mapping pipeline over observations JSONL.",
+    )
+    signal_run_cmd.add_argument("--observations", required=True, help="Path to observation JSONL.")
+    signal_run_cmd.add_argument(
+        "--profile",
+        required=True,
+        help="Mapping profile path or built-in profile id (tone_vad_v1, kasbah_env_v1).",
+    )
+    signal_run_cmd.add_argument("--out-root", default=EVAL_DEFAULTS["out_root"])
+    signal_run_cmd.add_argument("--domain-pack", default="custom_v1")
+    signal_run_cmd.set_defaults(func=_cmd_signal_run)
 
     return parser
 

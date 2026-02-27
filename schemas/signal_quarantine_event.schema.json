@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tonesight.local/schemas/signal_quarantine_event.schema.json",
+  "title": "ToneSight Signal Quarantine Event",
+  "type": "object",
+  "required": [
+    "schema",
+    "reason_code",
+    "reason_detail",
+    "observation_hash",
+    "t",
+    "entity_id",
+    "mapping_profile",
+    "mapping_profile_hash",
+    "domain_pack",
+    "domain_pack_hash",
+    "run_id"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "ns8.signal.quarantine_event.v1"
+    },
+    "reason_code": {
+      "type": "string",
+      "enum": [
+        "MISSING_CHANNEL",
+        "OUT_OF_RANGE",
+        "PROFILE_MISMATCH"
+      ]
+    },
+    "reason_detail": {
+      "type": "string",
+      "minLength": 1
+    },
+    "observation_hash": {
+      "type": "string",
+      "minLength": 1
+    },
+    "t": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "entity_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mapping_profile": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mapping_profile_hash": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domain_pack": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domain_pack_hash": {
+      "type": "string",
+      "minLength": 1
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

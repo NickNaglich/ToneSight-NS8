@@ -72,7 +72,15 @@ def test_run_index_stable_order_and_schema():
     assert second["source_label"] == "eval"
     assert first["source_labels"] == ["live"]
     assert second["source_labels"] == ["chat"]
-    assert set(first["artifacts"]) == {"eval_summary_json", "out_jsonl", "receipt_json", "report_html"}
+    assert set(first["artifacts"]) == {
+        "eval_summary_json",
+        "out_jsonl",
+        "anchor_events_jsonl",
+        "metrics_summary_json",
+        "receipt_json",
+        "report_html",
+        "quarantine_jsonl",
+    }
 
 
 def test_run_index_idempotent_for_unchanged_runs():
@@ -118,3 +126,80 @@ def test_run_index_json_idempotent_for_unchanged_runs():
     second = run_index_json(str(root))
     second_bytes = Path(second["index_json_path"]).read_bytes()
     assert first_bytes == second_bytes
+
+
+def test_run_index_includes_signal_mode_runs():
+    root = _temp_dir("tmp_run_index_signal")
+    run_dir = root / "run_signal_demo"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(
+        run_dir / "receipt.json",
+        {
+            "spec_version": "1.0",
+            "run_id": "run_signal_demo",
+            "dataset_hash": "sig123",
+            "mapping_profile": "tone_vad",
+            "mapping_profile_hash": "abc123",
+            "domain_pack": "tone_vad_v1",
+            "domain_pack_hash": "def456",
+            "quarantine_count_total": 2,
+            "quarantine_counts_by_reason": {"MISSING_CHANNEL": 1, "OUT_OF_RANGE": 1},
+            "artifacts": {
+                "anchor_events_jsonl": str(run_dir / "anchor_events.jsonl"),
+                "metrics_summary_json": str(run_dir / "metrics_summary.json"),
+                "receipt_json": str(run_dir / "receipt.json"),
+                "quarantine_jsonl": str(run_dir / "quarantine.jsonl"),
+            },
+        },
+    )
+    _write_json(
+        run_dir / "metrics_summary.json",
+        {
+            "run_id": "run_signal_demo",
+            "count_anchor_events": 2,
+            "count_quarantine": 2,
+            "volatility_mean_step_distance": 0.5,
+            "transition_entropy": 0.0,
+        },
+    )
+    _write_jsonl(
+        run_dir / "anchor_events.jsonl",
+        [
+            {
+                "schema": "ns8.signal.anchor_event.v1",
+                "t": "2026-02-27T12:00:00Z",
+                "entity_id": "spk_1",
+                "anchor": {"family": "TLF", "i": 6, "j": 4, "idx": 44, "A": 1},
+                "inputs": {"channels": {"valence_bin": 3, "arousal_bin": 6, "dominance_bin": 4}},
+                "derived": {"step_distance": 0, "transition_type": "initial"},
+            }
+        ],
+    )
+    _write_jsonl(
+        run_dir / "quarantine.jsonl",
+        [
+            {
+                "schema": "ns8.signal.quarantine_event.v1",
+                "reason_code": "MISSING_CHANNEL",
+                "reason_detail": "missing",
+                "observation_hash": "abc",
+                "t": "2026-02-27T12:01:00Z",
+                "entity_id": "spk_1",
+                "mapping_profile": "tone_vad",
+                "mapping_profile_hash": "abc123",
+                "domain_pack": "tone_vad_v1",
+                "domain_pack_hash": "def456",
+                "run_id": "run_signal_demo",
+            }
+        ],
+    )
+
+    payload = run_index(str(root))
+    lines = Path(payload["index_path"]).read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 1
+    row = json.loads(lines[0])
+    assert row["run_id"] == "run_signal_demo"
+    assert row["source_label"] == "signal"
+    assert row["artifacts"]["metrics_summary_json"]
+    assert row["artifacts"]["anchor_events_jsonl"]
+    assert row["signal_layer"]["quarantine_count_total"] == 2

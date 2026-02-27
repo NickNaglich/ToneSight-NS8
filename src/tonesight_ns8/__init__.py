@@ -28,7 +28,17 @@ from .mapping import (
     list_mappings,
     register_mapping,
 )
+from .domainpacks import (
+    get_builtin_domainpack_profile_path,
+    list_builtin_domainpack_profiles,
+    load_builtin_domainpack_profile,
+    load_mapping_profile,
+    stable_payload_hash,
+    validate_mapping_profile,
+)
 from .ns8 import compute_A, resolve_to_seed, validate_inputs
+from .signal_mapping import fold_channels, map_observation_to_ns8
+from .signal_runner import run_signal_pipeline, run_signal_pipeline_with_profile
 from .redaction import redact_live_event, redact_text
 from .report_runner import run_report
 from .release_check_runner import run_release_check
@@ -91,4 +101,14 @@ __all__ = [
     "list_mappings",
     "get_default_mapping",
     "get_default_mapping_id",
+    "validate_mapping_profile",
+    "load_mapping_profile",
+    "list_builtin_domainpack_profiles",
+    "get_builtin_domainpack_profile_path",
+    "load_builtin_domainpack_profile",
+    "stable_payload_hash",
+    "fold_channels",
+    "map_observation_to_ns8",
+    "run_signal_pipeline",
+    "run_signal_pipeline_with_profile",
 ]

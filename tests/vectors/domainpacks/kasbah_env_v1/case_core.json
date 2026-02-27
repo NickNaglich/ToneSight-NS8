@@ -1,0 +1,46 @@
+{
+  "profile": "kasbah_env_v1",
+  "cases": [
+    {
+      "id": "kasbah_ok_1",
+      "observation": {
+        "schema": "ns8.signal.observation.v1",
+        "t": "2026-02-27T12:05:00Z",
+        "domain": "sensor_env",
+        "entity_type": "device",
+        "entity_id": "dev_1",
+        "stream_id": "room_1",
+        "channels": {
+          "temp_bin": 2,
+          "humidity_bin": 7,
+          "noise_bin": 1
+        }
+      },
+      "expected": {
+        "family": "TLF",
+        "r": 7,
+        "c": 1,
+        "k": 2,
+        "idx": 49,
+        "A": 4
+      }
+    },
+    {
+      "id": "kasbah_out_of_range",
+      "observation": {
+        "schema": "ns8.signal.observation.v1",
+        "t": "2026-02-27T12:06:00Z",
+        "domain": "sensor_env",
+        "entity_type": "device",
+        "entity_id": "dev_1",
+        "stream_id": "room_1",
+        "channels": {
+          "temp_bin": 2,
+          "humidity_bin": 9,
+          "noise_bin": 1
+        }
+      },
+      "expected_error": "out of range"
+    }
+  ]
+}

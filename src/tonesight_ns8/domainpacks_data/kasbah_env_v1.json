@@ -1,0 +1,41 @@
+{
+  "schema": "ns8.mapping.profile.v1",
+  "name": "kasbah_env",
+  "version": "v1",
+  "n": 8,
+  "channels": {
+    "temp_bin": {
+      "required": true,
+      "range": [
+        1,
+        8
+      ]
+    },
+    "humidity_bin": {
+      "required": true,
+      "range": [
+        1,
+        8
+      ]
+    },
+    "noise_bin": {
+      "required": true,
+      "range": [
+        1,
+        8
+      ]
+    }
+  },
+  "compose": {
+    "mode": "multi_channel_fold",
+    "channel_order": [
+      "temp_bin",
+      "humidity_bin",
+      "noise_bin"
+    ]
+  },
+  "validation": {
+    "reject_on_out_of_range": true,
+    "missing_channel_policy": "quarantine"
+  }
+}

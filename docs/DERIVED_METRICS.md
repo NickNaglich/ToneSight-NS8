@@ -101,3 +101,17 @@ Outputs:
   - `speaker_pair_count`
   - `pair_details[]` with `speaker_a`, `speaker_b`, `aligned_count`, `coupling_score`
   - `insufficient_data`
+
+## Signal-Layer Metrics (v0.2.6)
+
+For deterministic multi-domain signal runs (`anchor_events.jsonl`), additive metrics include:
+- `volatility_mean_step_distance`
+- `persistence_mean_dwell`
+- `transition_entropy`
+- `adjacency_ratio`
+- `spike_rate`
+- `stability_index`
+
+Supporting deterministic artifacts:
+- `transition_matrix.json` (`matrix_8x8`, `transition_count`)
+- `density_map.json` (`grid_8x8`)

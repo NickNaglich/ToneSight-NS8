@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tonesight.local/schemas/anchor_event.schema.json",
+  "title": "ToneSight Signal Anchor Event",
+  "type": "object",
+  "required": [
+    "schema",
+    "t",
+    "entity_id",
+    "anchor",
+    "inputs"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "ns8.signal.anchor_event.v1"
+    },
+    "t": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "entity_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "anchor": {
+      "type": "object",
+      "required": [
+        "family",
+        "i",
+        "j",
+        "idx",
+        "A"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "family": {
+          "type": "string",
+          "enum": [
+            "TLF",
+            "TRF",
+            "BLF",
+            "BRF",
+            "TRB",
+            "TLB",
+            "BLB",
+            "BRB"
+          ]
+        },
+        "i": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8
+        },
+        "j": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8
+        },
+        "idx": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "A": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8
+        }
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "required": [
+        "channels",
+        "mapping_profile",
+        "mapping_profile_hash"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "channels": {
+          "type": "object",
+          "minProperties": 1
+        },
+        "mapping_profile": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mapping_profile_hash": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "derived": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

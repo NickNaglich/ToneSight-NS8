@@ -47,3 +47,17 @@ Status:
 - Operational eval/live receipts include additive `receipt_schema_version` for artifact contract versioning.
 - Operational eval/live summaries include additive `summary_schema_version` for summary contract versioning.
 - Operational eval/live receipts may include additive provenance fields (for example `code_revision`) when available; absence remains backward-compatible.
+
+## Signal-Layer Additive Fields (v0.2.6)
+
+Signal-layer receipts may include additive deterministic fields:
+- `mapping_profile`
+- `mapping_profile_hash`
+- `domain_pack`
+- `domain_pack_hash`
+- `quarantine_count_total`
+- `quarantine_counts_by_reason`
+- `quarantine_artifact_path`
+- `quarantine_artifact_hash`
+
+These fields are additive and must not break existing receipt consumers.

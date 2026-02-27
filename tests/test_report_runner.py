@@ -174,3 +174,68 @@ def test_run_report_includes_coding_agent_drift_slices_when_present():
     assert payload["coding_agent_drift"]["run_b"]["language_mismatch_rate"] == 1.0
     assert payload["coding_agent_drift"]["run_a"]["language_mismatch_rate"] == 0.0
     assert payload["coding_agent_drift"]["delta_run_b_minus_run_a"]["language_mismatch_rate"] == 1.0
+
+
+def test_run_report_supports_signal_mode_artifacts():
+    out_root = _temp_dir("tmp_report_signal")
+    run_signal = out_root / "run_signal_A"
+    run_signal.mkdir(parents=True, exist_ok=True)
+    (run_signal / "receipt.json").write_text(
+        json.dumps(
+            {
+                "spec_version": "1.0",
+                "receipt_schema_version": "1.0",
+                "run_id": "run_signal_A",
+                "dataset_hash": "sig123",
+                "mapping_profile": "tone_vad",
+                "mapping_profile_hash": "abc123",
+                "domain_pack": "tone_vad_v1",
+                "domain_pack_hash": "def456",
+                "quarantine_count_total": 1,
+                "quarantine_counts_by_reason": {"MISSING_CHANNEL": 1},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (run_signal / "metrics_summary.json").write_text(
+        json.dumps(
+            {
+                "run_id": "run_signal_A",
+                "metrics_schema_version": "1.0",
+                "count_anchor_events": 2,
+                "count_quarantine": 1,
+                "volatility_mean_step_distance": 0.0,
+                "transition_entropy": 0.0,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (run_signal / "anchor_events.jsonl").write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "schema": "ns8.signal.anchor_event.v1",
+                        "t": "2026-02-27T12:00:00Z",
+                        "entity_id": "spk_1",
+                        "anchor": {"family": "TLF", "i": 6, "j": 4, "idx": 44, "A": 1},
+                        "inputs": {"channels": {"valence_bin": 3, "arousal_bin": 6, "dominance_bin": 4}},
+                        "derived": {"step_distance": 0, "transition_type": "initial"},
+                    }
+                )
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = run_report(str(run_signal))["report"]
+    assert payload["run_b"]["run_mode"] == "signal"
+    assert payload["signal_layer"]["available"] is True
+    assert payload["signal_layer"]["mapping_profile"] == "tone_vad"
+    assert payload["signal_layer"]["quarantine_count_total"] == 1
+    assert payload["compare_highlights"]["available"] is False

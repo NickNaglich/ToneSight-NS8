@@ -1,6 +1,6 @@
 # UI Allowed Contracts (Read-Only)
 
-This document defines the only artifact contracts the UI is allowed to read in `v0.2.5`.
+This document defines the only artifact contracts the UI is allowed to read in `v0.2.6`.
 
 Boundary:
 - UI is a read-only renderer over existing deterministic artifacts.
@@ -52,10 +52,19 @@ UI behavior:
 - `profile_label`
 - `source_label`
 - `source_labels`
+- `signal_layer.mapping_profile`
+- `signal_layer.mapping_profile_hash`
+- `signal_layer.domain_pack`
+- `signal_layer.domain_pack_hash`
+- `signal_layer.quarantine_count_total`
+- `signal_layer.quarantine_counts_by_reason`
 - `artifacts.out_jsonl`
 - `artifacts.eval_summary_json`
+- `artifacts.anchor_events_jsonl`
+- `artifacts.metrics_summary_json`
 - `artifacts.report_html`
 - `artifacts.receipt_json`
+- `artifacts.quarantine_jsonl`
 
 ### Receipt (`runs/<run_id>/receipt.json`)
 
@@ -73,6 +82,12 @@ UI behavior:
 - `model_version`
 - `generation_settings`
 - `redaction_summary`
+- `mapping_profile`
+- `mapping_profile_hash`
+- `domain_pack`
+- `domain_pack_hash`
+- `quarantine_count_total`
+- `quarantine_counts_by_reason`
 - `created_at_utc`
 - `code_revision`
 

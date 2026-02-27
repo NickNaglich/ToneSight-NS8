@@ -1,4 +1,4 @@
-# Domain Packs (Draft for v0.2.6)
+# Domain Packs (v0.2.6)
 
 Purpose:
 - define versioned deterministic bundles that map domain channels into NS8-compatible signal-layer artifacts.
@@ -10,15 +10,17 @@ A domain pack bundles:
 - metric defaults
 - vector fixtures
 
-## v0.2.6 target packs
+## v0.2.6 packs
 
 1. `tone_vad_v1`
 - goal: preserve ToneSight VAD compatibility under signal-layer contracts.
 - channel style: discrete V/A/D bins.
+- built-in profile path: `src/tonesight_ns8/domainpacks_data/tone_vad_v1.json`
 
 2. `kasbah_env_v1`
 - goal: baseline environmental telemetry mapping (for example temperature/humidity/noise bins).
 - channel style: bounded discrete bins.
+- built-in profile path: `src/tonesight_ns8/domainpacks_data/kasbah_env_v1.json`
 
 ## Pack Contract Requirements
 
@@ -42,6 +44,9 @@ Deferred:
   - `MISSING_CHANNEL`
   - `OUT_OF_RANGE`
   - `PROFILE_MISMATCH`
+- vector fixture roots:
+  - `tests/vectors/domainpacks/tone_vad_v1/`
+  - `tests/vectors/domainpacks/kasbah_env_v1/`
 
 ## Artifact Expectations
 

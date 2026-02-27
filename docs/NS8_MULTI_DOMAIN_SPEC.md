@@ -1,4 +1,4 @@
-# NS8 Multi-Domain Signal Spec (Draft for v0.2.6)
+# NS8 Multi-Domain Signal Spec (v0.2.6)
 
 Status:
 - execution target: `v0.2.6`

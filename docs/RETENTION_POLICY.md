@@ -39,7 +39,7 @@ Coding-agent telemetry note:
 - retain deterministic derived artifacts (`out.jsonl`, summaries, receipts, benchmark evidence) as primary records
 - treat raw capture text as higher-sensitivity data; prefer shorter retention windows and explicit purge cadence
 
-## UI Retention Boundary (v0.2.5)
+## UI Retention Boundary (v0.2.6)
 
 UI should default to retained derived artifacts:
 - `runs/index.json`

@@ -30,8 +30,8 @@ Quick links:
 - benchmark command: `python -m tonesight_ns8.cli benchmark --suite core`
 - evidence narrative: `docs/WHY_NS8.md`
 - conformance contract: `docs/NS8_CONTRACT_ASSURANCE.md`
-- multi-domain draft spec (v0.2.6 planning): `docs/NS8_MULTI_DOMAIN_SPEC.md`
-- domain pack draft guide (v0.2.6 planning): `docs/DOMAIN_PACKS.md`
+- multi-domain signal spec (v0.2.6): `docs/NS8_MULTI_DOMAIN_SPEC.md`
+- domain pack guide (v0.2.6): `docs/DOMAIN_PACKS.md`
 
 ## Why This Exists
 
@@ -871,6 +871,7 @@ curl -X POST http://localhost:8080/eval/run \
 |   |-- RELEASE_NOTES_0.2.3.md
 |   |-- RELEASE_NOTES_0.2.4.md
 |   |-- RELEASE_NOTES_0.2.5.md
+|   |-- RELEASE_NOTES_0.2.6.md
 |   |-- RECEIPT_SCHEMA.md
 |   |-- RETENTION_POLICY.md
 |   |-- SECURITY_POLICY.md
@@ -905,7 +906,7 @@ Note: The current layout uses a reference implementation (`ns8_ref.py`).
 ## Versioning and Stability
 
 - Library/package versioning follows semantic versioning and is currently pre-1.0 (`0.x` series).
-- Current package version target: `0.2.5`.
+- Current package version target: `0.2.6`.
 - NS8 spec version is tracked separately in `docs/SPEC_NS8.md`.
 - The NS8 specification is stable within a major version.
 

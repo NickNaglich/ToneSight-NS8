@@ -745,3 +745,97 @@ def test_cli_purge_dry_run_and_apply(capsys):
     assert apply_payload["dry_run"] is False
     assert apply_payload["would_delete_count"] >= 1
     assert apply_payload["deleted_count"] + apply_payload["failed_count"] >= 1
+
+
+def test_cli_signal_map_with_builtin_profile(capsys):
+    root = _temp_dir("tmp_signal_map_cli")
+    obs_path = root / "observation.json"
+    obs_path.write_text(
+        json.dumps(
+            {
+                "schema": "ns8.signal.observation.v1",
+                "t": "2026-02-27T12:00:00Z",
+                "domain": "tone",
+                "entity_type": "speaker",
+                "entity_id": "spk_1",
+                "stream_id": "s_1",
+                "channels": {"valence_bin": 3, "arousal_bin": 6, "dominance_bin": 4},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    rc = main(["signal-map", "--observation-json", str(obs_path), "--profile", "tone_vad_v1"])
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert payload["family"] == "TLF"
+    assert 1 <= payload["A"] <= 8
+
+
+def test_cli_signal_run_and_index_includes_signal_artifacts(capsys):
+    root = _temp_dir("tmp_signal_run_cli")
+    observations_path = root / "observations.jsonl"
+    observations_path.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "schema": "ns8.signal.observation.v1",
+                        "t": "2026-02-27T12:00:00Z",
+                        "domain": "tone",
+                        "entity_type": "speaker",
+                        "entity_id": "spk_1",
+                        "stream_id": "s_1",
+                        "channels": {"valence_bin": 3, "arousal_bin": 6, "dominance_bin": 4},
+                    }
+                ),
+                json.dumps(
+                    {
+                        "schema": "ns8.signal.observation.v1",
+                        "t": "2026-02-27T12:01:00Z",
+                        "domain": "tone",
+                        "entity_type": "speaker",
+                        "entity_id": "spk_1",
+                        "stream_id": "s_1",
+                        "channels": {"valence_bin": 4, "arousal_bin": 6, "dominance_bin": 4},
+                    }
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    rc_run = main(
+        [
+            "signal-run",
+            "--observations",
+            str(observations_path),
+            "--profile",
+            "tone_vad_v1",
+            "--out-root",
+            str(root),
+            "--domain-pack",
+            "tone_vad_v1",
+        ]
+    )
+    run_payload = json.loads(capsys.readouterr().out)
+    assert rc_run == 0
+    run_dir = Path(run_payload["out_dir"])
+    assert (run_dir / "anchor_events.jsonl").exists()
+    assert (run_dir / "metrics_summary.json").exists()
+    assert (run_dir / "receipt.json").exists()
+
+    rc_index = main(["index-runs", "--out-root", str(root)])
+    index_payload = json.loads(capsys.readouterr().out)
+    assert rc_index == 0
+    assert index_payload["run_count"] >= 1
+    index_lines = Path(index_payload["index_path"]).read_text(encoding="utf-8").splitlines()
+    rows = [json.loads(line) for line in index_lines if line.strip()]
+    signal_rows = [row for row in rows if row.get("run_id") == run_payload["run_id"]]
+    assert len(signal_rows) == 1
+    signal_row = signal_rows[0]
+    assert signal_row["source_label"] == "signal"
+    assert signal_row["artifacts"]["anchor_events_jsonl"]
+    assert signal_row["artifacts"]["metrics_summary_json"]
+    assert signal_row["signal_layer"]["quarantine_count_total"] == 0

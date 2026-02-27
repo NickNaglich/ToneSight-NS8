@@ -1,0 +1,45 @@
+{
+  "profile": "tone_vad_v1",
+  "cases": [
+    {
+      "id": "tone_ok_1",
+      "observation": {
+        "schema": "ns8.signal.observation.v1",
+        "t": "2026-02-27T12:00:00Z",
+        "domain": "tone",
+        "entity_type": "speaker",
+        "entity_id": "spk_a",
+        "stream_id": "s_1",
+        "channels": {
+          "valence_bin": 3,
+          "arousal_bin": 6,
+          "dominance_bin": 4
+        }
+      },
+      "expected": {
+        "family": "TLF",
+        "r": 6,
+        "c": 4,
+        "k": 3,
+        "idx": 44,
+        "A": 1
+      }
+    },
+    {
+      "id": "tone_missing_channel",
+      "observation": {
+        "schema": "ns8.signal.observation.v1",
+        "t": "2026-02-27T12:01:00Z",
+        "domain": "tone",
+        "entity_type": "speaker",
+        "entity_id": "spk_a",
+        "stream_id": "s_1",
+        "channels": {
+          "valence_bin": 3,
+          "arousal_bin": 6
+        }
+      },
+      "expected_error": "missing required channels"
+    }
+  ]
+}

@@ -31,7 +31,7 @@ Limitations:
 - this is a bounded heuristic layer, not a full PII-classification engine
 - users should treat this as a deterministic safeguard, not a legal compliance guarantee
 
-## UI Exposure Boundary (v0.2.5)
+## UI Exposure Boundary (v0.2.6)
 
 Default UI exposure policy:
 - UI surfaces derived artifacts only (summaries, reports, receipts, compare/gate outputs).
