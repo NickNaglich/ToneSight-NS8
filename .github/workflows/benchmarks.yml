@@ -28,7 +28,7 @@ jobs:
           test -f runs/benchmarks/core/report.json
 
       - name: Upload benchmark artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-core
           path: runs/benchmarks/core/
