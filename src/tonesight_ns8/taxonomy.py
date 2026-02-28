@@ -29,7 +29,7 @@ def validate_taxonomy(taxonomy: dict) -> None:
             raise InvalidTaxonomy(f"{label} must define exactly V,A,D")
         for key in ("V", "A", "D"):
             value = vad[key]
-            if not isinstance(value, int):
+            if not isinstance(value, int) or isinstance(value, bool):
                 raise InvalidTaxonomy(f"{label}.{key} must be int")
             if value < 1 or value > 8:
                 raise InvalidTaxonomy(f"{label}.{key} must be in 1..8")

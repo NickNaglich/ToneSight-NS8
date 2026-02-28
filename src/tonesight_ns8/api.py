@@ -12,6 +12,15 @@ from .taxonomy import get_vad, load_taxonomy
 SPEC_VERSION = "1.0"
 
 
+def _validate_vad_triplet(V: int, A: int, D: int, *, context: str) -> tuple[int, int, int]:
+    for key, value in (("V", V), ("A", A), ("D", D)):
+        if not isinstance(value, int) or isinstance(value, bool):
+            raise ValueError(f"{context} {key} must be an integer in 1..8")
+        if value < 1 or value > 8:
+            raise ValueError(f"{context} {key} must be in 1..8")
+    return (V, A, D)
+
+
 def _build_receipt(
     family: str,
     r: int,
@@ -67,7 +76,8 @@ def tonesight_from_vad(
     mapping_id: str = "ns8",
 ) -> dict:
     """Use explicit VAD and return deterministic receipt."""
-    return _build_receipt(family, r, c, k, vad=(V, A, D), mapping_id=mapping_id)
+    vad = _validate_vad_triplet(V, A, D, context="input")
+    return _build_receipt(family, r, c, k, vad=vad, mapping_id=mapping_id)
 
 
 def tonesight_from_vad_batch(
@@ -90,8 +100,7 @@ def tonesight_from_vad_batch(
         v = row["V"]
         a = row["A"]
         d = row["D"]
-        if not isinstance(v, int) or not isinstance(a, int) or not isinstance(d, int):
-            raise ValueError(f"rows[{idx}] V,A,D must be integers")
+        _validate_vad_triplet(v, a, d, context=f"rows[{idx}]")
         receipts.append(tonesight_from_vad(v, a, d, family, r, c, k, mapping_id=mapping_id))
     return receipts
 

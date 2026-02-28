@@ -2,17 +2,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-import sys
-
 from .errors import InvalidInput
-
-# Keep root oracle authoritative until packaged parity is complete.
-ROOT = Path(__file__).resolve().parents[2]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-from ns8_ref import (  # noqa: E402
+from .ns8_ref import (
     InvalidInput as OracleInvalidInput,
     ns8_A,
     ns8_route,
@@ -42,4 +33,3 @@ def compute_A(family: str, r: int, c: int, k: int, N: int = 8) -> int:
         return ns8_A(family, r, c, k, N)
     except OracleInvalidInput as exc:
         raise InvalidInput(str(exc)) from exc
-

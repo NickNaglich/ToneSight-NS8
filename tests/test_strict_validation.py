@@ -32,3 +32,15 @@ def test_validate_taxonomy_rejects_non_snake_case_label():
                 "tones": {"Bad-Label": {"V": 1, "A": 1, "D": 1}},
             }
         )
+
+
+def test_validate_taxonomy_rejects_bool_vad_value():
+    with pytest.raises(InvalidTaxonomy):
+        validate_taxonomy(
+            {
+                "spec_version": "1.0",
+                "N": 8,
+                "vad_scale": "1..8",
+                "tones": {"steady": {"V": True, "A": 1, "D": 1}},
+            }
+        )
