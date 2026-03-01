@@ -6,6 +6,28 @@ on:
   pull_request:
 
 jobs:
+  package-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build wheel and install non-editable package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build
+          python -m build
+          python -m pip install dist/*.whl
+
+      - name: Wheel runtime smoke
+        run: |
+          python -c "from tonesight_ns8 import compute_A; assert compute_A('TLF', 1, 1, 1) == 1"
+
   security-bandit:
     runs-on: ubuntu-latest
     steps:
