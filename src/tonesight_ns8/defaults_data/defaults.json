@@ -1,0 +1,17 @@
+{
+  "spec_version": "1.0",
+  "description": "Deterministic default runtime configuration for eval and CLI wrappers.",
+  "eval_defaults": {
+    "out_root": "runs",
+    "taxonomy_path": "taxonomy/tone_taxonomy.v1.json",
+    "threshold_l1": 3,
+    "calibration_path": null,
+    "capture_gpu": false,
+    "mlflow_tracking_uri": null
+  },
+  "artifact_defaults": {
+    "vectors_path": "vectors/ns8_test_vectors.json",
+    "taxonomy_path": "taxonomy/tone_taxonomy.v1.json",
+    "goldset_path": "data/goldset.jsonl"
+  }
+}

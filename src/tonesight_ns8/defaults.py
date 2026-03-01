@@ -12,6 +12,7 @@ from .defaults_schema import validate_defaults_payload
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULTS_PATH = ROOT / "config" / "defaults.json"
 DEFAULTS_ENV_VAR = "TONESIGHT_DEFAULTS_PATH"
+PACKAGE_DEFAULTS_PATH = Path(__file__).resolve().parent / "defaults_data" / "defaults.json"
 
 
 def _resolve_defaults_path(path: Path | None = None) -> Path:
@@ -20,7 +21,14 @@ def _resolve_defaults_path(path: Path | None = None) -> Path:
     env_path = os.getenv(DEFAULTS_ENV_VAR)
     if env_path:
         return Path(env_path)
-    return DEFAULTS_PATH
+    if DEFAULTS_PATH.exists():
+        return DEFAULTS_PATH
+    if PACKAGE_DEFAULTS_PATH.exists():
+        return PACKAGE_DEFAULTS_PATH
+    raise RuntimeError(
+        f"Missing defaults config: checked {DEFAULTS_PATH} and {PACKAGE_DEFAULTS_PATH}. "
+        f"Set {DEFAULTS_ENV_VAR} to an explicit path."
+    )
 
 
 def _load_defaults(path: Path | None = None) -> dict[str, Any]:

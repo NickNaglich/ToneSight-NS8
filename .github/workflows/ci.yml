@@ -102,7 +102,7 @@ jobs:
 
       - name: Verify vector regeneration is stable
         run: |
-          python tools/regen_vectors.py
+          python tools/regen_vectors.py --check
           git diff --exit-code
 
   determinism-matrix:
@@ -135,7 +135,7 @@ jobs:
 
       - name: Determinism matrix vector stability
         run: |
-          python tools/regen_vectors.py
+          python tools/regen_vectors.py --check
           git diff --exit-code
 
   observability:
