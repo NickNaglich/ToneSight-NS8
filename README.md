@@ -769,7 +769,7 @@ Cross-environment determinism validation:
   - `windows-latest` + Python `3.11`
 - matrix checks run:
   - `python -m pytest -q`
-  - `python tools/regen_vectors.py`
+  - `python tools/regen_vectors.py --check`
   - `git diff --exit-code`
 
 ## Path B Monitoring (Opt-in)
@@ -882,6 +882,7 @@ curl -X POST http://localhost:8080/eval/run \
 |   |-- RELEASE_NOTES_0.2.4.md
 |   |-- RELEASE_NOTES_0.2.5.md
 |   |-- RELEASE_NOTES_0.2.6.md
+|   |-- RELEASE_NOTES_0.2.7.md
 |   |-- RECEIPT_SCHEMA.md
 |   |-- RETENTION_POLICY.md
 |   |-- SECURITY_POLICY.md
@@ -916,7 +917,7 @@ Note: The current layout uses a reference implementation (`ns8_ref.py`).
 ## Versioning and Stability
 
 - Library/package versioning follows semantic versioning and is currently pre-1.0 (`0.x` series).
-- Current package version target: `0.2.6`.
+- Current package version target: `0.2.7`.
 - NS8 spec version is tracked separately in `docs/SPEC_NS8.md`.
 - The NS8 specification is stable within a major version.
 

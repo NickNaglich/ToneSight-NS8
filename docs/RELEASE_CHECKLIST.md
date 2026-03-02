@@ -17,7 +17,9 @@ python -m tonesight_ns8.cli benchmark --suite coding_agent_drift --out-root runs
 python -m tonesight_ns8.cli live-replay --capture runs/captures/<capture_id> --taxonomy taxonomy/tone_taxonomy.v1.json --threshold-l1 3 --adapter coding_agent --require-pinned-model-identity
 python -m tonesight_ns8.cli gate --run-a runs/<baseline_live_run> --run-b runs/<candidate_live_run> --profile coding_agent_drift --allow-dataset-mismatch
 python -m pytest -q
-python tools/regen_vectors.py
+python tools/regen_vectors.py --check
+python -m build
+python -m twine check dist/*
 git diff --exit-code
 ```
 
@@ -57,6 +59,8 @@ python -m tonesight_ns8.cli bundle --run-b runs/<run_id>
 - full test suite passes
 - warnings are triaged/documented; no unexpected warnings are introduced
 - vector regeneration produces no diff
+- source distribution and wheel build successfully
+- `twine check` passes for all `dist/*` artifacts
 - observability API tests pass when optional dependencies are installed
 - CLI entrypoint is installed and operational
 - eval smoke command returns a JSON payload with `run_id` and writes run artifacts
