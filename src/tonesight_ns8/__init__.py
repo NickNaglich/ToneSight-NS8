@@ -6,6 +6,8 @@ from .api import (
     tonesight_from_llm_labels,
     tonesight_from_vad,
     tonesight_from_vad_batch,
+    tonesight_receipt_from_label_context,
+    tonesight_receipt_from_vad_context,
     tonesight_receipt_from_segment,
 )
 from .analytics import summarize_session, summarize_speaker
@@ -58,6 +60,8 @@ __all__ = [
     "tonesight_from_llm_labels",
     "tonesight_from_vad",
     "tonesight_from_vad_batch",
+    "tonesight_receipt_from_label_context",
+    "tonesight_receipt_from_vad_context",
     "tonesight_receipt_from_segment",
     "attach_tonesight_to_segment",
     "Route",

@@ -39,8 +39,13 @@ Status:
 ## Notes
 
 - `label` and `vad` are optional based on entrypoint:
-  - `tonesight_from_label(...)`: include both `label` and resolved `vad`
-  - `tonesight_from_vad(...)`: include `vad`; omit `label` if not provided
+  - `tonesight_receipt_from_label_context(...)`: include both `label` and resolved `vad`
+  - `tonesight_receipt_from_vad_context(...)`: include `vad`; omit `label` if not provided
+- Anchor semantics:
+  - `output.A` is derived from NS8 routing inputs (`family`, `r`, `c`, `k`).
+  - `input.vad` and `input.label` are contextual receipt fields and do not directly alter NS8 anchor math.
+  - With fixed `family/r/c/k`, anchor can remain constant even when VAD varies.
+- Backward-compatible aliases `tonesight_from_label(...)` and `tonesight_from_vad(...)` remain available but are deprecated.
 - `spec_version` must match `docs/SPEC_NS8.md`.
 - `A` must be in `1..8`.
 - Unknown optional fields are allowed only if they do not alter deterministic behavior.

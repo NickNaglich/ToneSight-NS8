@@ -940,3 +940,7 @@ Validation: workflow update only; local runtime tests not re-run in this step.
 Files: src/tonesight_ns8/defaults.py, src/tonesight_ns8/defaults_data/defaults.json, pyproject.toml, tools/regen_vectors.py, .github/workflows/ci.yml, .agent/LOGS/CHANGE_LOG.md
 Reason: Remove repo-root-only defaults coupling by adding packaged defaults fallback for installed environments, and enforce vector-regeneration governance with explicit authorization checks while adding non-mutating `--check` mode for CI stability validation.
 Validation: python tools/regen_vectors.py --check; python -m pytest -q tests/test_defaults_config.py test_ns8_vectors.py tests/test_strict_validation.py (31 passed); python -m pytest -q (262 passed)
+[2026-03-01T02:05:30Z] Clarify VAD-context API semantics with explicit aliases, deprecation warnings, and contract docs
+Files: src/tonesight_ns8/api.py, src/tonesight_ns8/__init__.py, src/tonesight_ns8/cli.py, test_receipts_api.py, tests/test_mapping_registry.py, README.md, docs/API_REFERENCE.md, docs/RECEIPT_SCHEMA.md, .agent/LOGS/CHANGE_LOG.md
+Reason: Reduce integration ambiguity by introducing explicit context-named wrapper APIs, deprecating ambiguous aliases, updating CLI to non-deprecated entrypoints, and documenting that anchor variation is driven by NS8 route inputs (family/r/c/k) rather than direct VAD math.
+Validation: python -m pytest -q (263 passed)

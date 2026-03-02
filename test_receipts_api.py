@@ -7,6 +7,8 @@ from tonesight_ns8 import (
     tonesight_from_llm_labels,
     tonesight_from_vad,
     tonesight_from_vad_batch,
+    tonesight_receipt_from_label_context,
+    tonesight_receipt_from_vad_context,
 )
 
 
@@ -18,8 +20,8 @@ def test_compute_and_route_public_api():
 
 
 def test_receipt_from_vad_shape_and_determinism():
-    rec1 = tonesight_from_vad(7, 3, 3, "TRF", 6, 4, 3)
-    rec2 = tonesight_from_vad(7, 3, 3, "TRF", 6, 4, 3)
+    rec1 = tonesight_receipt_from_vad_context(7, 3, 3, "TRF", 6, 4, 3)
+    rec2 = tonesight_receipt_from_vad_context(7, 3, 3, "TRF", 6, 4, 3)
     assert rec1 == rec2
     assert set(rec1.keys()) == {"spec_version", "input", "route", "output"}
     assert set(rec1["input"].keys()) == {"family", "r", "c", "k", "vad"}
@@ -29,7 +31,7 @@ def test_receipt_from_vad_shape_and_determinism():
 
 
 def test_receipt_from_label():
-    rec = tonesight_from_label(
+    rec = tonesight_receipt_from_label_context(
         label="empathetic",
         family="TRF",
         r=6,
@@ -80,10 +82,33 @@ def test_batch_adapter_type_validation():
 
 def test_vad_adapter_strict_domain_validation():
     with pytest.raises(ValueError, match="input V must be an integer in 1..8"):
-        tonesight_from_vad(True, 3, 3, "TRF", 6, 4, 3)  # type: ignore[arg-type]
+        tonesight_receipt_from_vad_context(True, 3, 3, "TRF", 6, 4, 3)  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="input A must be in 1..8"):
-        tonesight_from_vad(7, 9, 3, "TRF", 6, 4, 3)
+        tonesight_receipt_from_vad_context(7, 9, 3, "TRF", 6, 4, 3)
     with pytest.raises(ValueError, match="rows\\[0\\] V must be an integer in 1..8"):
         tonesight_from_vad_batch([{"V": True, "A": 3, "D": 3}], "TRF", 6, 4, 3)  # type: ignore[dict-item]
     with pytest.raises(ValueError, match="rows\\[0\\] A must be in 1..8"):
         tonesight_from_vad_batch([{"V": 7, "A": 0, "D": 3}], "TRF", 6, 4, 3)
+
+
+def test_deprecated_aliases_warn_and_preserve_behavior():
+    with pytest.deprecated_call(match="tonesight_from_vad is deprecated"):
+        from_vad = tonesight_from_vad(7, 3, 3, "TRF", 6, 4, 3)
+    with pytest.deprecated_call(match="tonesight_from_label is deprecated"):
+        from_label = tonesight_from_label(
+            label="empathetic",
+            family="TRF",
+            r=6,
+            c=4,
+            k=3,
+            taxonomy_path="taxonomy/tone_taxonomy.v1.json",
+        )
+    assert from_vad["output"] == tonesight_receipt_from_vad_context(7, 3, 3, "TRF", 6, 4, 3)["output"]
+    assert from_label["output"] == tonesight_receipt_from_label_context(
+        label="empathetic",
+        family="TRF",
+        r=6,
+        c=4,
+        k=3,
+        taxonomy_path="taxonomy/tone_taxonomy.v1.json",
+    )["output"]

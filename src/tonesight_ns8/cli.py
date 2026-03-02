@@ -41,8 +41,8 @@ from . import (
     run_ui_package,
     summarize_session,
     summarize_speaker,
-    tonesight_from_label,
-    tonesight_from_vad,
+    tonesight_receipt_from_label_context,
+    tonesight_receipt_from_vad_context,
 )
 
 _FAMILIES = ("TLF", "TRF", "BLF", "BRF", "TRB", "TLB", "BLB", "BRB")
@@ -125,7 +125,7 @@ def _cmd_encode(args: argparse.Namespace) -> dict:
     if args.label:
         if not args.taxonomy:
             raise ValueError("--taxonomy is required when --label is provided")
-        return tonesight_from_label(
+        return tonesight_receipt_from_label_context(
             label=args.label,
             family=args.family,
             r=args.r,
@@ -137,7 +137,7 @@ def _cmd_encode(args: argparse.Namespace) -> dict:
 
     if args.V is None or args.A is None or args.D is None:
         raise ValueError("Provide either --label/--taxonomy or all of --V --A --D")
-    return tonesight_from_vad(
+    return tonesight_receipt_from_vad_context(
         V=args.V,
         A=args.A,
         D=args.D,

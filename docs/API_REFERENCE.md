@@ -15,10 +15,12 @@ Stable public imports are the names exported by `tonesight_ns8.__all__`:
 - `compute_A`
 - `resolve_to_seed`
 - `validate_inputs`
-- `tonesight_from_label`
+- `tonesight_from_label` (deprecated alias)
 - `tonesight_from_llm_labels`
-- `tonesight_from_vad`
+- `tonesight_from_vad` (deprecated alias)
 - `tonesight_from_vad_batch`
+- `tonesight_receipt_from_label_context`
+- `tonesight_receipt_from_vad_context`
 - `tonesight_receipt_from_segment`
 - `attach_tonesight_to_segment`
 - `Route`
@@ -89,10 +91,13 @@ Raised when strict input validation fails, including:
 Primary package functions:
 - `compute_A(...)`
 - `resolve_to_seed(...)`
-- `tonesight_from_label(...)`
+- `tonesight_receipt_from_label_context(...)`
 - `tonesight_from_llm_labels(...)`
-- `tonesight_from_vad(...)`
+- `tonesight_receipt_from_vad_context(...)`
 - `tonesight_from_vad_batch(...)`
+- deprecated aliases:
+  - `tonesight_from_label(...)`
+  - `tonesight_from_vad(...)`
 
 ### `ns8_A(family: str, r: int, c: int, k: int, n: int = 8) -> int`
 
@@ -186,8 +191,8 @@ Example adapter:
 - minimal plugin reference for registry integration and conformance testing
 
 Current wrappers support optional `mapping_id`:
-- `tonesight_from_label(..., mapping_id="ns8")`
-- `tonesight_from_vad(..., mapping_id="ns8")`
+- `tonesight_receipt_from_label_context(..., mapping_id="ns8")`
+- `tonesight_receipt_from_vad_context(..., mapping_id="ns8")`
 - `tonesight_from_llm_labels(..., mapping_id="ns8")`
 - `tonesight_from_vad_batch(..., mapping_id="ns8")`
 - `tonesight_receipt_from_segment(..., mapping_id="ns8")`
@@ -762,20 +767,24 @@ CLI:
 - `python -m tonesight_ns8.cli benchmark --suite killer_stability --killer-profiles default,oscillation_path,boundary_jitter,phase_flip_cycle --killer-seeds 0,1,2,3,4 --killer-primary-strength 0.2 --killer-sweep-strengths 0.05,0.1,0.15,0.2,0.3 --killer-sample-multiplier 2`
 - `python -m tonesight_ns8.cli benchmark --suite coding_agent_drift --coding-baseline-events tests/fixtures/live_event.coding_agent.python.jsonl --coding-candidate-events tests/fixtures/live_event.coding_agent.typescript.jsonl,tests/fixtures/live_event.coding_agent.mismatch.jsonl`
 
-### `tonesight_from_label(label: str, family: str, r: int, c: int, k: int, taxonomy_path: str) -> dict`
+### `tonesight_receipt_from_label_context(label: str, family: str, r: int, c: int, k: int, taxonomy_path: str) -> dict`
 
 Behavior:
 - load taxonomy
-- resolve label to VAD
-- compute NS8 anchor
+- resolve label to VAD context
+- compute NS8 anchor from `family/r/c/k`
 - return deterministic JSON-serializable receipt
 
-### `tonesight_from_vad(V: int, A: int, D: int, family: str, r: int, c: int, k: int) -> dict`
+### `tonesight_receipt_from_vad_context(V: int, A: int, D: int, family: str, r: int, c: int, k: int) -> dict`
 
 Behavior:
-- use explicit VAD input
-- compute NS8 anchor
+- use explicit VAD input as receipt context
+- compute NS8 anchor from `family/r/c/k`
 - return deterministic JSON-serializable receipt
+
+Deprecated aliases:
+- `tonesight_from_label(...)` -> `tonesight_receipt_from_label_context(...)`
+- `tonesight_from_vad(...)` -> `tonesight_receipt_from_vad_context(...)`
 
 ### `tonesight_from_vad_batch(rows: list[dict[str, int]], family: str, r: int, c: int, k: int) -> list[dict]`
 

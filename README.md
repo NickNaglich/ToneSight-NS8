@@ -94,9 +94,9 @@ python examples/ns8_drift_demo.py --out-root runs/demo
 ## Hello Tone Example
 
 ```python
-from tonesight_ns8 import tonesight_from_label
+from tonesight_ns8 import tonesight_receipt_from_label_context
 
-receipt = tonesight_from_label(
+receipt = tonesight_receipt_from_label_context(
     label="empathetic",
     family="TRF",
     r=6,
@@ -265,6 +265,16 @@ Notes:
 
 ToneSight NS8 operates on segments that may be attributed to a speaker and grouped into a session. These concepts are domain-neutral and apply to calls, interviews, podcasts, sessions, and other multi-speaker audio.
 
+## Anchor Variation Semantics
+
+- NS8 anchor `A` is computed from deterministic routing inputs: `family`, `r`, `c`, `k`.
+- Wrapper entrypoints that accept `V/A/D` or labels attach that data as receipt context.
+- If you keep `family/r/c/k` constant across segments, anchor `A` can remain constant even when VAD changes.
+- Use explicit entrypoints for clarity:
+  - `tonesight_receipt_from_vad_context(...)`
+  - `tonesight_receipt_from_label_context(...)`
+- Backward-compatible aliases `tonesight_from_vad(...)` and `tonesight_from_label(...)` remain available but are deprecated.
+
 ## Analytics
 
 Core analytics produce deterministic JSON-serializable summaries:
@@ -320,7 +330,7 @@ ToneSight includes a deterministic mapping registry with NS8 registered as the d
 This enables future mapping implementations without changing core eval/receipt contracts.
 
 Current mapping-aware surfaces:
-- Python wrappers accept optional `mapping_id` (`tonesight_from_vad`, `tonesight_from_label`, segment helpers)
+- Python wrappers accept optional `mapping_id` (`tonesight_receipt_from_vad_context`, `tonesight_receipt_from_label_context`, segment helpers)
 - CLI supports `--mapping` for `encode` and `decode`
 
 Developer references:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, replace
+import warnings
 
 from .mapping import get_mapping
 from .schema import SegmentRecord, ToneReceipt
@@ -10,6 +11,11 @@ from .taxonomy import get_vad, load_taxonomy
 
 
 SPEC_VERSION = "1.0"
+_DEPRECATION_HINT = (
+    "This function attaches VAD/label context to the receipt, but anchor A is computed from NS8 "
+    "routing inputs (family,r,c,k). Use tonesight_receipt_from_vad_context / "
+    "tonesight_receipt_from_label_context for explicit semantics."
+)
 
 
 def _validate_vad_triplet(V: int, A: int, D: int, *, context: str) -> tuple[int, int, int]:
@@ -50,6 +56,36 @@ def _build_receipt(
     return asdict(receipt)
 
 
+def tonesight_receipt_from_label_context(
+    label: str,
+    family: str,
+    r: int,
+    c: int,
+    k: int,
+    taxonomy_path: str,
+    mapping_id: str = "ns8",
+) -> dict:
+    """Resolve label to VAD context and return deterministic receipt."""
+    taxonomy = load_taxonomy(taxonomy_path)
+    vad = get_vad(label, taxonomy)
+    return _build_receipt(family, r, c, k, label=label, vad=vad, mapping_id=mapping_id)
+
+
+def tonesight_receipt_from_vad_context(
+    V: int,
+    A: int,
+    D: int,
+    family: str,
+    r: int,
+    c: int,
+    k: int,
+    mapping_id: str = "ns8",
+) -> dict:
+    """Attach explicit VAD context and return deterministic receipt."""
+    vad = _validate_vad_triplet(V, A, D, context="input")
+    return _build_receipt(family, r, c, k, vad=vad, mapping_id=mapping_id)
+
+
 def tonesight_from_label(
     label: str,
     family: str,
@@ -59,10 +95,23 @@ def tonesight_from_label(
     taxonomy_path: str,
     mapping_id: str = "ns8",
 ) -> dict:
-    """Resolve tone label to VAD and return deterministic receipt."""
-    taxonomy = load_taxonomy(taxonomy_path)
-    vad = get_vad(label, taxonomy)
-    return _build_receipt(family, r, c, k, label=label, vad=vad, mapping_id=mapping_id)
+    """Deprecated alias for tonesight_receipt_from_label_context."""
+    warnings.warn(
+        "tonesight_from_label is deprecated. "
+        "Use tonesight_receipt_from_label_context instead. "
+        + _DEPRECATION_HINT,
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return tonesight_receipt_from_label_context(
+        label=label,
+        family=family,
+        r=r,
+        c=c,
+        k=k,
+        taxonomy_path=taxonomy_path,
+        mapping_id=mapping_id,
+    )
 
 
 def tonesight_from_vad(
@@ -75,9 +124,24 @@ def tonesight_from_vad(
     k: int,
     mapping_id: str = "ns8",
 ) -> dict:
-    """Use explicit VAD and return deterministic receipt."""
-    vad = _validate_vad_triplet(V, A, D, context="input")
-    return _build_receipt(family, r, c, k, vad=vad, mapping_id=mapping_id)
+    """Deprecated alias for tonesight_receipt_from_vad_context."""
+    warnings.warn(
+        "tonesight_from_vad is deprecated. "
+        "Use tonesight_receipt_from_vad_context instead. "
+        + _DEPRECATION_HINT,
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return tonesight_receipt_from_vad_context(
+        V=V,
+        A=A,
+        D=D,
+        family=family,
+        r=r,
+        c=c,
+        k=k,
+        mapping_id=mapping_id,
+    )
 
 
 def tonesight_from_vad_batch(
@@ -101,7 +165,9 @@ def tonesight_from_vad_batch(
         a = row["A"]
         d = row["D"]
         _validate_vad_triplet(v, a, d, context=f"rows[{idx}]")
-        receipts.append(tonesight_from_vad(v, a, d, family, r, c, k, mapping_id=mapping_id))
+        receipts.append(
+            tonesight_receipt_from_vad_context(v, a, d, family, r, c, k, mapping_id=mapping_id)
+        )
     return receipts
 
 
