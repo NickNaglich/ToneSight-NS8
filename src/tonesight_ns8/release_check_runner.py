@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .data_lint_runner import run_data_lint
-from .defaults import EVAL_DEFAULTS
+from .defaults import EVAL_DEFAULTS, resolve_gate_profiles_path
 from .taxonomy import load_taxonomy
 
 
@@ -88,7 +88,7 @@ def run_release_check(
     *,
     goldset_path: str = "data/goldset.jsonl",
     taxonomy_path: str = EVAL_DEFAULTS["taxonomy_path"],
-    gate_profiles_path: str = "config/gate_profiles.json",
+    gate_profiles_path: str = resolve_gate_profiles_path(),
     out_path: str | None = None,
 ) -> dict[str, Any]:
     """Run deterministic pre-release checks and return machine-readable status."""

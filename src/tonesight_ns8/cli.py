@@ -9,7 +9,7 @@ from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any
 
-from .defaults import ARTIFACT_DEFAULTS, EVAL_DEFAULTS
+from .defaults import ARTIFACT_DEFAULTS, EVAL_DEFAULTS, resolve_gate_profiles_path
 from .live_runner import list_live_adapters
 from .mapping import get_mapping, list_mappings
 from . import (
@@ -511,7 +511,7 @@ def build_parser() -> argparse.ArgumentParser:
     gate_cmd.add_argument("--run-a", required=True, help="Baseline run directory path.")
     gate_cmd.add_argument("--run-b", required=True, help="Candidate run directory path.")
     gate_cmd.add_argument("--profile", help="Optional gate profile name from gate profiles config.")
-    gate_cmd.add_argument("--gate-profiles", default="config/gate_profiles.json")
+    gate_cmd.add_argument("--gate-profiles", default=resolve_gate_profiles_path())
     gate_cmd.add_argument("--min-pass-rate-delta", type=float, default=None)
     gate_cmd.add_argument("--max-avg-l1-delta", type=float, default=None)
     gate_cmd.add_argument("--max-p95-l1-delta", type=float, default=None)
@@ -573,7 +573,7 @@ def build_parser() -> argparse.ArgumentParser:
     canary_cmd.add_argument("--shadow-strict", choices=("fail", "drop", "quarantine"), default="quarantine")
     canary_cmd.add_argument("--disable-redaction", action="store_true")
     canary_cmd.add_argument("--profile", help="Optional gate profile name from gate profiles config.")
-    canary_cmd.add_argument("--gate-profiles", default="config/gate_profiles.json")
+    canary_cmd.add_argument("--gate-profiles", default=resolve_gate_profiles_path())
     canary_cmd.add_argument("--min-pass-rate-delta", type=float, default=None)
     canary_cmd.add_argument("--max-avg-l1-delta", type=float, default=None)
     canary_cmd.add_argument("--max-p95-l1-delta", type=float, default=None)
@@ -650,7 +650,7 @@ def build_parser() -> argparse.ArgumentParser:
     report_cmd.add_argument("--run-a", help="Optional baseline run directory path for compare and gate highlights.")
     report_cmd.add_argument("--top-n", type=_non_negative_int, default=10)
     report_cmd.add_argument("--profile", help="Optional gate profile name from gate profiles config.")
-    report_cmd.add_argument("--gate-profiles", default="config/gate_profiles.json")
+    report_cmd.add_argument("--gate-profiles", default=resolve_gate_profiles_path())
     report_cmd.add_argument("--min-pass-rate-delta", type=float, default=None)
     report_cmd.add_argument("--max-avg-l1-delta", type=float, default=None)
     report_cmd.add_argument("--max-p95-l1-delta", type=float, default=None)
@@ -669,7 +669,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     release_check_cmd.add_argument("--goldset", default=ARTIFACT_DEFAULTS["goldset_path"])
     release_check_cmd.add_argument("--taxonomy", default=EVAL_DEFAULTS["taxonomy_path"])
-    release_check_cmd.add_argument("--gate-profiles", default="config/gate_profiles.json")
+    release_check_cmd.add_argument("--gate-profiles", default=resolve_gate_profiles_path())
     release_check_cmd.add_argument("--out", help="Optional explicit release-check output path (.json).")
     release_check_cmd.set_defaults(func=_cmd_release_check)
 

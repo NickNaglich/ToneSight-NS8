@@ -8,6 +8,7 @@ from typing import Any
 
 from .compatibility import compatibility_issues
 from .compare_runner import run_compare
+from .defaults import resolve_gate_profiles_path
 
 _DEFAULT_THRESHOLDS = {
     "min_pass_rate_delta": -0.02,
@@ -148,7 +149,8 @@ def _resolve_thresholds(
     resolved = dict(_DEFAULT_THRESHOLDS)
     selected_profile: str | None = None
     if profile:
-        profiles = _load_gate_profiles(Path(gate_profiles_path))
+        resolved_gate_profiles_path = resolve_gate_profiles_path(gate_profiles_path)
+        profiles = _load_gate_profiles(Path(resolved_gate_profiles_path))
         if profile not in profiles:
             raise ValueError(f"Unknown gate profile: {profile}")
         resolved.update(profiles[profile])

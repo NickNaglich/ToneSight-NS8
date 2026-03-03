@@ -43,6 +43,17 @@ def test_runtime_defaults_are_loaded_from_config():
     assert ARTIFACT_DEFAULTS["goldset_path"] == "data/goldset.jsonl"
 
 
+def test_packaged_defaults_fallback_paths_resolve_when_repo_paths_missing(monkeypatch):
+    temp_cwd = _local_test_dir("tmp_defaults_fallback")
+    with monkeypatch.context() as m:
+        m.chdir(temp_cwd)
+        payload = defaults_module._load_defaults(defaults_module.PACKAGE_DEFAULTS_PATH)
+    assert Path(payload["eval"]["taxonomy_path"]).exists()
+    assert Path(payload["artifacts"]["taxonomy_path"]).exists()
+    assert Path(payload["artifacts"]["goldset_path"]).exists()
+    assert Path(payload["artifacts"]["vectors_path"]).exists()
+
+
 def test_cli_eval_defaults_follow_config_defaults():
     parser = cli_module.build_parser()
     args = parser.parse_args(["eval"])

@@ -150,6 +150,9 @@ Requirements:
 - Python 3.11+
 - `pytest` (for running tests)
 
+Installed package builds include deterministic built-in defaults/taxonomy/goldset/vector assets.
+If repo-local paths are unavailable in another project, CLI defaults fall back to packaged assets automatically.
+
 After install, verify the CLI using module invocation (recommended and cross-platform):
 
 ```bash

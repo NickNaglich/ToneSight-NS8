@@ -31,4 +31,11 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-tonesight_ns8 = ["defaults_data/*.json", "domainpacks_data/*.json"]
+tonesight_ns8 = [
+  "defaults_data/*.json",
+  "domainpacks_data/*.json",
+  "package_data/config/*.json",
+  "package_data/data/*.jsonl",
+  "package_data/taxonomy/*.json",
+  "package_data/vectors/*.json",
+]
