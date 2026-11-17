@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import html
 import json
+import os
 import platform
 import shutil
 import subprocess  # nosec B404
@@ -138,6 +139,8 @@ def log_eval_to_mlflow(
 ) -> dict[str, Any] | None:
     if not tracking_uri:
         return None
+    # App-process default before SDK initialization; retain explicit caller policy.
+    os.environ.setdefault("MLFLOW_DISABLE_TELEMETRY", "true")
     try:
         import mlflow  # type: ignore
     except Exception as exc:  # pragma: no cover

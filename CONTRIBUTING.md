@@ -74,5 +74,8 @@ auditing the complete installed tool environment. This is the patched floor for
 [GHSA-xmj3-9gf7-h52w](https://github.com/pypa/setuptools/security/advisories/GHSA-xmj3-9gf7-h52w);
 `pip-audit` still fails on any reported vulnerability. The tool-environment audit
 is not an audit or security certification of all optional application dependencies.
-In particular, the existing MLflow 2.x range has separate published advisories
-and is unchanged by this repair. Do not infer whole-stack security from green CI.
+The observability job separately audits its actual optional environment and
+checks the patched client with synthetic SQLite tracking. See
+[MLflow tracking and migration](docs/MONITORING.md#4-mlflow-tracking) for the
+client-only dependency boundary, telemetry default and legacy file-store
+compatibility change. Neither advisory snapshot certifies whole-stack security.

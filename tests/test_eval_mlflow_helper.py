@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import builtins
+import os
 import sys
 from pathlib import Path
 from uuid import uuid4
@@ -62,7 +64,8 @@ def _temp_dir(prefix: str) -> Path:
     return root
 
 
-def test_log_eval_to_mlflow_noop_when_tracking_uri_empty():
+def test_log_eval_to_mlflow_noop_when_tracking_uri_empty(monkeypatch):
+    monkeypatch.delenv("MLFLOW_DISABLE_TELEMETRY", raising=False)
     out_dir = _temp_dir("tmp_mlflow_helper_noop")
     out_dir.mkdir(parents=True, exist_ok=True)
     payload = log_eval_to_mlflow(
@@ -74,6 +77,7 @@ def test_log_eval_to_mlflow_noop_when_tracking_uri_empty():
         calibration_path=None,
     )
     assert payload is None
+    assert "MLFLOW_DISABLE_TELEMETRY" not in os.environ
 
 
 def test_log_eval_to_mlflow_failure_is_non_fatal(monkeypatch):
@@ -81,7 +85,7 @@ def test_log_eval_to_mlflow_failure_is_non_fatal(monkeypatch):
     out_dir = _temp_dir("tmp_mlflow_helper_fail")
     out_dir.mkdir(parents=True, exist_ok=True)
     payload = log_eval_to_mlflow(
-        tracking_uri="file:/tmp/mlruns",
+        tracking_uri="sqlite:///synthetic.db",
         result={"summary": {"pass_rate": 0.8, "avg_l1": 1.0, "p95_l1": 2.0}},
         out_dir=out_dir,
         threshold_l1=3,
@@ -99,7 +103,7 @@ def test_log_eval_to_mlflow_success(monkeypatch):
     out_dir = _temp_dir("tmp_mlflow_helper_ok")
     out_dir.mkdir(parents=True, exist_ok=True)
     payload = log_eval_to_mlflow(
-        tracking_uri="file:/tmp/mlruns",
+        tracking_uri="sqlite:///synthetic.db",
         result={"summary": {"pass_rate": 0.91, "avg_l1": 0.4, "p95_l1": 1.0}},
         out_dir=out_dir,
         threshold_l1=3,
@@ -107,7 +111,43 @@ def test_log_eval_to_mlflow_success(monkeypatch):
         calibration_path=None,
     )
     assert payload == {"enabled": True, "run_id": "mlflow_run_123"}
-    assert fake_mlflow.tracking_uri == "file:/tmp/mlruns"
+    assert fake_mlflow.tracking_uri == "sqlite:///synthetic.db"
     assert fake_mlflow.params["threshold_l1"] == 3
     assert "pass_rate" in fake_mlflow.metrics
     assert len(fake_mlflow.artifacts) == 4
+
+
+def test_telemetry_default_precedes_sdk_import(monkeypatch):
+    monkeypatch.delenv("MLFLOW_DISABLE_TELEMETRY", raising=False)
+    original_import = builtins.__import__
+    fake = _FakeMlflowOk()
+    imported = []
+
+    def checked_import(name, *args, **kwargs):
+        if name == "mlflow":
+            imported.append(name)
+            assert os.environ["MLFLOW_DISABLE_TELEMETRY"] == "true"
+            return fake
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", checked_import)
+    payload = log_eval_to_mlflow(
+        tracking_uri="sqlite:///synthetic.db",
+        result={"summary": {"pass_rate": 1.0, "avg_l1": 0.0, "p95_l1": 0.0}},
+        out_dir=_temp_dir("tmp_mlflow_privacy"), threshold_l1=3,
+        taxonomy_path="synthetic.json", calibration_path=None,
+    )
+    assert payload["enabled"] is True
+    assert imported == ["mlflow"]
+
+
+def test_explicit_telemetry_policy_is_retained(monkeypatch):
+    monkeypatch.setenv("MLFLOW_DISABLE_TELEMETRY", "false")
+    monkeypatch.setitem(sys.modules, "mlflow", _FakeMlflowOk())
+    log_eval_to_mlflow(
+        tracking_uri="sqlite:///synthetic.db",
+        result={"summary": {"pass_rate": 1.0, "avg_l1": 0.0, "p95_l1": 0.0}},
+        out_dir=_temp_dir("tmp_mlflow_explicit_policy"), threshold_l1=3,
+        taxonomy_path="synthetic.json", calibration_path=None,
+    )
+    assert os.environ["MLFLOW_DISABLE_TELEMETRY"] == "false"
