@@ -25,6 +25,19 @@ def _canonical_generation_identity(value: Any) -> str:
     return json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
 
 
+def _calibration_identity(receipt: dict[str, Any], config: dict[str, Any]) -> tuple[str, str]:
+    """Content identity is relocatable; legacy calibrated paths are unverified."""
+    path = _as_str(config.get("calibration_path"))
+    if "calibration_hash" not in receipt:
+        return ("legacy-path:" + path, "legacy_unverified") if path else ("", "none")
+    digest = receipt["calibration_hash"]
+    if digest is None and not path:
+        return "", "none"
+    if isinstance(digest, str) and len(digest) == 64 and all(c in "0123456789abcdef" for c in digest):
+        return "sha256:" + digest, "sha256"
+    return "", "invalid"
+
+
 def identity_fields(receipt: dict[str, Any]) -> dict[str, str]:
     """Extract normalized identity fields used by compare/gate/eval-compare."""
     config = _receipt_config(receipt)
@@ -32,7 +45,7 @@ def identity_fields(receipt: dict[str, Any]) -> dict[str, str]:
     mapping_id = _as_str(receipt.get("mapping_id") or config.get("mapping_id") or "ns8")
     mapping_version = _as_str(receipt.get("mapping_version") or config.get("mapping_version") or spec_version)
     taxonomy_identity = _as_str(receipt.get("taxonomy_hash") or config.get("taxonomy_path"))
-    calibration_identity = _as_str(config.get("calibration_path"))
+    calibration_identity, calibration_identity_kind = _calibration_identity(receipt, config)
     defaults_schema_version = _as_str(
         receipt.get("defaults_spec_version") or config.get("defaults_spec_version") or receipt.get("defaults_hash")
     )
@@ -54,6 +67,7 @@ def identity_fields(receipt: dict[str, Any]) -> dict[str, str]:
         "mapping_version": mapping_version,
         "taxonomy_identity": taxonomy_identity,
         "calibration_identity": calibration_identity,
+        "calibration_identity_kind": calibration_identity_kind,
         "defaults_schema_version": defaults_schema_version,
         "dataset_hash": dataset_hash,
         "provider": provider,
@@ -74,6 +88,19 @@ def compatibility_issues(
     fields_expected = identity_fields(expected)
     fields_actual = identity_fields(actual)
     issues: list[dict[str, str]] = []
+
+    for role, fields in (("expected", fields_expected), ("actual", fields_actual)):
+        kind = fields["calibration_identity_kind"]
+        if kind in ("legacy_unverified", "invalid"):
+            issues.append(
+                {
+                    "reason": "calibration_content_unverified" if kind == "legacy_unverified" else "calibration_hash_invalid",
+                    "field": "calibration_hash",
+                    "receipt": role,
+                    "expected": "full lowercase SHA-256 for calibrated receipts",
+                    "actual": kind,
+                }
+            )
 
     if require_dataset_match and fields_expected["dataset_hash"] != fields_actual["dataset_hash"]:
         issues.append(
