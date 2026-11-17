@@ -107,25 +107,66 @@ Recommendation:
 
 ## 4) MLflow tracking
 
-Status:
-- implemented as optional `run_eval(..., mlflow_tracking_uri=...)`
-- if `mlflow` is unavailable, receipt records a non-fatal disabled reason
+Install the `observability` extra (or `requirements-observability.txt`). It uses
+MLflow Skinny 3.17.2 or newer in the qualified 3.17.x series plus SQLAlchemy and
+Alembic for local SQL tracking. SQLAlchemy stays on 2.0.x because this SDK
+uses a loader strategy deprecated in 2.1 under the project's strict warning policy.
+Lift the 2.1 ceiling after a patched SDK passes these same strict local-client
+tests and dependency audit with SQLAlchemy 2.1 or newer. ToneSight needs tracking APIs, not an MLflow
+server, UI, model loader or data-science stack. Merely renaming an unpatched
+MLflow 2.x install to Skinny would not patch shared SDK code; this upgrade also
+advances that code. Avoid co-installing conflicting full/skinny SDK versions.
+Use a fresh environment when moving from the old extra: changing a requirement
+does not uninstall previously installed full MLflow or PyArrow. Check the final
+environment with `python -m pip check` and `python -m pip_audit`; resolve old
+packages instead of assuming a new requirement removed them.
 
-Log for every batch/eval:
-- Params:
-  - backend_id, thresholds, ns8 family selection, calibration version
-  - dataset hash + row count
-  - code version (git SHA if available)
-- Metrics:
-  - pass_rate, avg_l1, median_l1, p95_l1
-  - per-dim MAE (V/A/D)
-  - confusion matrix summaries
-- Artifacts:
-  - receipt.json
-  - out.jsonl
-  - confusion matrices (csv or json)
-  - optional report.html
-  - gpu_before.json / gpu_after.json
+`run_eval(..., mlflow_tracking_uri=...)` and the equivalent CLI/API option log:
+
+- params: `threshold_l1`, `taxonomy_path`, `calibration_path`;
+- metrics: `pass_rate`, `avg_l1`, `p95_l1`;
+- artifacts: `out.jsonl`, `eval_summary.json`, `report.html`, `receipt.json`.
+
+Logging remains opt-in. An empty URI does nothing; missing SDK or logging errors
+remain non-fatal and are reported in the receipt's `mlflow` block. The adapter
+sets the process-local default `MLFLOW_DISABLE_TELEMETRY=true` **before SDK
+import** when logging is requested. An explicitly configured caller value is
+retained. This neither changes machine configuration nor undoes activity from
+SDK imports a caller performed earlier. For strict local use, explicitly set
+`MLFLOW_DISABLE_TELEMETRY=true` (or `DO_NOT_TRACK=true`) before starting Python.
+Only send artifacts to tracking destinations for which you have authorization.
+
+### Local SQLite and legacy file-store migration
+
+For a new local run, pass an explicit SQLite URI, for example:
+
+```text
+tonesight-ns8 eval --mlflow-tracking-uri sqlite:///tracking.db
+```
+
+Use an absolute SQLite URI if the process working directory varies. Keep the
+artifact directory as well as the database when moving or backing up runs.
+This was checked using fresh synthetic records, local SQLite, exact retrieved
+params/metrics/artifact bytes, and denied socket/DNS calls; no remote server or
+model loading was exercised.
+
+**Compatibility change:** MLflow 3.17.x disables its maintenance-mode legacy
+file tracking backend by default. Old `file:` or directory tracking URIs can
+therefore produce a non-fatal disabled logging receipt instead of a logged run.
+ToneSight does not set `MLFLOW_ALLOW_FILE_STORE` to bypass that upstream default.
+Inspect the receipt rather than assuming tracking succeeded.
+
+For existing authorized file-store data, back it up and stop writers first.
+The upstream migration command accepts a source directory and an empty SQLite
+target, for example `mlflow migrate-filestore --source /path/to/mlruns --target
+sqlite:///tracking.db`. Follow the [official migration guide](https://mlflow.org/docs/latest/self-hosting/migrate-from-file-store/),
+then point ToneSight at that SQLite URI and verify your retained records.
+Artifacts stay at their original locations; migration does not copy them.
+No existing or private store was migrated by this change.
+
+The observability CI job audits its installed optional dependencies and runs
+real local-client tests. A clean advisory snapshot is not a proof of whole-stack
+security, remote-server authorization or safety of loading untrusted models.
 
 ## 5) GPU monitoring
 
