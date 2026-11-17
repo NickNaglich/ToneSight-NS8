@@ -91,15 +91,24 @@ def _defaults_spec_version(path: Path) -> str:
     return str(payload.get("spec_version", ""))
 
 
-def _load_calibration(calibration_path: str | None) -> dict[str, tuple[int, int, int]]:
+def _load_calibration(calibration_path: str | None) -> tuple[dict[str, tuple[int, int, int]], str | None]:
+    """Parse and identify the same immutable byte snapshot used by this eval."""
     if not calibration_path:
-        return {}
-    payload = json.loads(Path(calibration_path).read_text(encoding="utf-8"))
+        return {}, None
+    raw = Path(calibration_path).read_bytes()
+    payload = json.loads(raw.decode("utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("calibration must be a JSON object")
     overrides = payload.get("label_overrides", {})
+    if not isinstance(overrides, dict):
+        raise ValueError("calibration label_overrides must be an object")
     out: dict[str, tuple[int, int, int]] = {}
-    for label, vad in overrides.items():
-        out[str(label)] = (int(vad["V"]), int(vad["A"]), int(vad["D"]))
-    return out
+    try:
+        for label, vad in overrides.items():
+            out[str(label)] = (int(vad["V"]), int(vad["A"]), int(vad["D"]))
+    except (KeyError, TypeError, ValueError) as error:
+        raise ValueError("calibration overrides require V/A/D integer values") from error
+    return out, hashlib.sha256(raw).hexdigest()
 
 
 def _gpu_snapshot() -> dict[str, Any]:
@@ -292,7 +301,7 @@ def run_eval(
     gpath = Path(goldset_path)
     rows = _read_jsonl(gpath)
     taxonomy = load_taxonomy(taxonomy_path)
-    calibration = _load_calibration(calibration_path)
+    calibration, calibration_hash = _load_calibration(calibration_path)
     taxonomy_hash = _file_hash(Path(taxonomy_path))
     defaults_path = _resolve_defaults_path()
     defaults_hash = _file_hash(defaults_path)
@@ -392,6 +401,7 @@ def run_eval(
         "dataset_path": str(gpath),
         "dataset_hash": d_hash,
         "taxonomy_hash": taxonomy_hash,
+        "calibration_hash": calibration_hash,
         "defaults_hash": defaults_hash,
         "defaults_spec_version": defaults_spec_version,
         "mapping_id": "ns8",

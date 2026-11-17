@@ -577,3 +577,35 @@ python -m tonesight_ns8.cli report --run-a runs/<baseline_live_run> --run-b runs
 
 Boundary note:
 - this mode provides deterministic behavioral consistency telemetry; it is not code-correctness or cognition scoring.
+
+## Calibration content identity and replay
+
+New eval receipts include top-level `calibration_hash`: full lowercase SHA-256
+of the exact calibration file bytes parsed for scoring, or `null` when no
+calibration is configured. Loading, parsing and hashing use one byte snapshot;
+a later file change cannot change which bytes the receipt identifies. Keep that
+snapshot available for replay: a hash identifies bytes, but does not archive them.
+Scoring, thresholds, spec version and receipt schema version are unchanged.
+
+Shared compare/gate/eval-compare compatibility uses that content identity,
+not the calibration pathname. Identical bytes relocated to another path are
+compatible. A byte change (including JSON formatting) is a different identity,
+even at the same path. Other dataset/spec/mapping/taxonomy/default/model checks
+remain in force. Pin explicit baseline paths for reproducible comparisons;
+`eval-compare` still discovers the latest compatible prior directory by mtime.
+
+Legacy receipts with no calibration path and no hash remain compatible with
+new uncalibrated receipts. A legacy receipt with a configured calibration path
+but no hash is *not content verified*: compatibility reports
+`calibration_content_unverified` (gate incompatible/exit3). Malformed hashes,
+or `null` with a configured path, report `calibration_hash_invalid`. Re-evaluate
+from an approved frozen calibration snapshot to obtain a content-bound receipt;
+do not retrofit a hash of today's file into an old receipt or infer its old bytes.
+An empty calibration file path continues to mean no calibration.
+
+For a replay, verify the saved calibration snapshot against the original receipt
+before use and retain the resulting new receipt. Missing or malformed calibration
+files fail evaluation before an output run directory is created. The existing
+stable artifact comparison excludes only declared run metadata/duration fields.
+Rows lacking both a label and gold VAD fall back to their target VAD; identify
+these as self-comparison controls, never independent predictions or model accuracy.
