@@ -91,6 +91,15 @@ def run_canary(
 
     return {
         "spec_version": "1.0",
+        "replay_policy": {
+            "adapter": adapter,
+            "require_pinned_model_identity": bool(effective_pinned),
+        },
+        "evidence_scope": {
+            "operation": "recorded_capture_replay",
+            "live_model_execution": "not_attested_by_canary",
+            "model_identity_attestation": "not_performed_by_canary",
+        },
         "capture": {
             "path": capture,
             "baseline_capture_id": baseline_capture_id,

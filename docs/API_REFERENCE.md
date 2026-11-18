@@ -448,7 +448,40 @@ Runs baseline/candidate replay over the same capture and returns a gate decision
 - Pinned metadata is a declaration, not proof that a real model produced the capture.
   Replay self-target compliance is not predictive accuracy.
 
+The additive report separates enforcement policy from evidence scope:
+
+```json
+{
+  "replay_policy": {
+    "adapter": "coding_agent",
+    "require_pinned_model_identity": true
+  },
+  "evidence_scope": {
+    "operation": "recorded_capture_replay",
+    "live_model_execution": "not_attested_by_canary",
+    "model_identity_attestation": "not_performed_by_canary"
+  }
+}
+```
+
+`replay_policy.adapter` is the adapter selected for both native replays.
+`require_pinned_model_identity` is the effective enforcement policy, including a
+selected profile's requirement; it does not mean that a model was executed or
+its identity independently verified. Coding-agent provider/model/generation
+fields come from caller-declared capture metadata and are checked for required
+presence and compatibility under the existing policy.
+
+Canary replays a recorded capture and does not independently attest the
+capture's producer/model identity. `live_model_execution="not_attested_by_canary"`
+means this report establishes neither the presence nor the absence of model
+execution upstream or inside a registered custom adapter callback. These scope
+fields do not audit capture acquisition, callbacks or external execution history.
+They add no attestation service or new compatibility rule.
+The existing CLI includes these fields in its JSON output, with unchanged exits.
+
 Returns:
+- `replay_policy` (adapter and effective identity enforcement)
+- `evidence_scope` (recorded replay, model execution not attested, no independent identity attestation)
 - baseline replay result
 - candidate replay result
 - `compare_summary` (from gate/compare)
