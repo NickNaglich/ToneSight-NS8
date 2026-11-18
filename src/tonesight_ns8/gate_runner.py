@@ -229,7 +229,7 @@ def run_gate(
         base_payload["decision"] = "incompatible"
         base_payload["incompatibilities"] = issues
         base_payload["violations"] = []
-        base_payload["human_summary"] = "Gate skipped: incompatible runs (dataset/spec mismatch)."
+        base_payload["human_summary"] = "Gate skipped: incompatible runs."
         base_payload["exit_code"] = 3
         return base_payload
 

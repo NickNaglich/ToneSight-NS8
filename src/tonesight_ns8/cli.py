@@ -282,6 +282,8 @@ def _cmd_canary(args: argparse.Namespace) -> dict:
         max_avg_l1_delta=args.max_avg_l1_delta,
         max_p95_l1_delta=args.max_p95_l1_delta,
         allow_dataset_mismatch=args.allow_dataset_mismatch,
+        adapter=args.adapter,
+        require_pinned_model_identity=args.require_pinned_model_identity,
     )
 
 
@@ -572,6 +574,12 @@ def build_parser() -> argparse.ArgumentParser:
     canary_cmd.add_argument("--candidate-threshold-l1", type=_non_negative_int, default=EVAL_DEFAULTS["threshold_l1"])
     canary_cmd.add_argument("--shadow-strict", choices=("fail", "drop", "quarantine"), default="quarantine")
     canary_cmd.add_argument("--disable-redaction", action="store_true")
+    canary_cmd.add_argument("--adapter", choices=list_live_adapters(), default="upstream_signal")
+    canary_cmd.add_argument(
+        "--require-pinned-model-identity",
+        action="store_true",
+        help="Require pinned coding-agent identity; selected gate profiles may also require it.",
+    )
     canary_cmd.add_argument("--profile", help="Optional gate profile name from gate profiles config.")
     canary_cmd.add_argument("--gate-profiles", default=resolve_gate_profiles_path())
     canary_cmd.add_argument("--min-pass-rate-delta", type=float, default=None)

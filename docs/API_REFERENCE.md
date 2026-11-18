@@ -207,7 +207,7 @@ CLI support:
 - `live-capture --events <path>`
 - `live-replay --capture <capture_dir_or_events_jsonl> [--adapter <live_adapter_id>] [--require-pinned-model-identity]`
 - `live-verify --capture <capture_dir_or_events_jsonl> [--adapter <live_adapter_id>] [--require-pinned-model-identity]`
-- `canary --capture <capture_dir_or_events_jsonl>`
+- `canary --capture <capture_dir_or_events_jsonl> [--adapter coding_agent] [--require-pinned-model-identity]`
 - `incident --run-a <run_dir> --run-b <run_dir>`
 - `report --run-b <run_dir> [--run-a <run_dir>]`
 - `data-lint --dataset <jsonl_path>`
@@ -431,9 +431,22 @@ Gate profiles:
   - `min_tests_presence_rate_delta`
   - `min_tool_call_rate_delta`
 
-### `run_canary(capture: str, *, baseline_out_root: str = "runs/canary/baseline", candidate_out_root: str = "runs/canary/candidate", baseline_taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", candidate_taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", baseline_threshold_l1: int = 3, candidate_threshold_l1: int = 3, shadow_strict: str = "quarantine", redact: bool = True, top_n: int = 10, profile: str | None = None, gate_profiles_path: str = "config/gate_profiles.json", min_pass_rate_delta: float | None = None, max_avg_l1_delta: float | None = None, max_p95_l1_delta: float | None = None, allow_dataset_mismatch: bool = False) -> dict`
+### `run_canary(capture: str, *, baseline_out_root: str = "runs/canary/baseline", candidate_out_root: str = "runs/canary/candidate", baseline_taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", candidate_taxonomy_path: str = "taxonomy/tone_taxonomy.v1.json", baseline_threshold_l1: int = 3, candidate_threshold_l1: int = 3, shadow_strict: str = "quarantine", redact: bool = True, top_n: int = 10, profile: str | None = None, gate_profiles_path: str = "config/gate_profiles.json", min_pass_rate_delta: float | None = None, max_avg_l1_delta: float | None = None, max_p95_l1_delta: float | None = None, allow_dataset_mismatch: bool = False, adapter: str = "upstream_signal", require_pinned_model_identity: bool = False) -> dict`
 
 Runs baseline/candidate replay over the same capture and returns a gate decision bundle.
+
+- `adapter` selects a registered live adapter for both replays; the default remains
+  `upstream_signal`. CLI: `--adapter coding_agent`.
+- `require_pinned_model_identity=True` (CLI: `--require-pinned-model-identity`)
+  requires declared provider/model identity and generation settings in both coding-agent
+  replays and in compare/gate. Profiles such as `coding_agent_drift` also require this
+  policy even when the flag is omitted; `False` does not disable a profile requirement.
+  Native replay rejects pinned enforcement with an adapter other than `coding_agent`.
+- `allow_dataset_mismatch=True` (CLI: `--allow-dataset-mismatch`) disables only the
+  dataset-hash match requirement for both compare and gate. This per-call allowance
+  is needed for live receipts without `dataset_hash`; other identity checks remain.
+- Pinned metadata is a declaration, not proof that a real model produced the capture.
+  Replay self-target compliance is not predictive accuracy.
 
 Returns:
 - baseline replay result
