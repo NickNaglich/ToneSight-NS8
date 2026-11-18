@@ -93,6 +93,15 @@ def test_canary_routes_adapter_identity_and_dataset_policy(
     assert calls["gate"][0][2]["require_pinned_model_identity"] is (True if explicit_pin else None)
     assert calls["compare"][0][2]["require_pinned_model_identity"] is effective_pin
     assert result["exit_code"] == 2  # Native decision is preserved, not coerced to success.
+    # The emitted policy describes enforcement, not execution/identity attestation.
+    assert result["replay_policy"] == {
+        "adapter": adapter, "require_pinned_model_identity": effective_pin,
+    }
+    assert result["evidence_scope"] == {
+        "operation": "recorded_capture_replay",
+        "live_model_execution": "not_performed_by_canary",
+        "model_identity_attestation": "not_performed_by_canary",
+    }
 
 
 @pytest.mark.parametrize("flags,adapter,pinned", [
@@ -184,3 +193,50 @@ def test_canary_reports_only_known_capture_identity(
     assert capture["candidate_capture_id"] == expected_b
     assert capture["same_capture_id"] is same
 
+
+
+def test_canary_cli_reports_replay_scope_without_attesting_declared_identity(monkeypatch, capsys):
+    from tonesight_ns8 import canary_runner, cli
+
+    replays = []
+    declared = {
+        "capture_id": "offline_capture",
+        "provider": "caller_claimed_provider",
+        "model_tag": "caller_claimed:v1",
+        "model_version": "caller_claimed_version",
+        "generation_settings": {"temperature": 0},
+    }
+
+    def replay(capture, **kwargs):
+        replays.append(kwargs)
+        return {"out_dir": kwargs["out_root"], "receipt": dict(declared)}
+
+    def gate(*args, **kwargs):
+        assert kwargs["require_pinned_model_identity"] is None
+        assert kwargs["require_dataset_match"] is False
+        return {"decision": "passed", "exit_code": 0}
+
+    def compare(*args, **kwargs):
+        assert kwargs["require_pinned_model_identity"] is True
+        assert kwargs["require_dataset_match"] is False
+        return {"compare_summary": {"rows": {"count_common_ids": 2}}}
+
+    monkeypatch.setattr(canary_runner, "run_live_replay", replay)
+    monkeypatch.setattr(canary_runner, "run_gate", gate)
+    monkeypatch.setattr(canary_runner, "run_compare", compare)
+    code = cli.main([
+        "canary", "--capture", "unused-offline-stub.jsonl", "--adapter", "coding_agent",
+        "--profile", "coding_agent_drift", "--allow-dataset-mismatch",
+    ])
+    streams = capsys.readouterr()
+    assert code == 0 and streams.err == ""
+    report = json.loads(streams.out)
+    assert len(replays) == 2 and all(k["require_pinned_model_identity"] is True for k in replays)
+    assert report["replay_policy"] == {"adapter": "coding_agent", "require_pinned_model_identity": True}
+    assert report["evidence_scope"] == {
+        "operation": "recorded_capture_replay",
+        "live_model_execution": "not_performed_by_canary",
+        "model_identity_attestation": "not_performed_by_canary",
+    }
+    assert report["baseline"]["receipt"] == report["candidate"]["receipt"] == declared
+    assert report["gate_result"] == {"decision": "passed", "exit_code": 0}
