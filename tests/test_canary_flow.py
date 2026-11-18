@@ -99,7 +99,7 @@ def test_canary_routes_adapter_identity_and_dataset_policy(
     }
     assert result["evidence_scope"] == {
         "operation": "recorded_capture_replay",
-        "live_model_execution": "not_performed_by_canary",
+        "live_model_execution": "not_attested_by_canary",
         "model_identity_attestation": "not_performed_by_canary",
     }
 
@@ -235,7 +235,7 @@ def test_canary_cli_reports_replay_scope_without_attesting_declared_identity(mon
     assert report["replay_policy"] == {"adapter": "coding_agent", "require_pinned_model_identity": True}
     assert report["evidence_scope"] == {
         "operation": "recorded_capture_replay",
-        "live_model_execution": "not_performed_by_canary",
+        "live_model_execution": "not_attested_by_canary",
         "model_identity_attestation": "not_performed_by_canary",
     }
     assert report["baseline"]["receipt"] == report["candidate"]["receipt"] == declared

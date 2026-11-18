@@ -97,7 +97,7 @@ def run_canary(
         },
         "evidence_scope": {
             "operation": "recorded_capture_replay",
-            "live_model_execution": "not_performed_by_canary",
+            "live_model_execution": "not_attested_by_canary",
             "model_identity_attestation": "not_performed_by_canary",
         },
         "capture": {

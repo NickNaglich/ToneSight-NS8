@@ -458,7 +458,7 @@ The additive report separates enforcement policy from evidence scope:
   },
   "evidence_scope": {
     "operation": "recorded_capture_replay",
-    "live_model_execution": "not_performed_by_canary",
+    "live_model_execution": "not_attested_by_canary",
     "model_identity_attestation": "not_performed_by_canary"
   }
 }
@@ -471,17 +471,17 @@ its identity independently verified. Coding-agent provider/model/generation
 fields come from caller-declared capture metadata and are checked for required
 presence and compatibility under the existing policy.
 
-Canary replays a recorded capture; it does not itself invoke a live model or
-independently attest the capture's producer/model identity. The scope fields
-describe this canary operation, not how the capture was originally acquired or
-whether an upstream producer actually ran. Registered custom adapter behavior is
-outside this declaration: these fields do not audit callbacks or external
-execution history. They add no attestation service or new compatibility rule.
+Canary replays a recorded capture and does not independently attest the
+capture's producer/model identity. `live_model_execution="not_attested_by_canary"`
+means this report establishes neither the presence nor the absence of model
+execution upstream or inside a registered custom adapter callback. These scope
+fields do not audit capture acquisition, callbacks or external execution history.
+They add no attestation service or new compatibility rule.
 The existing CLI includes these fields in its JSON output, with unchanged exits.
 
 Returns:
 - `replay_policy` (adapter and effective identity enforcement)
-- `evidence_scope` (recorded replay and absence of canary model execution/attestation)
+- `evidence_scope` (recorded replay, model execution not attested, no independent identity attestation)
 - baseline replay result
 - candidate replay result
 - `compare_summary` (from gate/compare)
