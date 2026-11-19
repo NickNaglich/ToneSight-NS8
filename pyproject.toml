@@ -18,7 +18,7 @@ observability = [
   # Starlette 1.7 fixes TestClient deprecated AnyIO imports; qualify minor bumps.
   "starlette>=1.7,<1.8",
   "uvicorn>=0.30,<0.36",
-  "prometheus-client>=0.20,<0.22",
+  "prometheus-client>=0.25.0,<0.26",
   "httpx2>=2.0,<3",
   "mlflow-skinny>=3.17.2,<3.18",
   "sqlalchemy>=2.0,<2.1",
