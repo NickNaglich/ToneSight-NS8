@@ -60,6 +60,17 @@ Security enforcement tests:
 - `http_request_duration_seconds_count{route,method}`
 - `http_request_duration_seconds_sum{route,method}`
 
+HTTP `route` labels use registered route templates after dispatch, never the raw
+requested path. Unmatched requests use `__unmatched__`; for example, five
+unknown URLs produce five 404 observations under that one route label.
+`method` labels are `GET`, `HEAD`, `POST`, `PUT`, `DELETE`, `CONNECT`, `OPTIONS`,
+`TRACE`, `PATCH`, or `OTHER`. This bounds label values for a fixed route table
+without changing routing, response statuses, authentication or rate limiting.
+A registered route rejected with 405 retains its template when the router
+supplies it. Counter increments and duration observations occur after dispatch;
+a `/metrics` scrape therefore includes earlier completed requests, not its own
+observation (which appears on the next scrape).
+
 ### Model behavior (low-cardinality)
 (Do NOT label with run_id.)
 - `tone_score_requests_total{backend,decision}`  (`decision=pass|fail`)
