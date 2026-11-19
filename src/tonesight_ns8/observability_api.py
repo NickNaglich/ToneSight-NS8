@@ -55,6 +55,7 @@ TONE_P95_L1 = Gauge(
 
 _LAST_EVAL: dict[str, Any] | None = None
 _RATE_LIMIT_STATE: dict[str, list[float]] = {}
+_HTTP_METRIC_METHODS = frozenset({"GET", "HEAD", "POST", "PUT", "DELETE", "CONNECT", "OPTIONS", "TRACE", "PATCH"})
 
 
 def _api_token() -> str | None:
@@ -140,11 +141,17 @@ def _to_jsonable(value: Any) -> Any:
 
 @app.middleware("http")
 async def _metrics_middleware(request: Request, call_next):
-    route_label = request.url.path
-    method_label = request.method
     started = time.perf_counter()
     response = await call_next(request)
     elapsed = time.perf_counter() - started
+    route = request.scope.get("route")
+    route_path = getattr(route, "path", None)
+    route_label = (
+        route_path
+        if isinstance(route_path, str) and any(route is registered for registered in app.routes)
+        else "__unmatched__"
+    )
+    method_label = request.method if request.method in _HTTP_METRIC_METHODS else "OTHER"
     status_label = str(response.status_code)
     HTTP_REQUESTS_TOTAL.labels(route=route_label, method=method_label, status=status_label).inc()
     HTTP_REQUEST_DURATION_SECONDS.labels(route=route_label, method=method_label).observe(elapsed)
