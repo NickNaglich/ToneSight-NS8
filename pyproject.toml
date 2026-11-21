@@ -21,7 +21,7 @@ observability = [
   "prometheus-client>=0.25.0,<0.26",
   "httpx2>=2.0,<3",
   "mlflow-skinny>=3.17.2,<3.18",
-  "sqlalchemy>=2.0,<2.1",
+  "sqlalchemy>=2.0,<2.2",
   "alembic>=1.13,<2",
 ]
 
