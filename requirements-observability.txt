@@ -1,4 +1,4 @@
-fastapi>=0.137,<0.138
+fastapi>=0.137,<0.164
 # Same qualified TestClient compatibility/security floor as the native extra.
 starlette>=1.7,<1.8
 uvicorn>=0.30,<0.36
