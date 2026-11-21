@@ -14,7 +14,7 @@ dependencies = []
 
 [project.optional-dependencies]
 observability = [
-  "fastapi>=0.137,<0.138",
+  "fastapi>=0.137,<0.164",
   # Starlette 1.7 fixes TestClient deprecated AnyIO imports; qualify minor bumps.
   "starlette>=1.7,<1.8",
   "uvicorn>=0.30,<0.36",
